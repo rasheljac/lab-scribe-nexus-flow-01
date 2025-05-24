@@ -15,7 +15,8 @@ import {
   FileText,
   Clock,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Flask
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
