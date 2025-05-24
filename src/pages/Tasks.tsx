@@ -6,47 +6,18 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Filter, Calendar, User, CheckSquare, Clock, AlertCircle } from "lucide-react";
+import { Plus, Search, Filter, Calendar, User, CheckSquare, Clock, AlertCircle, Loader2 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
-
-const tasks = [
-  {
-    id: 1,
-    title: "Calibrate pH meter",
-    description: "Weekly calibration of the lab pH meter using standard buffer solutions",
-    priority: "high",
-    status: "pending",
-    assignee: "Lab Tech Mike",
-    dueDate: "2024-01-25",
-    category: "Equipment Maintenance",
-  },
-  {
-    id: 2,
-    title: "Order new pipette tips",
-    description: "Restock 10μL and 200μL pipette tips for upcoming experiments",
-    priority: "medium",
-    status: "in_progress",
-    assignee: "Dr. Sarah Chen",
-    dueDate: "2024-01-30",
-    category: "Inventory",
-  },
-  {
-    id: 3,
-    title: "Review experiment protocols",
-    description: "Review and approve new protein analysis protocols submitted by team",
-    priority: "low",
-    status: "completed",
-    assignee: "Dr. John Doe",
-    dueDate: "2024-01-20",
-    category: "Documentation",
-  },
-];
+import CreateTaskDialog from "@/components/CreateTaskDialog";
+import { useTasks } from "@/hooks/useTasks";
 
 const Tasks = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
+
+  const { tasks, isLoading, error, updateTask } = useTasks();
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -76,11 +47,34 @@ const Tasks = () => {
 
   const filteredTasks = tasks.filter(task => {
     const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         task.description.toLowerCase().includes(searchTerm.toLowerCase());
+                         (task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = filterStatus === "all" || task.status === filterStatus;
     const matchesPriority = filterPriority === "all" || task.priority === filterPriority;
     return matchesSearch && matchesStatus && matchesPriority;
   });
+
+  const handleTaskStatusChange = (taskId: string, completed: boolean) => {
+    const newStatus = completed ? "completed" : "pending";
+    updateTask.mutate({ id: taskId, status: newStatus });
+  };
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex">
+        <Sidebar />
+        <div className="flex-1 flex flex-col">
+          <Header />
+          <main className="flex-1 p-6 overflow-auto">
+            <div className="max-w-7xl mx-auto">
+              <div className="text-center py-12">
+                <p className="text-red-600">Error loading tasks: {error.message}</p>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -95,10 +89,7 @@ const Tasks = () => {
                 <h1 className="text-3xl font-bold text-gray-900">Task Manager</h1>
                 <p className="text-gray-600 mt-1">Organize and track your laboratory tasks</p>
               </div>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                New Task
-              </Button>
+              <CreateTaskDialog />
             </div>
 
             {/* Filters */}
@@ -137,43 +128,59 @@ const Tasks = () => {
             </div>
 
             {/* Tasks List */}
-            <div className="space-y-4">
-              {filteredTasks.map((task) => (
-                <Card key={task.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-4 flex-1">
-                        <Checkbox id={`task-${task.id}`} />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            {getStatusIcon(task.status)}
-                            <h3 className="font-semibold text-lg">{task.title}</h3>
-                            <Badge className={getPriorityColor(task.priority)}>
-                              {task.priority}
-                            </Badge>
-                          </div>
-                          <p className="text-gray-600 mb-3">{task.description}</p>
-                          <div className="flex items-center gap-4 text-sm text-gray-500">
-                            <div className="flex items-center gap-1">
-                              <User className="h-4 w-4" />
-                              <span>{task.assignee}</span>
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredTasks.map((task) => (
+                  <Card key={task.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-4 flex-1">
+                          <Checkbox 
+                            id={`task-${task.id}`}
+                            checked={task.status === "completed"}
+                            onCheckedChange={(checked) => handleTaskStatusChange(task.id, checked as boolean)}
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              {getStatusIcon(task.status)}
+                              <h3 className="font-semibold text-lg">{task.title}</h3>
+                              <Badge className={getPriorityColor(task.priority)}>
+                                {task.priority}
+                              </Badge>
                             </div>
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              <span>{task.dueDate}</span>
+                            <p className="text-gray-600 mb-3">{task.description}</p>
+                            <div className="flex items-center gap-4 text-sm text-gray-500">
+                              <div className="flex items-center gap-1">
+                                <User className="h-4 w-4" />
+                                <span>{task.assignee}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-4 w-4" />
+                                <span>{task.due_date}</span>
+                              </div>
+                              <Badge variant="outline">{task.category}</Badge>
                             </div>
-                            <Badge variant="outline">{task.category}</Badge>
                           </div>
                         </div>
+                        <Button variant="outline" size="sm">
+                          Edit
+                        </Button>
                       </div>
-                      <Button variant="outline" size="sm">
-                        Edit
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                {filteredTasks.length === 0 && !isLoading && (
+                  <div className="text-center py-12">
+                    <CheckSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600">No tasks found. Create your first task to get started.</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </main>
       </div>
