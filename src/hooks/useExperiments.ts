@@ -29,7 +29,7 @@ export const useExperiments = () => {
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('experiments')
         .select('*')
         .order('created_at', { ascending: false });
@@ -44,7 +44,7 @@ export const useExperiments = () => {
     mutationFn: async (experiment: Omit<Experiment, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
       if (!user) throw new Error('User not authenticated');
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('experiments')
         .insert([{ ...experiment, user_id: user.id }])
         .select()
@@ -60,7 +60,7 @@ export const useExperiments = () => {
 
   const updateExperiment = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Experiment> & { id: string }) => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('experiments')
         .update(updates)
         .eq('id', id)
@@ -77,7 +77,7 @@ export const useExperiments = () => {
 
   const deleteExperiment = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('experiments')
         .delete()
         .eq('id', id);
