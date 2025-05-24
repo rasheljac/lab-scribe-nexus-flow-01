@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,8 +14,7 @@ import {
   FileText,
   Clock,
   CheckCircle,
-  AlertCircle,
-  Flask
+  AlertCircle
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
@@ -76,7 +74,7 @@ const Experiments = () => {
       case "planning":
         return <AlertCircle className="h-4 w-4 text-yellow-600" />;
       default:
-        return <Flask className="h-4 w-4 text-gray-600" />;
+        return <Beaker className="h-4 w-4 text-gray-600" />;
     }
   };
 
