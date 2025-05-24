@@ -105,7 +105,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/admin/users" element={
-              <Prot ectedRoute>
+              <ProtectedRoute>
                 <Index />
               </ProtectedRoute>
             } />
