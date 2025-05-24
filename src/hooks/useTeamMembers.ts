@@ -30,7 +30,7 @@ export const useTeamMembers = () => {
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('team_members')
         .select('*')
         .order('created_at', { ascending: false });
@@ -45,7 +45,7 @@ export const useTeamMembers = () => {
     mutationFn: async (teamMember: Omit<TeamMember, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
       if (!user) throw new Error('User not authenticated');
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('team_members')
         .insert([{ ...teamMember, user_id: user.id }])
         .select()
@@ -61,7 +61,7 @@ export const useTeamMembers = () => {
 
   const updateTeamMember = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<TeamMember> & { id: string }) => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('team_members')
         .update(updates)
         .eq('id', id)
@@ -78,7 +78,7 @@ export const useTeamMembers = () => {
 
   const deleteTeamMember = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('team_members')
         .delete()
         .eq('id', id);
