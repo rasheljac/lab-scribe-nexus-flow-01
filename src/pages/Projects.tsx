@@ -1,59 +1,20 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Plus, Search, Filter, Calendar, Users, FolderOpen, BarChart3 } from "lucide-react";
+import { Search, Filter, Calendar, Users, FolderOpen, BarChart3, Loader2 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
-
-const projects = [
-  {
-    id: 1,
-    title: "Protein Structure Analysis",
-    description: "Comprehensive analysis of bacterial protein structures using X-ray crystallography",
-    status: "active",
-    progress: 65,
-    startDate: "2024-01-01",
-    endDate: "2024-06-30",
-    teamMembers: ["Dr. Sarah Chen", "Dr. John Doe", "Lab Tech Mike"],
-    experiments: 8,
-    budget: "$50,000",
-    category: "Biochemistry",
-  },
-  {
-    id: 2,
-    title: "Drug Discovery Pipeline",
-    description: "Development of novel compounds for treating antibiotic-resistant bacteria",
-    status: "planning",
-    progress: 15,
-    startDate: "2024-02-01",
-    endDate: "2024-12-31",
-    teamMembers: ["Dr. Lisa Wong", "Dr. Mike Johnson"],
-    experiments: 3,
-    budget: "$75,000",
-    category: "Pharmacology",
-  },
-  {
-    id: 3,
-    title: "Environmental Microbiome Study",
-    description: "Analysis of microbial communities in various environmental samples",
-    status: "completed",
-    progress: 100,
-    startDate: "2023-09-01",
-    endDate: "2023-12-31",
-    teamMembers: ["Dr. Emily Davis", "Dr. Tom Wilson", "Lab Tech Sarah"],
-    experiments: 12,
-    budget: "$30,000",
-    category: "Environmental Science",
-  },
-];
+import CreateProjectDialog from "@/components/CreateProjectDialog";
+import { useProjects } from "@/hooks/useProjects";
 
 const Projects = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+
+  const { projects, isLoading, error } = useProjects();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -72,10 +33,28 @@ const Projects = () => {
 
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         project.description.toLowerCase().includes(searchTerm.toLowerCase());
+                         (project.description && project.description.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = filterStatus === "all" || project.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex">
+        <Sidebar />
+        <div className="flex-1 flex flex-col">
+          <Header />
+          <main className="flex-1 p-6 overflow-auto">
+            <div className="max-w-7xl mx-auto">
+              <div className="text-center py-12">
+                <p className="text-red-600">Error loading projects: {error.message}</p>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -90,10 +69,7 @@ const Projects = () => {
                 <h1 className="text-3xl font-bold text-gray-900">Project Management</h1>
                 <p className="text-gray-600 mt-1">Organize and track your research projects</p>
               </div>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                New Project
-              </Button>
+              <CreateProjectDialog />
             </div>
 
             {/* Search and Filter */}
@@ -107,63 +83,69 @@ const Projects = () => {
                   className="pl-10"
                 />
               </div>
-              <Button variant="outline" className="gap-2">
-                <Filter className="h-4 w-4" />
-                Filter
-              </Button>
             </div>
 
             {/* Projects Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredProjects.map((project) => (
-                <Card key={project.id} className="hover:shadow-md transition-shadow cursor-pointer">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <FolderOpen className="h-5 w-5 text-blue-600" />
-                        <CardTitle className="text-lg">{project.title}</CardTitle>
+            {isLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {filteredProjects.map((project) => (
+                  <Card key={project.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          <FolderOpen className="h-5 w-5 text-blue-600" />
+                          <CardTitle className="text-lg">{project.title}</CardTitle>
+                        </div>
+                        <Badge className={getStatusColor(project.status)}>
+                          {project.status}
+                        </Badge>
                       </div>
-                      <Badge className={getStatusColor(project.status)}>
-                        {project.status}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-2">{project.description}</p>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Progress */}
-                    <div>
-                      <div className="flex justify-between text-sm mb-2">
-                        <span>Progress</span>
-                        <span>{project.progress}%</span>
+                      <p className="text-sm text-gray-600 mt-2">{project.description}</p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Progress */}
+                      <div>
+                        <div className="flex justify-between text-sm mb-2">
+                          <span>Progress</span>
+                          <span>{project.progress}%</span>
+                        </div>
+                        <Progress value={project.progress} className="h-2" />
                       </div>
-                      <Progress value={project.progress} className="h-2" />
-                    </div>
 
-                    {/* Project Details */}
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-gray-400" />
-                        <span>{project.startDate} - {project.endDate}</span>
+                      {/* Project Details */}
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-gray-400" />
+                          <span>{project.start_date} - {project.end_date || "Ongoing"}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <BarChart3 className="h-4 w-4 text-gray-400" />
+                          <span>{project.experiments_count} experiments</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-gray-400" />
-                        <span>{project.teamMembers.length} team members</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <BarChart3 className="h-4 w-4 text-gray-400" />
-                        <span>{project.experiments} experiments</span>
-                      </div>
-                    </div>
 
-                    {/* Budget and Category */}
-                    <div className="flex justify-between items-center pt-2">
-                      <Badge variant="outline">{project.category}</Badge>
-                      <span className="text-sm font-medium text-green-600">{project.budget}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                      {/* Budget and Category */}
+                      <div className="flex justify-between items-center pt-2">
+                        <Badge variant="outline">{project.category}</Badge>
+                        {project.budget && (
+                          <span className="text-sm font-medium text-green-600">{project.budget}</span>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                {filteredProjects.length === 0 && !isLoading && (
+                  <div className="col-span-full text-center py-12">
+                    <FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600">No projects found. Create your first project to get started.</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </main>
       </div>
