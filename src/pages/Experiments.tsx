@@ -9,7 +9,7 @@ import {
   Search, 
   Filter, 
   Plus, 
-  Flask, 
+  Beaker, 
   Calendar, 
   User, 
   FileText,

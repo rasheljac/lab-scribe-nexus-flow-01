@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarDays, Flask, FolderOpen, CheckSquare, BarChart3, FileText, Users, Settings } from "lucide-react";
+import { CalendarDays, Beaker, FolderOpen, CheckSquare, BarChart3, FileText, Users, Settings } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import StatsCard from "@/components/StatsCard";
@@ -44,7 +44,7 @@ const Index = () => {
               <StatsCard
                 title="Active Experiments"
                 value={activeExperiments}
-                icon={Flask}
+                icon={Beaker}
                 color="text-blue-600"
                 bgColor="bg-blue-50"
               />

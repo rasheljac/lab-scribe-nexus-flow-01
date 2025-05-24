@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
   Home,
-  Flask,
+  Beaker,
   FolderOpen,
   Calendar,
   CheckSquare,
@@ -30,7 +30,7 @@ const Sidebar = () => {
 
   const menuItems = [
     { icon: Home, label: "Dashboard", path: "/", badge: null },
-    { icon: Flask, label: "Experiments", path: "/experiments", badge: "12" },
+    { icon: Beaker, label: "Experiments", path: "/experiments", badge: "12" },
     { icon: FolderOpen, label: "Projects", path: "/projects", badge: "5" },
     { icon: Calendar, label: "Calendar", path: "/calendar", badge: null },
     { icon: CheckSquare, label: "Tasks", path: "/tasks", badge: "8" },

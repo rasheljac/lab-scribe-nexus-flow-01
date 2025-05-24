@@ -2,7 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Clock, FileText, Flask, CheckSquare } from "lucide-react";
+import { Clock, FileText, Beaker, CheckSquare } from "lucide-react";
 
 const activities = [
   {
@@ -12,7 +12,7 @@ const activities = [
     user: "Dr. Sarah Chen",
     time: "2 hours ago",
     status: "in_progress",
-    icon: Flask,
+    icon: Beaker,
   },
   {
     id: 2,
@@ -39,7 +39,7 @@ const activities = [
     user: "Dr. Lisa Wong",
     time: "1 day ago",
     status: "started",
-    icon: Flask,
+    icon: Beaker,
   },
 ];
 
