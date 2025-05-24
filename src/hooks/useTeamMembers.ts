@@ -26,7 +26,7 @@ export const useTeamMembers = () => {
   const queryClient = useQueryClient();
 
   const { data: teamMembers, isLoading, error } = useQuery({
-    queryKey: ['team-members'],
+    queryKey: ['teamMembers'],
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
       
@@ -55,7 +55,7 @@ export const useTeamMembers = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['team-members'] });
+      queryClient.invalidateQueries({ queryKey: ['teamMembers'] });
     },
   });
 
@@ -72,7 +72,7 @@ export const useTeamMembers = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['team-members'] });
+      queryClient.invalidateQueries({ queryKey: ['teamMembers'] });
     },
   });
 
@@ -86,7 +86,7 @@ export const useTeamMembers = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['team-members'] });
+      queryClient.invalidateQueries({ queryKey: ['teamMembers'] });
     },
   });
 

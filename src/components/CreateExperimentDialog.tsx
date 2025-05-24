@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
 import { useExperiments, Experiment } from "@/hooks/useExperiments";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 
 const CreateExperimentDialog = () => {
   const [open, setOpen] = useState(false);
@@ -26,13 +26,17 @@ const CreateExperimentDialog = () => {
   });
 
   const { createExperiment } = useExperiments();
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
       await createExperiment.mutateAsync(formData);
-      toast.success("Experiment created successfully!");
+      toast({
+        title: "Success",
+        description: "Experiment created successfully!",
+      });
       setOpen(false);
       setFormData({
         title: "",
@@ -47,7 +51,11 @@ const CreateExperimentDialog = () => {
         category: "",
       });
     } catch (error) {
-      toast.error("Failed to create experiment");
+      toast({
+        title: "Error",
+        description: "Failed to create experiment",
+        variant: "destructive",
+      });
       console.error(error);
     }
   };

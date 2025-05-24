@@ -9,7 +9,246 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      experiments: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          end_date: string | null
+          id: string
+          progress: number
+          protocols: number
+          researcher: string
+          samples: number
+          start_date: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          progress?: number
+          protocols?: number
+          researcher: string
+          samples?: number
+          start_date: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          progress?: number
+          protocols?: number
+          researcher?: string
+          samples?: number
+          start_date?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          budget: string | null
+          category: string
+          created_at: string
+          description: string | null
+          end_date: string | null
+          experiments_count: number
+          id: string
+          progress: number
+          start_date: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          budget?: string | null
+          category: string
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          experiments_count?: number
+          id?: string
+          progress?: number
+          start_date: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          budget?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          experiments_count?: number
+          id?: string
+          progress?: number
+          start_date?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reports: {
+        Row: {
+          author: string
+          created_at: string
+          description: string | null
+          downloads: number
+          format: string
+          id: string
+          size: string | null
+          status: string
+          title: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          author: string
+          created_at?: string
+          description?: string | null
+          downloads?: number
+          format?: string
+          id?: string
+          size?: string | null
+          status?: string
+          title: string
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          author?: string
+          created_at?: string
+          description?: string | null
+          downloads?: number
+          format?: string
+          id?: string
+          size?: string | null
+          status?: string
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tasks: {
+        Row: {
+          assignee: string
+          category: string
+          created_at: string
+          description: string | null
+          due_date: string
+          id: string
+          priority: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assignee: string
+          category: string
+          created_at?: string
+          description?: string | null
+          due_date: string
+          id?: string
+          priority?: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assignee?: string
+          category?: string
+          created_at?: string
+          description?: string | null
+          due_date?: string
+          id?: string
+          priority?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      team_members: {
+        Row: {
+          avatar: string | null
+          created_at: string
+          current_projects: number
+          department: string
+          email: string
+          experiments_completed: number
+          expertise: string[]
+          id: string
+          join_date: string
+          name: string
+          phone: string | null
+          role: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar?: string | null
+          created_at?: string
+          current_projects?: number
+          department: string
+          email: string
+          experiments_completed?: number
+          expertise?: string[]
+          id?: string
+          join_date: string
+          name: string
+          phone?: string | null
+          role: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar?: string | null
+          created_at?: string
+          current_projects?: number
+          department?: string
+          email?: string
+          experiments_completed?: number
+          expertise?: string[]
+          id?: string
+          join_date?: string
+          name?: string
+          phone?: string | null
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

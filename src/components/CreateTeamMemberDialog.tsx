@@ -27,8 +27,8 @@ const CreateTeamMemberDialog = () => {
   const [formData, setFormData] = useState({
     name: "",
     role: "",
-    email: "",
     department: "",
+    email: "",
     phone: "",
     avatar: "",
     status: "active" as "active" | "inactive",
@@ -44,10 +44,10 @@ const CreateTeamMemberDialog = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name.trim() || !formData.email.trim()) {
+    if (!formData.name.trim() || !formData.email.trim() || !formData.role.trim() || !formData.department.trim() || !formData.join_date) {
       toast({
         title: "Error",
-        description: "Name and email are required",
+        description: "Please fill in all required fields",
         variant: "destructive",
       });
       return;
@@ -57,14 +57,14 @@ const CreateTeamMemberDialog = () => {
       await createTeamMember.mutateAsync(formData);
       toast({
         title: "Success",
-        description: "Team member added successfully",
+        description: "Team member created successfully",
       });
       setIsOpen(false);
       setFormData({
         name: "",
         role: "",
-        email: "",
         department: "",
+        email: "",
         phone: "",
         avatar: "",
         status: "active",
@@ -76,7 +76,7 @@ const CreateTeamMemberDialog = () => {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to add team member",
+        description: "Failed to create team member",
         variant: "destructive",
       });
     }
@@ -90,8 +90,8 @@ const CreateTeamMemberDialog = () => {
   };
 
   const handleExpertiseChange = (value: string) => {
-    const skills = value.split(',').map(skill => skill.trim()).filter(skill => skill);
-    handleInputChange('expertise', skills);
+    const expertiseArray = value.split(',').map(item => item.trim()).filter(item => item.length > 0);
+    handleInputChange("expertise", expertiseArray);
   };
 
   return (
@@ -99,12 +99,12 @@ const CreateTeamMemberDialog = () => {
       <DialogTrigger asChild>
         <Button className="gap-2">
           <Plus className="h-4 w-4" />
-          Add Team Member
+          New Team Member
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Team Member</DialogTitle>
+          <DialogTitle>Add New Team Member</DialogTitle>
           <DialogDescription>
             Add a new member to your laboratory team.
           </DialogDescription>
@@ -121,6 +121,30 @@ const CreateTeamMemberDialog = () => {
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="role">Role *</Label>
+              <Input
+                id="role"
+                value={formData.role}
+                onChange={(e) => handleInputChange("role", e.target.value)}
+                placeholder="e.g., Research Scientist"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="department">Department *</Label>
+              <Input
+                id="department"
+                value={formData.department}
+                onChange={(e) => handleInputChange("department", e.target.value)}
+                placeholder="e.g., Biology"
+                required
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="email">Email *</Label>
             <Input
@@ -131,28 +155,6 @@ const CreateTeamMemberDialog = () => {
               placeholder="Enter email address"
               required
             />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="role">Role</Label>
-              <Input
-                id="role"
-                value={formData.role}
-                onChange={(e) => handleInputChange("role", e.target.value)}
-                placeholder="e.g., Research Scientist"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="department">Department</Label>
-              <Input
-                id="department"
-                value={formData.department}
-                onChange={(e) => handleInputChange("department", e.target.value)}
-                placeholder="e.g., Biology"
-              />
-            </div>
           </div>
 
           <div className="space-y-2">
@@ -183,12 +185,13 @@ const CreateTeamMemberDialog = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="join_date">Join Date</Label>
+              <Label htmlFor="join_date">Join Date *</Label>
               <Input
                 id="join_date"
                 type="date"
                 value={formData.join_date}
                 onChange={(e) => handleInputChange("join_date", e.target.value)}
+                required
               />
             </div>
           </div>
@@ -197,9 +200,9 @@ const CreateTeamMemberDialog = () => {
             <Label htmlFor="expertise">Expertise (comma-separated)</Label>
             <Input
               id="expertise"
-              value={formData.expertise.join(', ')}
+              value={formData.expertise.join(", ")}
               onChange={(e) => handleExpertiseChange(e.target.value)}
-              placeholder="e.g., Molecular Biology, PCR, Cell Culture"
+              placeholder="e.g., Molecular Biology, Cell Culture"
             />
           </div>
 
@@ -229,7 +232,7 @@ const CreateTeamMemberDialog = () => {
 
           <div className="flex gap-2 pt-4">
             <Button type="submit" disabled={createTeamMember.isPending} className="flex-1">
-              {createTeamMember.isPending ? "Adding..." : "Add Member"}
+              {createTeamMember.isPending ? "Creating..." : "Create Team Member"}
             </Button>
             <Button
               type="button"

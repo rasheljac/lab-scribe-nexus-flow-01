@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
 import { useProjects, Project } from "@/hooks/useProjects";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 
 const CreateProjectDialog = () => {
   const [open, setOpen] = useState(false);
@@ -25,13 +25,17 @@ const CreateProjectDialog = () => {
   });
 
   const { createProject } = useProjects();
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
       await createProject.mutateAsync(formData);
-      toast.success("Project created successfully!");
+      toast({
+        title: "Success",
+        description: "Project created successfully!",
+      });
       setOpen(false);
       setFormData({
         title: "",
@@ -45,7 +49,11 @@ const CreateProjectDialog = () => {
         experiments_count: 0,
       });
     } catch (error) {
-      toast.error("Failed to create project");
+      toast({
+        title: "Error",
+        description: "Failed to create project",
+        variant: "destructive",
+      });
       console.error(error);
     }
   };
