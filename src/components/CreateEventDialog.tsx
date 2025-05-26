@@ -10,17 +10,31 @@ import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import { useToast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
 
+type EventType = "meeting" | "maintenance" | "experiment" | "training" | "booking";
+type EventStatus = "scheduled" | "cancelled" | "completed";
+
+interface FormData {
+  title: string;
+  description: string;
+  event_type: EventType;
+  start_time: string;
+  end_time: string;
+  location: string;
+  attendees: string[];
+  status: EventStatus;
+}
+
 const CreateEventDialog = () => {
   const [open, setOpen] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     title: "",
     description: "",
-    event_type: "meeting" as const,
+    event_type: "meeting",
     start_time: "",
     end_time: "",
     location: "",
-    attendees: [] as string[],
-    status: "scheduled" as const,
+    attendees: [],
+    status: "scheduled",
   });
 
   const { createEvent } = useCalendarEvents();
@@ -93,7 +107,7 @@ const CreateEventDialog = () => {
             <Label htmlFor="event_type">Event Type</Label>
             <Select 
               value={formData.event_type} 
-              onValueChange={(value: "meeting" | "maintenance" | "experiment" | "training" | "booking") => 
+              onValueChange={(value: EventType) => 
                 setFormData({ ...formData, event_type: value })
               }
             >
