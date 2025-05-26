@@ -9,9 +9,11 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Experiments from "./pages/Experiments";
+import ExperimentNotes from "./pages/ExperimentNotes";
 import Calendar from "./pages/Calendar";
 import Tasks from "./pages/Tasks";
 import Projects from "./pages/Projects";
+import ProjectExperiments from "./pages/ProjectExperiments";
 import Analytics from "./pages/Analytics";
 import Reports from "./pages/Reports";
 import Inventory from "./pages/Inventory";
@@ -44,6 +46,11 @@ const App = () => (
                 <Experiments />
               </ProtectedRoute>
             } />
+            <Route path="/experiments/:experimentId/notes" element={
+              <ProtectedRoute>
+                <ExperimentNotes />
+              </ProtectedRoute>
+            } />
             <Route path="/calendar" element={
               <ProtectedRoute>
                 <Calendar />
@@ -52,6 +59,11 @@ const App = () => (
             <Route path="/projects" element={
               <ProtectedRoute>
                 <Projects />
+              </ProtectedRoute>
+            } />
+            <Route path="/projects/:projectId/experiments" element={
+              <ProtectedRoute>
+                <ProjectExperiments />
               </ProtectedRoute>
             } />
             <Route path="/tasks" element={

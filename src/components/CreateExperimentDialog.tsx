@@ -24,7 +24,7 @@ const CreateExperimentDialog = () => {
     protocols: 0,
     samples: 0,
     category: "",
-    project_id: null as string | null,
+    project_id: "" as string,
   });
 
   const { createExperiment } = useExperiments();
@@ -34,8 +34,22 @@ const CreateExperimentDialog = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!formData.project_id) {
+      toast({
+        title: "Error",
+        description: "Please select a project for this experiment",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
-      await createExperiment.mutateAsync(formData);
+      const experimentData = {
+        ...formData,
+        project_id: formData.project_id || null,
+      };
+      
+      await createExperiment.mutateAsync(experimentData);
       toast({
         title: "Success",
         description: "Experiment created successfully!",
@@ -52,15 +66,15 @@ const CreateExperimentDialog = () => {
         protocols: 0,
         samples: 0,
         category: "",
-        project_id: null,
+        project_id: "",
       });
     } catch (error) {
+      console.error("Error creating experiment:", error);
       toast({
         title: "Error",
-        description: "Failed to create experiment",
+        description: "Failed to create experiment. Please try again.",
         variant: "destructive",
       });
-      console.error(error);
     }
   };
 
@@ -72,14 +86,14 @@ const CreateExperimentDialog = () => {
           New Experiment
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Experiment</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="title">Title</Label>
+              <Label htmlFor="title">Title *</Label>
               <Input
                 id="title"
                 value={formData.title}
@@ -88,7 +102,7 @@ const CreateExperimentDialog = () => {
               />
             </div>
             <div>
-              <Label htmlFor="researcher">Researcher</Label>
+              <Label htmlFor="researcher">Researcher *</Label>
               <Input
                 id="researcher"
                 value={formData.researcher}
@@ -104,18 +118,22 @@ const CreateExperimentDialog = () => {
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows={3}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="project">Project (Optional)</Label>
-              <Select value={formData.project_id || ""} onValueChange={(value) => setFormData({ ...formData, project_id: value || null })}>
+              <Label htmlFor="project">Project *</Label>
+              <Select 
+                value={formData.project_id} 
+                onValueChange={(value) => setFormData({ ...formData, project_id: value })}
+                required
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select project" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No Project</SelectItem>
                   {projects.map((project) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.title}
@@ -125,7 +143,7 @@ const CreateExperimentDialog = () => {
               </Select>
             </div>
             <div>
-              <Label htmlFor="category">Category</Label>
+              <Label htmlFor="category">Category *</Label>
               <Input
                 id="category"
                 value={formData.category}
@@ -150,11 +168,22 @@ const CreateExperimentDialog = () => {
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <Label htmlFor="progress">Progress (%)</Label>
+              <Input
+                id="progress"
+                type="number"
+                min="0"
+                max="100"
+                value={formData.progress}
+                onChange={(e) => setFormData({ ...formData, progress: parseInt(e.target.value) || 0 })}
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="start_date">Start Date</Label>
+              <Label htmlFor="start_date">Start Date *</Label>
               <Input
                 id="start_date"
                 type="date"
@@ -174,18 +203,7 @@ const CreateExperimentDialog = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="progress">Progress (%)</Label>
-              <Input
-                id="progress"
-                type="number"
-                min="0"
-                max="100"
-                value={formData.progress}
-                onChange={(e) => setFormData({ ...formData, progress: parseInt(e.target.value) || 0 })}
-              />
-            </div>
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="protocols">Protocols</Label>
               <Input
@@ -208,7 +226,7 @@ const CreateExperimentDialog = () => {
             </div>
           </div>
 
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>

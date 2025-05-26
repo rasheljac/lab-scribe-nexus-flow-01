@@ -1,12 +1,12 @@
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Search, 
-  Filter, 
   Beaker, 
   Calendar, 
   User, 
@@ -24,6 +24,7 @@ import { useExperiments } from "@/hooks/useExperiments";
 const Experiments = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+  const navigate = useNavigate();
   
   const { experiments, isLoading, error } = useExperiments();
 
@@ -59,6 +60,10 @@ const Experiments = () => {
     const matchesTab = activeTab === "all" || exp.status === activeTab;
     return matchesSearch && matchesTab;
   });
+
+  const handleExperimentClick = (experimentId: string) => {
+    navigate(`/experiments/${experimentId}/notes`);
+  };
 
   if (error) {
     return (
@@ -124,7 +129,11 @@ const Experiments = () => {
                 ) : (
                   <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                     {filteredExperiments.map((experiment) => (
-                      <Card key={experiment.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                      <Card 
+                        key={experiment.id} 
+                        className="hover:shadow-md transition-shadow cursor-pointer"
+                        onClick={() => handleExperimentClick(experiment.id)}
+                      >
                         <CardHeader className="pb-3">
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-2">

@@ -1,20 +1,24 @@
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Search, Filter, Calendar, Users, FolderOpen, BarChart3, Loader2 } from "lucide-react";
+import { Search, Calendar, FolderOpen, BarChart3, Loader2, Eye } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import CreateProjectDialog from "@/components/CreateProjectDialog";
 import { useProjects } from "@/hooks/useProjects";
+import { useExperiments } from "@/hooks/useExperiments";
 
 const Projects = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const navigate = useNavigate();
 
   const { projects, isLoading, error } = useProjects();
+  const { experiments } = useExperiments();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -31,12 +35,19 @@ const Projects = () => {
     }
   };
 
+  const getProjectExperiments = (projectId: string) => {
+    return experiments.filter(exp => exp.project_id === projectId);
+  };
+
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (project.description && project.description.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesStatus = filterStatus === "all" || project.status === filterStatus;
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
+
+  const handleViewExperiments = (projectId: string) => {
+    navigate(`/projects/${projectId}/experiments`);
+  };
 
   if (error) {
     return (
@@ -72,7 +83,7 @@ const Projects = () => {
               <CreateProjectDialog />
             </div>
 
-            {/* Search and Filter */}
+            {/* Search */}
             <div className="flex items-center gap-4">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -92,52 +103,67 @@ const Projects = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredProjects.map((project) => (
-                  <Card key={project.id} className="hover:shadow-md transition-shadow cursor-pointer">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2">
-                          <FolderOpen className="h-5 w-5 text-blue-600" />
-                          <CardTitle className="text-lg">{project.title}</CardTitle>
+                {filteredProjects.map((project) => {
+                  const projectExperiments = getProjectExperiments(project.id);
+                  return (
+                    <Card key={project.id} className="hover:shadow-md transition-shadow">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-2">
+                            <FolderOpen className="h-5 w-5 text-blue-600" />
+                            <CardTitle className="text-lg">{project.title}</CardTitle>
+                          </div>
+                          <Badge className={getStatusColor(project.status)}>
+                            {project.status}
+                          </Badge>
                         </div>
-                        <Badge className={getStatusColor(project.status)}>
-                          {project.status}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-gray-600 mt-2">{project.description}</p>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {/* Progress */}
-                      <div>
-                        <div className="flex justify-between text-sm mb-2">
-                          <span>Progress</span>
-                          <span>{project.progress}%</span>
+                        <p className="text-sm text-gray-600 mt-2">{project.description}</p>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {/* Progress */}
+                        <div>
+                          <div className="flex justify-between text-sm mb-2">
+                            <span>Progress</span>
+                            <span>{project.progress}%</span>
+                          </div>
+                          <Progress value={project.progress} className="h-2" />
                         </div>
-                        <Progress value={project.progress} className="h-2" />
-                      </div>
 
-                      {/* Project Details */}
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-gray-400" />
-                          <span>{project.start_date} - {project.end_date || "Ongoing"}</span>
+                        {/* Project Details */}
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-gray-400" />
+                            <span>{project.start_date} - {project.end_date || "Ongoing"}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <BarChart3 className="h-4 w-4 text-gray-400" />
+                            <span>{projectExperiments.length} experiments</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <BarChart3 className="h-4 w-4 text-gray-400" />
-                          <span>{project.experiments_count} experiments</span>
-                        </div>
-                      </div>
 
-                      {/* Budget and Category */}
-                      <div className="flex justify-between items-center pt-2">
-                        <Badge variant="outline">{project.category}</Badge>
+                        {/* Actions */}
+                        <div className="flex justify-between items-center pt-2">
+                          <Badge variant="outline">{project.category}</Badge>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handleViewExperiments(project.id)}
+                            className="gap-1"
+                          >
+                            <Eye className="h-3 w-3" />
+                            View Experiments
+                          </Button>
+                        </div>
+                        
                         {project.budget && (
-                          <span className="text-sm font-medium text-green-600">{project.budget}</span>
+                          <div className="text-sm font-medium text-green-600 text-center">
+                            Budget: {project.budget}
+                          </div>
                         )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
                 {filteredProjects.length === 0 && !isLoading && (
                   <div className="col-span-full text-center py-12">
                     <FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
