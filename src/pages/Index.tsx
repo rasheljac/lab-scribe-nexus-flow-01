@@ -10,12 +10,63 @@ import Header from "@/components/Header";
 import StatsCard from "@/components/StatsCard";
 import RecentActivity from "@/components/RecentActivity";
 import QuickActions from "@/components/QuickActions";
+import { useProjects } from "@/hooks/useProjects";
+import { useExperiments } from "@/hooks/useExperiments";
+import { useReports } from "@/hooks/useReports";
+import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 
 const Index = () => {
-  const [activeExperiments, setActiveExperiments] = useState(12);
-  const [completedTasks, setCompletedTasks] = useState(8);
-  const [totalProjects, setTotalProjects] = useState(5);
-  const [pendingReports, setPendingReports] = useState(3);
+  const { projects } = useProjects();
+  const { experiments } = useExperiments();
+  const { reports } = useReports();
+  const { events } = useCalendarEvents();
+
+  // Calculate real stats
+  const activeExperiments = experiments.filter(exp => exp.status === 'in_progress').length;
+  const completedExperiments = experiments.filter(exp => exp.status === 'completed').length;
+  const totalProjects = projects.length;
+  const pendingReports = reports.filter(report => report.status === 'draft').length;
+
+  // Get upcoming events
+  const upcomingEvents = [...events]
+    .filter(event => new Date(event.start_time) >= new Date())
+    .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+    .slice(0, 3);
+
+  const getEventColor = (eventType: string) => {
+    switch (eventType) {
+      case "meeting":
+        return "bg-blue-600";
+      case "maintenance":
+        return "bg-orange-600";
+      case "experiment":
+        return "bg-green-600";
+      case "training":
+        return "bg-purple-600";
+      case "booking":
+        return "bg-pink-600";
+      default:
+        return "bg-gray-600";
+    }
+  };
+
+  const formatDateTime = (dateTime: string) => {
+    const date = new Date(dateTime);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const isToday = date.toDateString() === today.toDateString();
+    const isTomorrow = date.toDateString() === tomorrow.toDateString();
+    
+    if (isToday) {
+      return `Today, ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    } else if (isTomorrow) {
+      return `Tomorrow, ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    } else {
+      return `${date.toLocaleDateString()}, ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -49,8 +100,8 @@ const Index = () => {
                 bgColor="bg-blue-50"
               />
               <StatsCard
-                title="Completed Tasks"
-                value={completedTasks}
+                title="Completed Experiments"
+                value={completedExperiments}
                 icon={CheckSquare}
                 color="text-green-600"
                 bgColor="bg-green-50"
@@ -95,27 +146,23 @@ const Index = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Protein Analysis</span>
-                      <Badge variant="outline">75%</Badge>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-blue-600 h-2 rounded-full w-3/4"></div>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Cell Culture Study</span>
-                      <Badge variant="outline">45%</Badge>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-green-600 h-2 rounded-full w-1/2"></div>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">DNA Sequencing</span>
-                      <Badge variant="outline">90%</Badge>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-purple-600 h-2 rounded-full w-9/10"></div>
-                    </div>
+                    {experiments.slice(0, 3).map((experiment) => (
+                      <div key={experiment.id}>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium">{experiment.title}</span>
+                          <Badge variant="outline">{experiment.progress}%</Badge>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full" 
+                            style={{ width: `${experiment.progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    {experiments.length === 0 && (
+                      <p className="text-gray-500 text-sm">No experiments found</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -129,27 +176,20 @@ const Index = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">Lab Meeting</p>
-                        <p className="text-xs text-gray-600">Today, 2:00 PM</p>
+                    {upcomingEvents.map((event) => (
+                      <div key={event.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <div className={`w-2 h-2 rounded-full ${getEventColor(event.event_type)}`} />
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{event.title}</p>
+                          <p className="text-xs text-gray-600">{formatDateTime(event.start_time)}</p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-                      <div className="w-2 h-2 bg-green-600 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">Equipment Maintenance</p>
-                        <p className="text-xs text-gray-600">Tomorrow, 9:00 AM</p>
+                    ))}
+                    {upcomingEvents.length === 0 && (
+                      <div className="text-center py-4 text-gray-500 text-sm">
+                        No upcoming events
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg">
-                      <div className="w-2 h-2 bg-orange-600 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">Inventory Check</p>
-                        <p className="text-xs text-gray-600">Friday, 11:00 AM</p>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

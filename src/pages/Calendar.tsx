@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,8 @@ import {
   ChevronRight,
   Clock,
   MapPin,
-  Users
+  Users,
+  Plus
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
@@ -21,6 +21,8 @@ const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<"month" | "week" | "day">("month");
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [showCreateEvent, setShowCreateEvent] = useState(false);
+  const [newEventType, setNewEventType] = useState<"meeting" | "maintenance" | "experiment" | "training" | "booking">("meeting");
 
   const { events, isLoading } = useCalendarEvents();
 
@@ -111,6 +113,25 @@ const Calendar = () => {
     const start = new Date(startTime);
     const end = new Date(endTime);
     return `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  };
+
+  const handleQuickAction = (actionType: string) => {
+    switch (actionType) {
+      case "schedule_meeting":
+        setNewEventType("meeting");
+        setShowCreateEvent(true);
+        break;
+      case "book_equipment":
+        setNewEventType("booking");
+        setShowCreateEvent(true);
+        break;
+      case "set_reminder":
+        setNewEventType("experiment");
+        setShowCreateEvent(true);
+        break;
+      default:
+        break;
+    }
   };
 
   return (
@@ -281,13 +302,28 @@ const Calendar = () => {
                     <CardTitle>Quick Actions</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <Button className="w-full justify-start gap-2" variant="outline">
+                    <Button 
+                      className="w-full justify-start gap-2" 
+                      variant="outline"
+                      onClick={() => handleQuickAction("schedule_meeting")}
+                    >
+                      <Plus className="h-4 w-4" />
                       Schedule Meeting
                     </Button>
-                    <Button className="w-full justify-start gap-2" variant="outline">
+                    <Button 
+                      className="w-full justify-start gap-2" 
+                      variant="outline"
+                      onClick={() => handleQuickAction("book_equipment")}
+                    >
+                      <Plus className="h-4 w-4" />
                       Book Equipment
                     </Button>
-                    <Button className="w-full justify-start gap-2" variant="outline">
+                    <Button 
+                      className="w-full justify-start gap-2" 
+                      variant="outline"
+                      onClick={() => handleQuickAction("set_reminder")}
+                    >
+                      <Plus className="h-4 w-4" />
                       Set Reminder
                     </Button>
                   </CardContent>
@@ -303,6 +339,14 @@ const Calendar = () => {
               onOpenChange={(open) => {
                 if (!open) setSelectedEvent(null);
               }}
+            />
+          )}
+
+          {showCreateEvent && (
+            <CreateEventDialog 
+              open={showCreateEvent}
+              onOpenChange={setShowCreateEvent}
+              defaultEventType={newEventType}
             />
           )}
         </main>

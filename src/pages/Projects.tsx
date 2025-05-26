@@ -21,6 +21,7 @@ import { Search, Calendar, FolderOpen, BarChart3, Loader2, Eye, Trash2 } from "l
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import CreateProjectDialog from "@/components/CreateProjectDialog";
+import EditProjectDialog from "@/components/EditProjectDialog";
 import { useProjects } from "@/hooks/useProjects";
 import { useExperiments } from "@/hooks/useExperiments";
 import { useToast } from "@/hooks/use-toast";
@@ -204,18 +205,21 @@ const Projects = () => {
                         {/* Actions */}
                         <div className="flex justify-between items-center pt-2">
                           <Badge variant="outline">{project.category}</Badge>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleProjectClick(project.id);
-                            }}
-                            className="gap-1"
-                          >
-                            <Eye className="h-3 w-3" />
-                            View Experiments
-                          </Button>
+                          <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                            <EditProjectDialog project={project} />
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleProjectClick(project.id);
+                              }}
+                              className="gap-1"
+                            >
+                              <Eye className="h-3 w-3" />
+                              View
+                            </Button>
+                          </div>
                         </div>
                         
                         {project.budget && (

@@ -1,22 +1,34 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Download, FileText, Eye, Calendar, User, Loader2 } from "lucide-react";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Search, Download, FileText, Eye, Calendar, User, Loader2, Trash2 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import CreateReportDialog from "@/components/CreateReportDialog";
 import { useReports } from "@/hooks/useReports";
+import { useToast } from "@/hooks/use-toast";
 
 const Reports = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
 
-  const { reports, isLoading, error } = useReports();
+  const { reports, isLoading, error, updateReport, deleteReport } = useReports();
+  const { toast } = useToast();
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -53,6 +65,84 @@ const Reports = () => {
     const matchesStatus = filterStatus === "all" || report.status === filterStatus;
     return matchesSearch && matchesType && matchesStatus;
   });
+
+  const handleViewReport = async (reportId: string) => {
+    try {
+      // Increment downloads count
+      const report = reports.find(r => r.id === reportId);
+      if (report) {
+        await updateReport.mutateAsync({
+          id: reportId,
+          downloads: report.downloads + 1
+        });
+      }
+      
+      // Simulate opening report
+      toast({
+        title: "Report Opened",
+        description: "Report is now being viewed",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to open report",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownloadReport = async (reportId: string, title: string) => {
+    try {
+      // Increment downloads count
+      const report = reports.find(r => r.id === reportId);
+      if (report) {
+        await updateReport.mutateAsync({
+          id: reportId,
+          downloads: report.downloads + 1
+        });
+      }
+
+      // Create a blob for download simulation
+      const content = `Report: ${title}\nGenerated on: ${new Date().toLocaleString()}\n\nThis is a sample report content.`;
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${title}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Download Started",
+        description: "Report download has begun",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to download report",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteReport = async (reportId: string) => {
+    try {
+      await deleteReport.mutateAsync(reportId);
+      toast({
+        title: "Success",
+        description: "Report deleted successfully!",
+      });
+    } catch (error) {
+      console.error("Error deleting report:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete report",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (error) {
     return (
@@ -194,16 +284,42 @@ const Reports = () => {
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                 {filteredReports.map((report) => (
-                  <Card key={report.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                  <Card key={report.id} className="hover:shadow-md transition-shadow">
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-2">
                           <FileText className="h-5 w-5 text-blue-600" />
                           <CardTitle className="text-lg">{report.title}</CardTitle>
                         </div>
-                        <Badge className={getStatusColor(report.status)}>
-                          {report.status}
-                        </Badge>
+                        <div className="flex gap-1 items-center">
+                          <Badge className={getStatusColor(report.status)}>
+                            {report.status}
+                          </Badge>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 p-1 h-6 w-6">
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Report</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete "{report.title}"? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteReport(report.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </div>
                       <p className="text-sm text-gray-600 mt-2">{report.description}</p>
                     </CardHeader>
@@ -237,11 +353,21 @@ const Reports = () => {
 
                       {/* Actions */}
                       <div className="flex gap-2 pt-2">
-                        <Button variant="outline" size="sm" className="flex-1">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => handleViewReport(report.id)}
+                        >
                           <Eye className="h-4 w-4 mr-1" />
                           View
                         </Button>
-                        <Button variant="outline" size="sm" className="flex-1">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => handleDownloadReport(report.id, report.title)}
+                        >
                           <Download className="h-4 w-4 mr-1" />
                           Download
                         </Button>
