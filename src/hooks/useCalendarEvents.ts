@@ -30,6 +30,7 @@ export const useCalendarEvents = () => {
       const { data, error } = await supabase
         .from('calendar_events')
         .select('*')
+        .eq('user_id', user.id)
         .order('start_time', { ascending: true });
 
       if (error) throw error;
@@ -62,6 +63,7 @@ export const useCalendarEvents = () => {
         .from('calendar_events')
         .update(updates)
         .eq('id', id)
+        .eq('user_id', user?.id)
         .select()
         .single();
 
@@ -78,7 +80,8 @@ export const useCalendarEvents = () => {
       const { error } = await supabase
         .from('calendar_events')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user?.id);
 
       if (error) throw error;
     },

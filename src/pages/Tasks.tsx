@@ -10,6 +10,7 @@ import { Plus, Search, Filter, Calendar, User, CheckSquare, Clock, AlertCircle, 
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
+import EditTaskDialog from "@/components/EditTaskDialog";
 import { useTasks } from "@/hooks/useTasks";
 
 const Tasks = () => {
@@ -166,9 +167,7 @@ const Tasks = () => {
                             </div>
                           </div>
                         </div>
-                        <Button variant="outline" size="sm">
-                          Edit
-                        </Button>
+                        <EditTaskDialog task={task} />
                       </div>
                     </CardContent>
                   </Card>

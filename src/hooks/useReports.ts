@@ -27,9 +27,10 @@ export const useReports = () => {
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
       
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('reports')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -42,7 +43,7 @@ export const useReports = () => {
     mutationFn: async (report: Omit<Report, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
       if (!user) throw new Error('User not authenticated');
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('reports')
         .insert([{ ...report, user_id: user.id }])
         .select()
@@ -58,10 +59,11 @@ export const useReports = () => {
 
   const updateReport = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Report> & { id: string }) => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('reports')
         .update(updates)
         .eq('id', id)
+        .eq('user_id', user?.id)
         .select()
         .single();
 
@@ -75,10 +77,11 @@ export const useReports = () => {
 
   const deleteReport = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('reports')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user?.id);
 
       if (error) throw error;
     },
