@@ -27,13 +27,20 @@ export const useCalendarEvents = () => {
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
       
+      console.log('Fetching calendar events for user:', user.id);
+      
       const { data, error } = await supabase
         .from('calendar_events')
         .select('*')
         .eq('user_id', user.id)
         .order('start_time', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching calendar events:', error);
+        throw error;
+      }
+      
+      console.log('Fetched calendar events:', data);
       return data as CalendarEvent[];
     },
     enabled: !!user,
@@ -43,13 +50,20 @@ export const useCalendarEvents = () => {
     mutationFn: async (event: Omit<CalendarEvent, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
       if (!user) throw new Error('User not authenticated');
 
+      console.log('Creating calendar event:', { ...event, user_id: user.id });
+
       const { data, error } = await supabase
         .from('calendar_events')
         .insert([{ ...event, user_id: user.id }])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating calendar event:', error);
+        throw error;
+      }
+      
+      console.log('Created calendar event:', data);
       return data;
     },
     onSuccess: () => {
@@ -59,6 +73,8 @@ export const useCalendarEvents = () => {
 
   const updateEvent = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<CalendarEvent> & { id: string }) => {
+      console.log('Updating calendar event:', id, updates);
+      
       const { data, error } = await supabase
         .from('calendar_events')
         .update(updates)
@@ -67,7 +83,12 @@ export const useCalendarEvents = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating calendar event:', error);
+        throw error;
+      }
+      
+      console.log('Updated calendar event:', data);
       return data;
     },
     onSuccess: () => {
@@ -77,13 +98,20 @@ export const useCalendarEvents = () => {
 
   const deleteEvent = useMutation({
     mutationFn: async (id: string) => {
+      console.log('Deleting calendar event:', id);
+      
       const { error } = await supabase
         .from('calendar_events')
         .delete()
         .eq('id', id)
         .eq('user_id', user?.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting calendar event:', error);
+        throw error;
+      }
+      
+      console.log('Deleted calendar event:', id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });

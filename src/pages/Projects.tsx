@@ -58,10 +58,6 @@ const Projects = () => {
     return matchesSearch;
   });
 
-  const handleViewExperiments = (projectId: string) => {
-    navigate(`/projects/${projectId}/experiments`);
-  };
-
   const handleProjectClick = (projectId: string) => {
     navigate(`/projects/${projectId}/experiments`);
   };
@@ -140,19 +136,16 @@ const Projects = () => {
                 {filteredProjects.map((project) => {
                   const projectExperiments = getProjectExperiments(project.id);
                   return (
-                    <Card key={project.id} className="hover:shadow-md transition-shadow">
-                      <CardHeader className="pb-3">
+                    <Card key={project.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                      <CardHeader className="pb-3" onClick={() => handleProjectClick(project.id)}>
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-2">
                             <FolderOpen className="h-5 w-5 text-blue-600" />
-                            <CardTitle 
-                              className="text-lg cursor-pointer hover:text-blue-600"
-                              onClick={() => handleProjectClick(project.id)}
-                            >
+                            <CardTitle className="text-lg hover:text-blue-600">
                               {project.title}
                             </CardTitle>
                           </div>
-                          <div className="flex gap-1">
+                          <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                             <Badge className={getStatusColor(project.status)}>
                               {project.status}
                             </Badge>
@@ -182,14 +175,11 @@ const Projects = () => {
                             </AlertDialog>
                           </div>
                         </div>
-                        <p 
-                          className="text-sm text-gray-600 mt-2 cursor-pointer"
-                          onClick={() => handleProjectClick(project.id)}
-                        >
+                        <p className="text-sm text-gray-600 mt-2">
                           {project.description}
                         </p>
                       </CardHeader>
-                      <CardContent className="space-y-4">
+                      <CardContent className="space-y-4" onClick={() => handleProjectClick(project.id)}>
                         {/* Progress */}
                         <div>
                           <div className="flex justify-between text-sm mb-2">
@@ -217,7 +207,10 @@ const Projects = () => {
                           <Button 
                             size="sm" 
                             variant="outline" 
-                            onClick={() => handleViewExperiments(project.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleProjectClick(project.id);
+                            }}
                             className="gap-1"
                           >
                             <Eye className="h-3 w-3" />
