@@ -1,26 +1,26 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Plus } from "lucide-react";
-import { useCalendarEvents, CalendarEvent } from "@/hooks/useCalendarEvents";
+import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import { useToast } from "@/hooks/use-toast";
+import { Plus } from "lucide-react";
 
 const CreateEventDialog = () => {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    event_type: "meeting" as CalendarEvent["event_type"],
+    event_type: "meeting" as const,
     start_time: "",
     end_time: "",
     location: "",
     attendees: [] as string[],
-    status: "scheduled" as CalendarEvent["status"],
+    status: "scheduled" as const,
   });
 
   const { createEvent } = useCalendarEvents();
@@ -47,12 +47,12 @@ const CreateEventDialog = () => {
         status: "scheduled",
       });
     } catch (error) {
+      console.error("Error creating event:", error);
       toast({
         title: "Error",
         description: "Failed to create event",
         variant: "destructive",
       });
-      console.error(error);
     }
   };
 
@@ -64,54 +64,50 @@ const CreateEventDialog = () => {
           New Event
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Create New Event</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="event_type">Type</Label>
-              <Select value={formData.event_type} onValueChange={(value) => setFormData({ ...formData, event_type: value as CalendarEvent["event_type"] })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="meeting">Meeting</SelectItem>
-                  <SelectItem value="maintenance">Maintenance</SelectItem>
-                  <SelectItem value="experiment">Experiment</SelectItem>
-                  <SelectItem value="training">Training</SelectItem>
-                  <SelectItem value="booking">Booking</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <Label htmlFor="title">Title</Label>
+            <Input
+              id="title"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              required
+            />
           </div>
-
+          
           <div>
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows={3}
             />
           </div>
 
           <div>
-            <Label htmlFor="location">Location</Label>
-            <Input
-              id="location"
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-            />
+            <Label htmlFor="event_type">Event Type</Label>
+            <Select 
+              value={formData.event_type} 
+              onValueChange={(value: "meeting" | "maintenance" | "experiment" | "training" | "booking") => 
+                setFormData({ ...formData, event_type: value })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="meeting">Meeting</SelectItem>
+                <SelectItem value="maintenance">Maintenance</SelectItem>
+                <SelectItem value="experiment">Experiment</SelectItem>
+                <SelectItem value="training">Training</SelectItem>
+                <SelectItem value="booking">Booking</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -135,6 +131,15 @@ const CreateEventDialog = () => {
                 required
               />
             </div>
+          </div>
+
+          <div>
+            <Label htmlFor="location">Location</Label>
+            <Input
+              id="location"
+              value={formData.location}
+              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+            />
           </div>
 
           <div className="flex justify-end gap-2">

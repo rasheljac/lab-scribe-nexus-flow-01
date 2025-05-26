@@ -5,19 +5,32 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Search, Calendar, FolderOpen, BarChart3, Loader2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Search, Calendar, FolderOpen, BarChart3, Loader2, Eye, Trash2 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import CreateProjectDialog from "@/components/CreateProjectDialog";
 import { useProjects } from "@/hooks/useProjects";
 import { useExperiments } from "@/hooks/useExperiments";
+import { useToast } from "@/hooks/use-toast";
 
 const Projects = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const { projects, isLoading, error } = useProjects();
+  const { projects, isLoading, error, deleteProject } = useProjects();
   const { experiments } = useExperiments();
 
   const getStatusColor = (status: string) => {
@@ -47,6 +60,27 @@ const Projects = () => {
 
   const handleViewExperiments = (projectId: string) => {
     navigate(`/projects/${projectId}/experiments`);
+  };
+
+  const handleProjectClick = (projectId: string) => {
+    navigate(`/projects/${projectId}/experiments`);
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    try {
+      await deleteProject.mutateAsync(projectId);
+      toast({
+        title: "Success",
+        description: "Project deleted successfully!",
+      });
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete project",
+        variant: "destructive",
+      });
+    }
   };
 
   if (error) {
@@ -111,13 +145,49 @@ const Projects = () => {
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-2">
                             <FolderOpen className="h-5 w-5 text-blue-600" />
-                            <CardTitle className="text-lg">{project.title}</CardTitle>
+                            <CardTitle 
+                              className="text-lg cursor-pointer hover:text-blue-600"
+                              onClick={() => handleProjectClick(project.id)}
+                            >
+                              {project.title}
+                            </CardTitle>
                           </div>
-                          <Badge className={getStatusColor(project.status)}>
-                            {project.status}
-                          </Badge>
+                          <div className="flex gap-1">
+                            <Badge className={getStatusColor(project.status)}>
+                              {project.status}
+                            </Badge>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 p-1 h-6 w-6">
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Project</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete "{project.title}"? This action cannot be undone and will also delete all associated experiments.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteProject(project.id)}
+                                    className="bg-red-600 hover:bg-red-700"
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
                         </div>
-                        <p className="text-sm text-gray-600 mt-2">{project.description}</p>
+                        <p 
+                          className="text-sm text-gray-600 mt-2 cursor-pointer"
+                          onClick={() => handleProjectClick(project.id)}
+                        >
+                          {project.description}
+                        </p>
                       </CardHeader>
                       <CardContent className="space-y-4">
                         {/* Progress */}

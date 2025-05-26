@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
   Calendar as CalendarIcon, 
-  Plus, 
   ChevronLeft, 
   ChevronRight,
   Clock,
@@ -14,53 +13,16 @@ import {
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
-
-const events = [
-  {
-    id: 1,
-    title: "Lab Meeting",
-    type: "meeting",
-    time: "14:00 - 15:00",
-    location: "Conference Room A",
-    attendees: 8,
-    date: "2024-01-24",
-    color: "bg-blue-500",
-  },
-  {
-    id: 2,
-    title: "Equipment Maintenance",
-    type: "maintenance",
-    time: "09:00 - 11:00",
-    location: "Lab B",
-    attendees: 2,
-    date: "2024-01-25",
-    color: "bg-orange-500",
-  },
-  {
-    id: 3,
-    title: "Sample Collection",
-    type: "experiment",
-    time: "13:00 - 17:00",
-    location: "Field Site",
-    attendees: 4,
-    date: "2024-01-26",
-    color: "bg-green-500",
-  },
-  {
-    id: 4,
-    title: "Training Session",
-    type: "training",
-    time: "10:00 - 12:00",
-    location: "Training Room",
-    attendees: 12,
-    date: "2024-01-27",
-    color: "bg-purple-500",
-  },
-];
+import CreateEventDialog from "@/components/CreateEventDialog";
+import EventDetailsDialog from "@/components/EventDetailsDialog";
+import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 
 const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<"month" | "week" | "day">("month");
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+
+  const { events, isLoading } = useCalendarEvents();
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("en-US", { 
@@ -92,10 +54,23 @@ const Calendar = () => {
     return days;
   };
 
+  const getFormattedDateForDay = (day: number | null) => {
+    if (!day) return null;
+    const date = new Date(currentDate);
+    date.setDate(day);
+    return date.toISOString().split('T')[0];
+  };
+
   const getEventsForDate = (day: number | null) => {
     if (!day) return [];
-    const dateStr = `2024-01-${day.toString().padStart(2, '0')}`;
-    return events.filter(event => event.date === dateStr);
+    
+    const dateStr = getFormattedDateForDay(day);
+    if (!dateStr) return [];
+
+    return events.filter(event => {
+      const eventDate = new Date(event.start_time).toISOString().split('T')[0];
+      return eventDate === dateStr;
+    });
   };
 
   const navigateMonth = (direction: "prev" | "next") => {
@@ -108,6 +83,34 @@ const Calendar = () => {
       }
       return newDate;
     });
+  };
+
+  const getEventColor = (eventType: string) => {
+    switch (eventType) {
+      case "meeting":
+        return "bg-blue-500";
+      case "maintenance":
+        return "bg-orange-500";
+      case "experiment":
+        return "bg-green-500";
+      case "training":
+        return "bg-purple-500";
+      case "booking":
+        return "bg-pink-500";
+      default:
+        return "bg-gray-500";
+    }
+  };
+
+  const upcomingEvents = [...events]
+    .filter(event => new Date(event.start_time) >= new Date())
+    .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+    .slice(0, 4);
+
+  const formatEventTime = (startTime: string, endTime: string) => {
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    return `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   };
 
   return (
@@ -123,10 +126,7 @@ const Calendar = () => {
                 <h1 className="text-3xl font-bold text-gray-900">Calendar</h1>
                 <p className="text-gray-600 mt-1">Schedule and manage lab activities</p>
               </div>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                New Event
-              </Button>
+              <CreateEventDialog />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -189,7 +189,7 @@ const Calendar = () => {
                             <div
                               key={index}
                               className={`min-h-[100px] p-2 border border-gray-200 ${
-                                day ? "bg-white hover:bg-gray-50 cursor-pointer" : "bg-gray-50"
+                                day ? "bg-white hover:bg-gray-50" : "bg-gray-50"
                               }`}
                             >
                               {day && (
@@ -199,13 +199,20 @@ const Calendar = () => {
                                     {dayEvents.slice(0, 2).map(event => (
                                       <div
                                         key={event.id}
-                                        className={`text-xs p-1 rounded text-white ${event.color}`}
+                                        className={`text-xs p-1 rounded text-white ${getEventColor(event.event_type)} cursor-pointer`}
+                                        onClick={() => setSelectedEvent(event)}
                                       >
                                         {event.title}
                                       </div>
                                     ))}
                                     {dayEvents.length > 2 && (
-                                      <div className="text-xs text-gray-500">
+                                      <div 
+                                        className="text-xs text-gray-500 cursor-pointer hover:underline"
+                                        onClick={() => {
+                                          // TODO: Show all events for the day
+                                          console.log("Show all events for day", day);
+                                        }}
+                                      >
                                         +{dayEvents.length - 2} more
                                       </div>
                                     )}
@@ -229,28 +236,41 @@ const Calendar = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {events.slice(0, 4).map(event => (
-                        <div key={event.id} className="p-3 bg-gray-50 rounded-lg">
+                      {upcomingEvents.map(event => (
+                        <div 
+                          key={event.id} 
+                          className="p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100"
+                          onClick={() => setSelectedEvent(event)}
+                        >
                           <div className="flex items-start gap-3">
-                            <div className={`w-3 h-3 rounded-full ${event.color} mt-1 flex-shrink-0`} />
+                            <div className={`w-3 h-3 rounded-full ${getEventColor(event.event_type)} mt-1 flex-shrink-0`} />
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-sm">{event.title}</p>
                               <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
                                 <Clock className="h-3 w-3" />
-                                <span>{event.time}</span>
+                                <span>{formatEventTime(event.start_time, event.end_time)}</span>
                               </div>
-                              <div className="flex items-center gap-1 text-xs text-gray-500">
-                                <MapPin className="h-3 w-3" />
-                                <span>{event.location}</span>
-                              </div>
-                              <div className="flex items-center gap-1 text-xs text-gray-500">
-                                <Users className="h-3 w-3" />
-                                <span>{event.attendees} attendees</span>
-                              </div>
+                              {event.location && (
+                                <div className="flex items-center gap-1 text-xs text-gray-500">
+                                  <MapPin className="h-3 w-3" />
+                                  <span>{event.location}</span>
+                                </div>
+                              )}
+                              {event.attendees && event.attendees.length > 0 && (
+                                <div className="flex items-center gap-1 text-xs text-gray-500">
+                                  <Users className="h-3 w-3" />
+                                  <span>{event.attendees.length} attendees</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
                       ))}
+                      {upcomingEvents.length === 0 && (
+                        <div className="text-center py-4 text-gray-500 text-sm">
+                          No upcoming events
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -262,15 +282,12 @@ const Calendar = () => {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <Button className="w-full justify-start gap-2" variant="outline">
-                      <Plus className="h-4 w-4" />
                       Schedule Meeting
                     </Button>
                     <Button className="w-full justify-start gap-2" variant="outline">
-                      <CalendarIcon className="h-4 w-4" />
                       Book Equipment
                     </Button>
                     <Button className="w-full justify-start gap-2" variant="outline">
-                      <Clock className="h-4 w-4" />
                       Set Reminder
                     </Button>
                   </CardContent>
@@ -278,6 +295,16 @@ const Calendar = () => {
               </div>
             </div>
           </div>
+
+          {selectedEvent && (
+            <EventDetailsDialog 
+              event={selectedEvent}
+              open={!!selectedEvent}
+              onOpenChange={(open) => {
+                if (!open) setSelectedEvent(null);
+              }}
+            />
+          )}
         </main>
       </div>
     </div>

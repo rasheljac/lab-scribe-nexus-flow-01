@@ -6,6 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { 
   Search, 
   ArrowLeft, 
   Beaker, 
@@ -16,19 +27,22 @@ import {
   CheckCircle,
   AlertCircle,
   Loader2,
-  Plus
+  Plus,
+  Trash2
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import { useExperiments } from "@/hooks/useExperiments";
 import { useProjects } from "@/hooks/useProjects";
+import { useToast } from "@/hooks/use-toast";
 
 const ProjectExperiments = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
+  const { toast } = useToast();
   
-  const { experiments, isLoading, error } = useExperiments();
+  const { experiments, isLoading, error, deleteExperiment } = useExperiments();
   const { projects } = useProjects();
 
   const project = projects.find(p => p.id === projectId);
@@ -68,6 +82,23 @@ const ProjectExperiments = () => {
 
   const handleExperimentClick = (experimentId: string) => {
     navigate(`/experiments/${experimentId}/notes`);
+  };
+
+  const handleDeleteExperiment = async (experimentId: string) => {
+    try {
+      await deleteExperiment.mutateAsync(experimentId);
+      toast({
+        title: "Success",
+        description: "Experiment deleted successfully!",
+      });
+    } catch (error) {
+      console.error("Error deleting experiment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete experiment",
+        variant: "destructive",
+      });
+    }
   };
 
   if (error) {
@@ -139,22 +170,54 @@ const ProjectExperiments = () => {
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                 {filteredExperiments.map((experiment) => (
-                  <Card 
-                    key={experiment.id} 
-                    className="hover:shadow-md transition-shadow cursor-pointer"
-                    onClick={() => handleExperimentClick(experiment.id)}
-                  >
+                  <Card key={experiment.id} className="hover:shadow-md transition-shadow">
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-1">
                           {getStatusIcon(experiment.status)}
-                          <CardTitle className="text-lg">{experiment.title}</CardTitle>
+                          <CardTitle 
+                            className="text-lg cursor-pointer hover:text-blue-600"
+                            onClick={() => handleExperimentClick(experiment.id)}
+                          >
+                            {experiment.title}
+                          </CardTitle>
                         </div>
-                        <Badge className={getStatusColor(experiment.status)}>
-                          {experiment.status.replace('_', ' ')}
-                        </Badge>
+                        <div className="flex gap-1 items-center">
+                          <Badge className={getStatusColor(experiment.status)}>
+                            {experiment.status.replace('_', ' ')}
+                          </Badge>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 p-1 h-6 w-6">
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Experiment</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete "{experiment.title}"? This action cannot be undone and will also delete all associated notes.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteExperiment(experiment.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </div>
-                      <p className="text-sm text-gray-600 mt-2">{experiment.description}</p>
+                      <p 
+                        className="text-sm text-gray-600 mt-2 cursor-pointer"
+                        onClick={() => handleExperimentClick(experiment.id)}
+                      >
+                        {experiment.description}
+                      </p>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       {/* Progress Bar */}

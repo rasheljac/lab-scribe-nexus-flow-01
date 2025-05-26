@@ -6,19 +6,32 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Filter, Calendar, User, CheckSquare, Clock, AlertCircle, Loader2 } from "lucide-react";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Plus, Search, Filter, Calendar, User, CheckSquare, Clock, AlertCircle, Loader2, Trash2 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
 import EditTaskDialog from "@/components/EditTaskDialog";
 import { useTasks } from "@/hooks/useTasks";
+import { useToast } from "@/hooks/use-toast";
 
 const Tasks = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
+  const { toast } = useToast();
 
-  const { tasks, isLoading, error, updateTask } = useTasks();
+  const { tasks, isLoading, error, updateTask, deleteTask } = useTasks();
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -57,6 +70,23 @@ const Tasks = () => {
   const handleTaskStatusChange = (taskId: string, completed: boolean) => {
     const newStatus = completed ? "completed" : "pending";
     updateTask.mutate({ id: taskId, status: newStatus });
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      await deleteTask.mutateAsync(taskId);
+      toast({
+        title: "Success",
+        description: "Task deleted successfully!",
+      });
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete task",
+        variant: "destructive",
+      });
+    }
   };
 
   if (error) {
@@ -167,7 +197,33 @@ const Tasks = () => {
                             </div>
                           </div>
                         </div>
-                        <EditTaskDialog task={task} />
+                        <div className="flex gap-2">
+                          <EditTaskDialog task={task} />
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Task</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete "{task.title}"? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteTask(task.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
