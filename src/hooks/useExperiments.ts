@@ -16,6 +16,7 @@ export interface Experiment {
   protocols: number;
   samples: number;
   category: string;
+  project_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -29,9 +30,10 @@ export const useExperiments = () => {
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
       
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('experiments')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -44,7 +46,7 @@ export const useExperiments = () => {
     mutationFn: async (experiment: Omit<Experiment, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
       if (!user) throw new Error('User not authenticated');
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('experiments')
         .insert([{ ...experiment, user_id: user.id }])
         .select()
@@ -60,10 +62,11 @@ export const useExperiments = () => {
 
   const updateExperiment = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Experiment> & { id: string }) => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('experiments')
         .update(updates)
         .eq('id', id)
+        .eq('user_id', user?.id)
         .select()
         .single();
 
@@ -77,10 +80,11 @@ export const useExperiments = () => {
 
   const deleteExperiment = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('experiments')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user?.id);
 
       if (error) throw error;
     },

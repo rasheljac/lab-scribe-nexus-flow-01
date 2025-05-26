@@ -9,6 +9,130 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      calendar_events: {
+        Row: {
+          attendees: string[] | null
+          created_at: string
+          description: string | null
+          end_time: string
+          event_type: string
+          id: string
+          location: string | null
+          start_time: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attendees?: string[] | null
+          created_at?: string
+          description?: string | null
+          end_time: string
+          event_type?: string
+          id?: string
+          location?: string | null
+          start_time: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attendees?: string[] | null
+          created_at?: string
+          description?: string | null
+          end_time?: string
+          event_type?: string
+          id?: string
+          location?: string | null
+          start_time?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      experiment_attachments: {
+        Row: {
+          created_at: string
+          experiment_id: string
+          file_path: string
+          file_size: number | null
+          file_type: string
+          filename: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          experiment_id: string
+          file_path: string
+          file_size?: number | null
+          file_type: string
+          filename: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          experiment_id?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string
+          filename?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "experiment_attachments_experiment_id_fkey"
+            columns: ["experiment_id"]
+            isOneToOne: false
+            referencedRelation: "experiments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      experiment_notes: {
+        Row: {
+          content: string | null
+          created_at: string
+          experiment_id: string
+          id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          experiment_id: string
+          id?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          experiment_id?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "experiment_notes_experiment_id_fkey"
+            columns: ["experiment_id"]
+            isOneToOne: false
+            referencedRelation: "experiments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       experiments: {
         Row: {
           category: string
@@ -17,6 +141,7 @@ export type Database = {
           end_date: string | null
           id: string
           progress: number
+          project_id: string | null
           protocols: number
           researcher: string
           samples: number
@@ -33,6 +158,7 @@ export type Database = {
           end_date?: string | null
           id?: string
           progress?: number
+          project_id?: string | null
           protocols?: number
           researcher: string
           samples?: number
@@ -49,6 +175,7 @@ export type Database = {
           end_date?: string | null
           id?: string
           progress?: number
+          project_id?: string | null
           protocols?: number
           researcher?: string
           samples?: number
@@ -58,7 +185,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "experiments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       projects: {
         Row: {

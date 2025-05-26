@@ -28,9 +28,10 @@ export const useProjects = () => {
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
       
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('projects')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -43,7 +44,7 @@ export const useProjects = () => {
     mutationFn: async (project: Omit<Project, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
       if (!user) throw new Error('User not authenticated');
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('projects')
         .insert([{ ...project, user_id: user.id }])
         .select()
@@ -59,10 +60,11 @@ export const useProjects = () => {
 
   const updateProject = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Project> & { id: string }) => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('projects')
         .update(updates)
         .eq('id', id)
+        .eq('user_id', user?.id)
         .select()
         .single();
 
@@ -76,10 +78,11 @@ export const useProjects = () => {
 
   const deleteProject = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('projects')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user?.id);
 
       if (error) throw error;
     },
