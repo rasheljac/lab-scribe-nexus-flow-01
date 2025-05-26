@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +17,7 @@ import {
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
+import EditNoteDialog from "@/components/EditNoteDialog";
 import { useExperiments } from "@/hooks/useExperiments";
 import { useExperimentNotes } from "@/hooks/useExperimentNotes";
 import { useToast } from "@/hooks/use-toast";
@@ -28,11 +28,10 @@ const ExperimentNotes = () => {
   const { toast } = useToast();
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingNote, setEditingNote] = useState<any>(null);
   const [newNote, setNewNote] = useState({ title: "", content: "" });
 
   const { experiments } = useExperiments();
-  const { notes, isLoading, createNote, updateNote, deleteNote } = useExperimentNotes(experimentId || "");
+  const { notes, isLoading, createNote, deleteNote } = useExperimentNotes(experimentId || "");
 
   const experiment = experiments.find(e => e.id === experimentId);
 
@@ -57,31 +56,6 @@ const ExperimentNotes = () => {
       toast({
         title: "Error",
         description: "Failed to create note",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleUpdateNote = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingNote) return;
-
-    try {
-      await updateNote.mutateAsync({
-        id: editingNote.id,
-        title: editingNote.title,
-        content: editingNote.content,
-      });
-      setEditingNote(null);
-      toast({
-        title: "Success",
-        description: "Note updated successfully!",
-      });
-    } catch (error) {
-      console.error("Error updating note:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update note",
         variant: "destructive",
       });
     }
@@ -191,21 +165,35 @@ const ExperimentNotes = () => {
                           <CardTitle className="text-lg">{note.title}</CardTitle>
                         </div>
                         <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setEditingNote(note)}
-                          >
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDeleteNote(note.id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                          <EditNoteDialog note={note} experimentId={experimentId || ""} />
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Note</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete "{note.title}"? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteNote(note.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -233,45 +221,6 @@ const ExperimentNotes = () => {
                 )}
               </div>
             )}
-
-            {/* Edit Note Dialog */}
-            <Dialog open={!!editingNote} onOpenChange={() => setEditingNote(null)}>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Edit Note</DialogTitle>
-                </DialogHeader>
-                {editingNote && (
-                  <form onSubmit={handleUpdateNote} className="space-y-4">
-                    <div>
-                      <Label htmlFor="edit-title">Title</Label>
-                      <Input
-                        id="edit-title"
-                        value={editingNote.title}
-                        onChange={(e) => setEditingNote({ ...editingNote, title: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="edit-content">Content</Label>
-                      <Textarea
-                        id="edit-content"
-                        value={editingNote.content}
-                        onChange={(e) => setEditingNote({ ...editingNote, content: e.target.value })}
-                        rows={6}
-                      />
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <Button type="button" variant="outline" onClick={() => setEditingNote(null)}>
-                        Cancel
-                      </Button>
-                      <Button type="submit" disabled={updateNote.isPending}>
-                        {updateNote.isPending ? "Updating..." : "Update Note"}
-                      </Button>
-                    </div>
-                  </form>
-                )}
-              </DialogContent>
-            </Dialog>
           </div>
         </main>
       </div>

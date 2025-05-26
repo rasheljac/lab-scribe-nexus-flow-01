@@ -8,7 +8,7 @@ import { CalendarDays, Beaker, FolderOpen, CheckSquare, BarChart3, FileText, Use
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import StatsCard from "@/components/StatsCard";
-import RecentActivity from "@/components/RecentActivity";
+import TaskList from "@/components/TaskList";
 import QuickActions from "@/components/QuickActions";
 import { useProjects } from "@/hooks/useProjects";
 import { useExperiments } from "@/hooks/useExperiments";
@@ -124,9 +124,9 @@ const Index = () => {
 
             {/* Main Content */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Recent Activity */}
+              {/* Task List */}
               <div className="lg:col-span-2">
-                <RecentActivity />
+                <TaskList />
               </div>
 
               {/* Quick Actions */}

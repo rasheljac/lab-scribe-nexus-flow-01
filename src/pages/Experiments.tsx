@@ -32,6 +32,7 @@ import {
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import CreateExperimentDialog from "@/components/CreateExperimentDialog";
+import EditExperimentDialog from "@/components/EditExperimentDialog";
 import { useExperiments } from "@/hooks/useExperiments";
 import { useToast } from "@/hooks/use-toast";
 
@@ -193,6 +194,7 @@ const Experiments = () => {
                           <Badge className={getStatusColor(experiment.status)}>
                             {experiment.status.replace('_', ' ')}
                           </Badge>
+                          <EditExperimentDialog experiment={experiment} />
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 p-1 h-6 w-6">

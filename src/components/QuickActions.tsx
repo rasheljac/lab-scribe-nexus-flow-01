@@ -1,79 +1,96 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, Calendar, Users, BarChart3, Package } from "lucide-react";
-
-const quickActions = [
-  {
-    icon: Plus,
-    label: "New Experiment",
-    description: "Start a new laboratory experiment",
-    color: "text-blue-600",
-    bgColor: "bg-blue-50",
-  },
-  {
-    icon: FileText,
-    label: "Create Report",
-    description: "Generate a new lab report",
-    color: "text-green-600",
-    bgColor: "bg-green-50",
-  },
-  {
-    icon: Calendar,
-    label: "Schedule Meeting",
-    description: "Book time with team members",
-    color: "text-purple-600",
-    bgColor: "bg-purple-50",
-  },
-  {
-    icon: Users,
-    label: "Invite User",
-    description: "Add new team member",
-    color: "text-orange-600",
-    bgColor: "bg-orange-50",
-  },
-  {
-    icon: BarChart3,
-    label: "View Analytics",
-    description: "Check lab performance metrics",
-    color: "text-pink-600",
-    bgColor: "bg-pink-50",
-  },
-  {
-    icon: Package,
-    label: "Check Inventory",
-    description: "Review lab supplies and equipment",
-    color: "text-indigo-600",
-    bgColor: "bg-indigo-50",
-  },
-];
+import { Plus, Calendar, FileText, Beaker, CheckSquare, Users } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import CreateEventDialog from "@/components/CreateEventDialog";
+import { useState } from "react";
 
 const QuickActions = () => {
+  const navigate = useNavigate();
+  const [createEventOpen, setCreateEventOpen] = useState(false);
+
+  const actions = [
+    {
+      title: "New Experiment",
+      description: "Start a new research experiment",
+      icon: Beaker,
+      action: () => navigate("/experiments"),
+      color: "bg-blue-50 text-blue-600 hover:bg-blue-100"
+    },
+    {
+      title: "Create Project",
+      description: "Start a new research project",
+      icon: Plus,
+      action: () => navigate("/projects"),
+      color: "bg-green-50 text-green-600 hover:bg-green-100"
+    },
+    {
+      title: "Schedule Event",
+      description: "Add a calendar event",
+      icon: Calendar,
+      action: () => setCreateEventOpen(true),
+      color: "bg-purple-50 text-purple-600 hover:bg-purple-100"
+    },
+    {
+      title: "Add Task",
+      description: "Create a new task",
+      icon: CheckSquare,
+      action: () => navigate("/tasks"),
+      color: "bg-orange-50 text-orange-600 hover:bg-orange-100"
+    },
+    {
+      title: "Generate Report",
+      description: "Create a new report",
+      icon: FileText,
+      action: () => navigate("/reports"),
+      color: "bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
+    },
+    {
+      title: "Manage Team",
+      description: "Add team members",
+      icon: Users,
+      action: () => navigate("/team"),
+      color: "bg-pink-50 text-pink-600 hover:bg-pink-100"
+    }
+  ];
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Quick Actions</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 gap-3">
-          {quickActions.map((action, index) => (
-            <Button
-              key={index}
-              variant="ghost"
-              className="h-auto p-4 justify-start gap-3 border border-gray-200 hover:border-gray-300"
-            >
-              <div className={`${action.bgColor} p-2 rounded-lg`}>
-                <action.icon className={`h-4 w-4 ${action.color}`} />
-              </div>
-              <div className="text-left">
-                <p className="font-medium text-sm">{action.label}</p>
-                <p className="text-xs text-gray-500">{action.description}</p>
-              </div>
-            </Button>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5" />
+            Quick Actions
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-3">
+            {actions.map((action, index) => (
+              <Button
+                key={index}
+                variant="ghost"
+                onClick={action.action}
+                className={`h-auto p-4 justify-start text-left ${action.color}`}
+              >
+                <div className="flex items-center gap-3 w-full">
+                  <action.icon className="h-5 w-5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">{action.title}</div>
+                    <div className="text-xs opacity-70">{action.description}</div>
+                  </div>
+                </div>
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <CreateEventDialog 
+        open={createEventOpen} 
+        onOpenChange={setCreateEventOpen}
+      />
+    </>
   );
 };
 
