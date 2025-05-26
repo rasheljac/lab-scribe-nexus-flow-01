@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
 import { useExperiments, Experiment } from "@/hooks/useExperiments";
+import { useProjects } from "@/hooks/useProjects";
 import { useToast } from "@/hooks/use-toast";
 
 const CreateExperimentDialog = () => {
@@ -23,9 +24,11 @@ const CreateExperimentDialog = () => {
     protocols: 0,
     samples: 0,
     category: "",
+    project_id: null as string | null,
   });
 
   const { createExperiment } = useExperiments();
+  const { projects } = useProjects();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,6 +52,7 @@ const CreateExperimentDialog = () => {
         protocols: 0,
         samples: 0,
         category: "",
+        project_id: null,
       });
     } catch (error) {
       toast({
@@ -105,6 +109,22 @@ const CreateExperimentDialog = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
+              <Label htmlFor="project">Project (Optional)</Label>
+              <Select value={formData.project_id || ""} onValueChange={(value) => setFormData({ ...formData, project_id: value || null })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select project" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No Project</SelectItem>
+                  {projects.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label htmlFor="category">Category</Label>
               <Input
                 id="category"
@@ -113,6 +133,9 @@ const CreateExperimentDialog = () => {
                 required
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="status">Status</Label>
               <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value as Experiment["status"] })}>
