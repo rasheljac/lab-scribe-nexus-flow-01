@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import { useToast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
+import RichTextEditor from "@/components/RichTextEditor";
 
 type EventType = "meeting" | "maintenance" | "experiment" | "training" | "booking";
 type EventStatus = "scheduled" | "cancelled" | "completed";
@@ -88,7 +88,7 @@ const CreateEventDialog = ({ open: controlledOpen, onOpenChange, defaultEventTyp
   };
 
   const dialogContent = (
-    <DialogContent className="max-w-md">
+    <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle>Create New Event</DialogTitle>
       </DialogHeader>
@@ -105,11 +105,11 @@ const CreateEventDialog = ({ open: controlledOpen, onOpenChange, defaultEventTyp
         
         <div>
           <Label htmlFor="description">Description</Label>
-          <Textarea
-            id="description"
+          <RichTextEditor
             value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            rows={3}
+            onChange={(value) => setFormData({ ...formData, description: value })}
+            placeholder="Enter event description..."
+            className="mt-2"
           />
         </div>
 

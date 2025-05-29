@@ -183,7 +183,10 @@ const Tasks = () => {
                                 {task.priority}
                               </Badge>
                             </div>
-                            <p className="text-gray-600 mb-3">{task.description}</p>
+                            <div 
+                              className="text-gray-600 mb-3 prose prose-sm max-w-none"
+                              dangerouslySetInnerHTML={{ __html: task.description || 'No description' }}
+                            />
                             <div className="flex items-center gap-4 text-sm text-gray-500">
                               <div className="flex items-center gap-1">
                                 <User className="h-4 w-4" />

@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   AlertDialog,
@@ -20,6 +19,7 @@ import {
 import { useCalendarEvents, CalendarEvent } from "@/hooks/useCalendarEvents";
 import { useToast } from "@/hooks/use-toast";
 import { Edit, Trash2, Calendar, MapPin, Clock, Users } from "lucide-react";
+import RichTextEditor from "@/components/RichTextEditor";
 
 interface EventDetailsDialogProps {
   event: CalendarEvent;
@@ -91,7 +91,7 @@ const EventDetailsDialog = ({ event, open, onOpenChange }: EventDetailsDialogPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             {isEditing ? "Edit Event" : "Event Details"}
@@ -147,11 +147,11 @@ const EventDetailsDialog = ({ event, open, onOpenChange }: EventDetailsDialogPro
             
             <div>
               <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
+              <RichTextEditor
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={3}
+                onChange={(value) => setFormData({ ...formData, description: value })}
+                placeholder="Enter event description..."
+                className="mt-2"
               />
             </div>
 
@@ -246,7 +246,10 @@ const EventDetailsDialog = ({ event, open, onOpenChange }: EventDetailsDialogPro
             {event.description && (
               <div>
                 <Label>Description</Label>
-                <p className="text-sm mt-1">{event.description}</p>
+                <div 
+                  className="text-sm mt-1 prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ __html: event.description }}
+                />
               </div>
             )}
 
