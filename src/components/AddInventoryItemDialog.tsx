@@ -1,32 +1,15 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-interface InventoryItem {
-  id: number;
-  name: string;
-  category: string;
-  supplier: string;
-  currentStock: number;
-  minStock: number;
-  maxStock: number;
-  unit: string;
-  location: string;
-  expiryDate: string;
-  status: string;
-  lastOrdered: string;
-  cost: string;
-}
+import { InventoryItem } from "@/hooks/useInventoryItems";
 
 interface AddInventoryItemDialogProps {
-  onAddItem: (item: Omit<InventoryItem, 'id'>) => void;
+  onAddItem: (item: Omit<InventoryItem, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => Promise<void>;
 }
 
 const AddInventoryItemDialog = ({ onAddItem }: AddInventoryItemDialogProps) => {
@@ -36,16 +19,16 @@ const AddInventoryItemDialog = ({ onAddItem }: AddInventoryItemDialogProps) => {
     name: "",
     category: "",
     supplier: "",
-    currentStock: 0,
-    minStock: 0,
-    maxStock: 0,
+    current_stock: 0,
+    min_stock: 0,
+    max_stock: 0,
     unit: "",
     location: "",
-    expiryDate: "",
+    expiry_date: "",
     cost: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name || !formData.category || !formData.supplier) {
@@ -57,33 +40,41 @@ const AddInventoryItemDialog = ({ onAddItem }: AddInventoryItemDialogProps) => {
       return;
     }
 
-    const status = formData.currentStock === 0 ? "out_of_stock" : 
-                   formData.currentStock <= formData.minStock ? "low_stock" : "in_stock";
+    const status = formData.current_stock === 0 ? "out_of_stock" : 
+                   formData.current_stock <= formData.min_stock ? "low_stock" : "in_stock";
 
-    onAddItem({
-      ...formData,
-      status,
-      lastOrdered: new Date().toISOString().split('T')[0],
-    });
+    try {
+      await onAddItem({
+        ...formData,
+        status,
+        last_ordered: new Date().toISOString().split('T')[0],
+      });
 
-    setFormData({
-      name: "",
-      category: "",
-      supplier: "",
-      currentStock: 0,
-      minStock: 0,
-      maxStock: 0,
-      unit: "",
-      location: "",
-      expiryDate: "",
-      cost: "",
-    });
+      setFormData({
+        name: "",
+        category: "",
+        supplier: "",
+        current_stock: 0,
+        min_stock: 0,
+        max_stock: 0,
+        unit: "",
+        location: "",
+        expiry_date: "",
+        cost: "",
+      });
 
-    setOpen(false);
-    toast({
-      title: "Success",
-      description: "Item added to inventory",
-    });
+      setOpen(false);
+      toast({
+        title: "Success",
+        description: "Item added to inventory",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add item",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -156,32 +147,32 @@ const AddInventoryItemDialog = ({ onAddItem }: AddInventoryItemDialogProps) => {
 
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="currentStock">Current Stock</Label>
+              <Label htmlFor="current_stock">Current Stock</Label>
               <Input
-                id="currentStock"
+                id="current_stock"
                 type="number"
-                value={formData.currentStock}
-                onChange={(e) => setFormData(prev => ({ ...prev, currentStock: parseInt(e.target.value) || 0 }))}
+                value={formData.current_stock}
+                onChange={(e) => setFormData(prev => ({ ...prev, current_stock: parseInt(e.target.value) || 0 }))}
                 min="0"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="minStock">Min Stock</Label>
+              <Label htmlFor="min_stock">Min Stock</Label>
               <Input
-                id="minStock"
+                id="min_stock"
                 type="number"
-                value={formData.minStock}
-                onChange={(e) => setFormData(prev => ({ ...prev, minStock: parseInt(e.target.value) || 0 }))}
+                value={formData.min_stock}
+                onChange={(e) => setFormData(prev => ({ ...prev, min_stock: parseInt(e.target.value) || 0 }))}
                 min="0"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="maxStock">Max Stock</Label>
+              <Label htmlFor="max_stock">Max Stock</Label>
               <Input
-                id="maxStock"
+                id="max_stock"
                 type="number"
-                value={formData.maxStock}
-                onChange={(e) => setFormData(prev => ({ ...prev, maxStock: parseInt(e.target.value) || 0 }))}
+                value={formData.max_stock}
+                onChange={(e) => setFormData(prev => ({ ...prev, max_stock: parseInt(e.target.value) || 0 }))}
                 min="0"
               />
             </div>
@@ -208,12 +199,12 @@ const AddInventoryItemDialog = ({ onAddItem }: AddInventoryItemDialogProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="expiryDate">Expiry Date</Label>
+            <Label htmlFor="expiry_date">Expiry Date</Label>
             <Input
-              id="expiryDate"
+              id="expiry_date"
               type="date"
-              value={formData.expiryDate}
-              onChange={(e) => setFormData(prev => ({ ...prev, expiryDate: e.target.value }))}
+              value={formData.expiry_date}
+              onChange={(e) => setFormData(prev => ({ ...prev, expiry_date: e.target.value }))}
             />
           </div>
 

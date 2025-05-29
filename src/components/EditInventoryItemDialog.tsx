@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -6,28 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-
-interface InventoryItem {
-  id: number;
-  name: string;
-  category: string;
-  supplier: string;
-  currentStock: number;
-  minStock: number;
-  maxStock: number;
-  unit: string;
-  location: string;
-  expiryDate: string;
-  status: string;
-  lastOrdered: string;
-  cost: string;
-}
+import { InventoryItem } from "@/hooks/useInventoryItems";
 
 interface EditInventoryItemDialogProps {
   item: InventoryItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpdateItem: (id: number, updatedItem: Partial<InventoryItem>) => void;
+  onUpdateItem: (id: string, updatedItem: Partial<InventoryItem>) => Promise<void>;
 }
 
 const EditInventoryItemDialog = ({ item, open, onOpenChange, onUpdateItem }: EditInventoryItemDialogProps) => {
@@ -36,12 +20,12 @@ const EditInventoryItemDialog = ({ item, open, onOpenChange, onUpdateItem }: Edi
     name: "",
     category: "",
     supplier: "",
-    currentStock: 0,
-    minStock: 0,
-    maxStock: 0,
+    current_stock: 0,
+    min_stock: 0,
+    max_stock: 0,
     unit: "",
     location: "",
-    expiryDate: "",
+    expiry_date: "",
     cost: "",
   });
 
@@ -51,18 +35,18 @@ const EditInventoryItemDialog = ({ item, open, onOpenChange, onUpdateItem }: Edi
         name: item.name,
         category: item.category,
         supplier: item.supplier,
-        currentStock: item.currentStock,
-        minStock: item.minStock,
-        maxStock: item.maxStock,
+        current_stock: item.current_stock,
+        min_stock: item.min_stock,
+        max_stock: item.max_stock,
         unit: item.unit,
         location: item.location,
-        expiryDate: item.expiryDate,
+        expiry_date: item.expiry_date,
         cost: item.cost,
       });
     }
   }, [item]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!item) return;
@@ -76,19 +60,27 @@ const EditInventoryItemDialog = ({ item, open, onOpenChange, onUpdateItem }: Edi
       return;
     }
 
-    const status = formData.currentStock === 0 ? "out_of_stock" : 
-                   formData.currentStock <= formData.minStock ? "low_stock" : "in_stock";
+    const status = formData.current_stock === 0 ? "out_of_stock" : 
+                   formData.current_stock <= formData.min_stock ? "low_stock" : "in_stock";
 
-    onUpdateItem(item.id, {
-      ...formData,
-      status,
-    });
+    try {
+      await onUpdateItem(item.id, {
+        ...formData,
+        status,
+      });
 
-    onOpenChange(false);
-    toast({
-      title: "Success",
-      description: "Item updated successfully",
-    });
+      onOpenChange(false);
+      toast({
+        title: "Success",
+        description: "Item updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update item",
+        variant: "destructive",
+      });
+    }
   };
 
   if (!item) return null;
@@ -157,32 +149,32 @@ const EditInventoryItemDialog = ({ item, open, onOpenChange, onUpdateItem }: Edi
 
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="currentStock">Current Stock</Label>
+              <Label htmlFor="current_stock">Current Stock</Label>
               <Input
-                id="currentStock"
+                id="current_stock"
                 type="number"
-                value={formData.currentStock}
-                onChange={(e) => setFormData(prev => ({ ...prev, currentStock: parseInt(e.target.value) || 0 }))}
+                value={formData.current_stock}
+                onChange={(e) => setFormData(prev => ({ ...prev, current_stock: parseInt(e.target.value) || 0 }))}
                 min="0"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="minStock">Min Stock</Label>
+              <Label htmlFor="min_stock">Min Stock</Label>
               <Input
-                id="minStock"
+                id="min_stock"
                 type="number"
-                value={formData.minStock}
-                onChange={(e) => setFormData(prev => ({ ...prev, minStock: parseInt(e.target.value) || 0 }))}
+                value={formData.min_stock}
+                onChange={(e) => setFormData(prev => ({ ...prev, min_stock: parseInt(e.target.value) || 0 }))}
                 min="0"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="maxStock">Max Stock</Label>
+              <Label htmlFor="max_stock">Max Stock</Label>
               <Input
-                id="maxStock"
+                id="max_stock"
                 type="number"
-                value={formData.maxStock}
-                onChange={(e) => setFormData(prev => ({ ...prev, maxStock: parseInt(e.target.value) || 0 }))}
+                value={formData.max_stock}
+                onChange={(e) => setFormData(prev => ({ ...prev, max_stock: parseInt(e.target.value) || 0 }))}
                 min="0"
               />
             </div>
@@ -209,12 +201,12 @@ const EditInventoryItemDialog = ({ item, open, onOpenChange, onUpdateItem }: Edi
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="expiryDate">Expiry Date</Label>
+            <Label htmlFor="expiry_date">Expiry Date</Label>
             <Input
-              id="expiryDate"
+              id="expiry_date"
               type="date"
-              value={formData.expiryDate}
-              onChange={(e) => setFormData(prev => ({ ...prev, expiryDate: e.target.value }))}
+              value={formData.expiry_date}
+              onChange={(e) => setFormData(prev => ({ ...prev, expiry_date: e.target.value }))}
             />
           </div>
 

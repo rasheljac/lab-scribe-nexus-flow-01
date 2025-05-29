@@ -5,94 +5,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, AlertTriangle, CheckCircle, Clock, Package, Edit, ShoppingCart } from "lucide-react";
+import { Plus, Search, AlertTriangle, CheckCircle, Clock, Package, Edit, ShoppingCart, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import AddInventoryItemDialog from "@/components/AddInventoryItemDialog";
 import EditInventoryItemDialog from "@/components/EditInventoryItemDialog";
 import { useToast } from "@/hooks/use-toast";
-
-interface InventoryItem {
-  id: number;
-  name: string;
-  category: string;
-  supplier: string;
-  currentStock: number;
-  minStock: number;
-  maxStock: number;
-  unit: string;
-  location: string;
-  expiryDate: string;
-  status: string;
-  lastOrdered: string;
-  cost: string;
-}
-
-const initialInventory: InventoryItem[] = [
-  {
-    id: 1,
-    name: "Pipette Tips (10μL)",
-    category: "Consumables",
-    supplier: "Fisher Scientific",
-    currentStock: 250,
-    minStock: 100,
-    maxStock: 500,
-    unit: "box",
-    location: "Storage Room A, Shelf 2",
-    expiryDate: "2025-06-30",
-    status: "in_stock",
-    lastOrdered: "2024-01-15",
-    cost: "$45.99",
-  },
-  {
-    id: 2,
-    name: "Sodium Chloride (NaCl)",
-    category: "Chemicals",
-    supplier: "Sigma-Aldrich",
-    currentStock: 15,
-    minStock: 20,
-    maxStock: 50,
-    unit: "kg",
-    location: "Chemical Storage, Cabinet B",
-    expiryDate: "2026-12-31",
-    status: "low_stock",
-    lastOrdered: "2023-11-20",
-    cost: "$29.99",
-  },
-  {
-    id: 3,
-    name: "Microscope Slides",
-    category: "Consumables",
-    supplier: "VWR",
-    currentStock: 0,
-    minStock: 50,
-    maxStock: 200,
-    unit: "pack",
-    location: "Storage Room A, Shelf 1",
-    expiryDate: "N/A",
-    status: "out_of_stock",
-    lastOrdered: "2023-12-10",
-    cost: "$12.50",
-  },
-  {
-    id: 4,
-    name: "Centrifuge Tubes (15mL)",
-    category: "Consumables",
-    supplier: "Eppendorf",
-    currentStock: 180,
-    minStock: 100,
-    maxStock: 300,
-    unit: "pack",
-    location: "Storage Room B, Shelf 3",
-    expiryDate: "N/A",
-    status: "in_stock",
-    lastOrdered: "2024-01-05",
-    cost: "$67.00",
-  },
-];
+import { useInventoryItems, InventoryItem } from "@/hooks/useInventoryItems";
 
 const Inventory = () => {
-  const [inventory, setInventory] = useState<InventoryItem[]>(initialInventory);
+  const { items, loading, addItem, updateItem, deleteItem } = useInventoryItems();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -130,20 +63,21 @@ const Inventory = () => {
     }
   };
 
-  const handleAddItem = (newItem: Omit<InventoryItem, 'id'>) => {
-    const id = Math.max(...inventory.map(item => item.id)) + 1;
-    setInventory(prev => [...prev, { ...newItem, id }]);
+  const handleAddItem = async (newItem: Omit<InventoryItem, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+    await addItem(newItem);
   };
 
-  const handleUpdateItem = (id: number, updatedItem: Partial<InventoryItem>) => {
-    setInventory(prev => prev.map(item => 
-      item.id === id ? { ...item, ...updatedItem } : item
-    ));
+  const handleUpdateItem = async (id: string, updatedItem: Partial<InventoryItem>) => {
+    await updateItem(id, updatedItem);
   };
 
   const handleEditItem = (item: InventoryItem) => {
     setEditingItem(item);
     setEditDialogOpen(true);
+  };
+
+  const handleDeleteItem = async (item: InventoryItem) => {
+    await deleteItem(item.id);
   };
 
   const handleOrderItem = (item: InventoryItem) => {
@@ -153,7 +87,7 @@ const Inventory = () => {
     });
   };
 
-  const filteredInventory = inventory.filter(item => {
+  const filteredInventory = items.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.supplier.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = filterCategory === "all" || item.category === filterCategory;
@@ -161,7 +95,23 @@ const Inventory = () => {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  const lowStockItems = inventory.filter(item => item.status === "low_stock" || item.status === "out_of_stock");
+  const lowStockItems = items.filter(item => item.status === "low_stock" || item.status === "out_of_stock");
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex">
+        <Sidebar />
+        <div className="flex-1 flex flex-col">
+          <Header />
+          <main className="flex-1 p-6 overflow-auto">
+            <div className="max-w-7xl mx-auto">
+              <div className="text-center">Loading inventory...</div>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -198,7 +148,7 @@ const Inventory = () => {
                     <div>
                       <p className="text-sm font-medium text-gray-600">In Stock</p>
                       <p className="text-xl font-bold">
-                        {inventory.filter(item => item.status === "in_stock").length}
+                        {items.filter(item => item.status === "in_stock").length}
                       </p>
                     </div>
                   </div>
@@ -213,7 +163,7 @@ const Inventory = () => {
                     <div>
                       <p className="text-sm font-medium text-gray-600">Low Stock</p>
                       <p className="text-xl font-bold">
-                        {inventory.filter(item => item.status === "low_stock").length}
+                        {items.filter(item => item.status === "low_stock").length}
                       </p>
                     </div>
                   </div>
@@ -228,7 +178,7 @@ const Inventory = () => {
                     <div>
                       <p className="text-sm font-medium text-gray-600">Out of Stock</p>
                       <p className="text-xl font-bold">
-                        {inventory.filter(item => item.status === "out_of_stock").length}
+                        {items.filter(item => item.status === "out_of_stock").length}
                       </p>
                     </div>
                   </div>
@@ -242,7 +192,7 @@ const Inventory = () => {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-600">Total Items</p>
-                      <p className="text-xl font-bold">{inventory.length}</p>
+                      <p className="text-xl font-bold">{items.length}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -269,6 +219,7 @@ const Inventory = () => {
                   <SelectItem value="Consumables">Consumables</SelectItem>
                   <SelectItem value="Chemicals">Chemicals</SelectItem>
                   <SelectItem value="Equipment">Equipment</SelectItem>
+                  <SelectItem value="Glassware">Glassware</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -306,8 +257,8 @@ const Inventory = () => {
                             <Badge variant="outline">{item.category}</Badge>
                           </div>
                           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600">
-                            <span>Stock: {item.currentStock} {item.unit}</span>
-                            <span>Min: {item.minStock} {item.unit}</span>
+                            <span>Stock: {item.current_stock} {item.unit}</span>
+                            <span>Min: {item.min_stock} {item.unit}</span>
                             <span>Location: {item.location}</span>
                             <span>Supplier: {item.supplier}</span>
                           </div>
@@ -321,6 +272,27 @@ const Inventory = () => {
                         <Button variant="outline" size="sm" onClick={() => handleOrderItem(item)}>
                           <ShoppingCart className="h-4 w-4" />
                         </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <Trash2 className="h-4 w-4 text-red-600" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Inventory Item</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete "{item.name}"? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteItem(item)}>
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
                   ))}

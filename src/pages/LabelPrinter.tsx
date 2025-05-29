@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,34 +7,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Printer, QrCode, Barcode, FileText, Download, Plus, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
+import { useLabels, Label as LabelData } from "@/hooks/useLabels";
+import jsPDF from 'jspdf';
 
 interface LabelTemplate {
   id: number;
   name: string;
   type: string;
   size: string;
-}
-
-interface LabelData {
-  title: string;
-  subtitle: string;
-  date: string;
-  researcher: string;
-  notes: string;
-  barcodeData: string;
-  quantity: number;
-}
-
-interface PrintJob {
-  id: number;
-  template: string;
-  quantity: number;
-  date: string;
-  status: string;
-  data: LabelData;
 }
 
 const initialTemplates: LabelTemplate[] = [
@@ -45,63 +38,28 @@ const initialTemplates: LabelTemplate[] = [
   { id: 4, name: "Storage Box", type: "storage", size: "4x2 inch" },
 ];
 
-const initialPrintJobs: PrintJob[] = [
-  { 
-    id: 1, 
-    template: "Sample Label", 
-    quantity: 50, 
-    date: "2024-01-25", 
-    status: "completed",
-    data: {
-      title: "DNA Sample #123",
-      subtitle: "Experiment A",
-      date: "2024-01-25",
-      researcher: "Dr. Smith",
-      notes: "Keep frozen",
-      barcodeData: "DNA123",
-      quantity: 50
-    }
-  },
-  { 
-    id: 2, 
-    template: "Equipment Tag", 
-    quantity: 25, 
-    date: "2024-01-24", 
-    status: "completed",
-    data: {
-      title: "Centrifuge #5",
-      subtitle: "Lab Equipment",
-      date: "2024-01-24",
-      researcher: "Lab Tech",
-      notes: "Maintenance due: Q2 2024",
-      barcodeData: "CENT005",
-      quantity: 25
-    }
-  },
-];
-
 const LabelPrinter = () => {
   const [selectedTemplate, setSelectedTemplate] = useState("");
-  const [templates, setTemplates] = useState<LabelTemplate[]>(initialTemplates);
-  const [printJobs, setPrintJobs] = useState<PrintJob[]>(initialPrintJobs);
-  const [printQueue, setPrintQueue] = useState<PrintJob[]>([]);
+  const [templates] = useState<LabelTemplate[]>(initialTemplates);
+  const [printQueue, setPrintQueue] = useState<LabelData[]>([]);
+  const { labels, loading, addLabel, deleteLabel } = useLabels();
   const { toast } = useToast();
 
-  const [labelData, setLabelData] = useState<LabelData>({
+  const [labelData, setLabelData] = useState({
     title: "",
     subtitle: "",
     date: "",
     researcher: "",
     notes: "",
-    barcodeData: "",
+    barcode_data: "",
     quantity: 1,
   });
 
-  const handleInputChange = (field: keyof LabelData, value: string | number) => {
+  const handleInputChange = (field: keyof typeof labelData, value: string | number) => {
     setLabelData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!selectedTemplate) {
       toast({
         title: "Error",
@@ -120,32 +78,34 @@ const LabelPrinter = () => {
       return;
     }
 
-    const newPrintJob: PrintJob = {
-      id: Date.now(),
-      template: selectedTemplate,
-      quantity: labelData.quantity,
-      date: new Date().toISOString().split('T')[0],
-      status: "completed",
-      data: { ...labelData }
-    };
+    try {
+      await addLabel({
+        ...labelData,
+        template_name: selectedTemplate,
+      });
+      
+      toast({
+        title: "Success",
+        description: `Printed ${labelData.quantity} labels successfully`,
+      });
 
-    setPrintJobs(prev => [newPrintJob, ...prev]);
-    
-    toast({
-      title: "Success",
-      description: `Printed ${labelData.quantity} labels successfully`,
-    });
-
-    // Reset form
-    setLabelData({
-      title: "",
-      subtitle: "",
-      date: "",
-      researcher: "",
-      notes: "",
-      barcodeData: "",
-      quantity: 1,
-    });
+      // Reset form
+      setLabelData({
+        title: "",
+        subtitle: "",
+        date: "",
+        researcher: "",
+        notes: "",
+        barcode_data: "",
+        quantity: 1,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to print labels",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDownloadPDF = () => {
@@ -158,10 +118,58 @@ const LabelPrinter = () => {
       return;
     }
 
-    toast({
-      title: "Success",
-      description: "PDF downloaded successfully",
-    });
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Add title
+      doc.setFontSize(16);
+      doc.text(labelData.title, 20, 30);
+
+      // Add subtitle if present
+      if (labelData.subtitle) {
+        doc.setFontSize(12);
+        doc.text(labelData.subtitle, 20, 45);
+      }
+
+      // Add date
+      if (labelData.date) {
+        doc.setFontSize(10);
+        doc.text(`Date: ${labelData.date}`, 20, 60);
+      }
+
+      // Add researcher
+      if (labelData.researcher) {
+        doc.text(`Researcher: ${labelData.researcher}`, 20, 70);
+      }
+
+      // Add barcode placeholder
+      if (labelData.barcode_data) {
+        doc.text(`Barcode: ${labelData.barcode_data}`, 20, 80);
+      }
+
+      // Add notes
+      if (labelData.notes) {
+        doc.text(`Notes: ${labelData.notes}`, 20, 90);
+      }
+
+      // Save the PDF
+      doc.save(`label-${labelData.title}.pdf`);
+
+      toast({
+        title: "Success",
+        description: "PDF downloaded successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF",
+        variant: "destructive",
+      });
+    }
   };
 
   const handlePreview = () => {
@@ -190,13 +198,13 @@ const LabelPrinter = () => {
       return;
     }
 
-    const queueItem: PrintJob = {
-      id: Date.now(),
-      template: selectedTemplate,
-      quantity: labelData.quantity,
-      date: new Date().toISOString().split('T')[0],
-      status: "queued",
-      data: { ...labelData }
+    const queueItem: any = {
+      id: Date.now().toString(),
+      ...labelData,
+      template_name: selectedTemplate,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      user_id: "",
     };
 
     setPrintQueue(prev => [...prev, queueItem]);
@@ -207,7 +215,7 @@ const LabelPrinter = () => {
     });
   };
 
-  const removeFromQueue = (id: number) => {
+  const removeFromQueue = (id: string) => {
     setPrintQueue(prev => prev.filter(item => item.id !== id));
     toast({
       title: "Success",
@@ -215,7 +223,7 @@ const LabelPrinter = () => {
     });
   };
 
-  const processQueue = () => {
+  const processQueue = async () => {
     if (printQueue.length === 0) {
       toast({
         title: "Error",
@@ -225,19 +233,53 @@ const LabelPrinter = () => {
       return;
     }
 
-    const processedJobs = printQueue.map(job => ({
-      ...job,
-      status: "completed"
-    }));
+    try {
+      for (const item of printQueue) {
+        await addLabel({
+          title: item.title,
+          subtitle: item.subtitle,
+          date: item.date,
+          researcher: item.researcher,
+          notes: item.notes,
+          barcode_data: item.barcode_data,
+          quantity: item.quantity,
+          template_name: item.template_name,
+        });
+      }
 
-    setPrintJobs(prev => [...processedJobs, ...prev]);
-    setPrintQueue([]);
-
-    toast({
-      title: "Success",
-      description: `Processed ${processedJobs.length} print jobs`,
-    });
+      setPrintQueue([]);
+      toast({
+        title: "Success",
+        description: `Processed ${printQueue.length} print jobs`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to process print queue",
+        variant: "destructive",
+      });
+    }
   };
+
+  const handleDeleteLabel = async (label: LabelData) => {
+    await deleteLabel(label.id);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex">
+        <Sidebar />
+        <div className="flex-1 flex flex-col">
+          <Header />
+          <main className="flex-1 p-6 overflow-auto">
+            <div className="max-w-7xl mx-auto">
+              <div className="text-center">Loading labels...</div>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -336,11 +378,11 @@ const LabelPrinter = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="barcodeData">Barcode/QR Code Data</Label>
+                      <Label htmlFor="barcode_data">Barcode/QR Code Data</Label>
                       <Input
-                        id="barcodeData"
-                        value={labelData.barcodeData}
-                        onChange={(e) => handleInputChange("barcodeData", e.target.value)}
+                        id="barcode_data"
+                        value={labelData.barcode_data}
+                        onChange={(e) => handleInputChange("barcode_data", e.target.value)}
                         placeholder="Data to encode in barcode"
                       />
                     </div>
@@ -404,7 +446,7 @@ const LabelPrinter = () => {
                           <div className="bg-gray-900 h-8 w-full flex items-center justify-center rounded">
                             <Barcode className="h-4 w-4 text-white" />
                             <span className="text-white text-xs ml-1">
-                              {labelData.barcodeData || "BARCODE"}
+                              {labelData.barcode_data || "BARCODE"}
                             </span>
                           </div>
                         </div>
@@ -465,9 +507,9 @@ const LabelPrinter = () => {
                           <div key={job.id} className="p-3 border border-gray-200 rounded-lg">
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
-                                <div className="font-medium text-sm">{job.data.title}</div>
+                                <div className="font-medium text-sm">{job.title}</div>
                                 <div className="text-xs text-gray-600">
-                                  {job.quantity} labels • {job.template}
+                                  {job.quantity} labels • {job.template_name}
                                 </div>
                               </div>
                               <Button
@@ -492,24 +534,41 @@ const LabelPrinter = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {printJobs.slice(0, 5).map((print) => (
-                        <div key={print.id} className="p-3 border border-gray-200 rounded-lg">
+                      {labels.slice(0, 5).map((label) => (
+                        <div key={label.id} className="p-3 border border-gray-200 rounded-lg">
                           <div className="flex justify-between items-start">
-                            <div>
-                              <div className="font-medium text-sm">{print.data.title}</div>
+                            <div className="flex-1">
+                              <div className="font-medium text-sm">{label.title}</div>
                               <div className="text-xs text-gray-600">
-                                {print.quantity} labels • {print.date}
+                                {label.quantity} labels • {new Date(label.created_at).toLocaleDateString()}
                               </div>
                             </div>
-                            <Badge 
-                              className={
-                                print.status === "completed" 
-                                  ? "bg-green-100 text-green-800" 
-                                  : "bg-red-100 text-red-800"
-                              }
-                            >
-                              {print.status}
-                            </Badge>
+                            <div className="flex gap-1">
+                              <Badge className="bg-green-100 text-green-800">
+                                completed
+                              </Badge>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <Trash2 className="h-4 w-4 text-red-600" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Label</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete this label? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteLabel(label)}>
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
                           </div>
                         </div>
                       ))}

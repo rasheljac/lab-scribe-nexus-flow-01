@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,11 +26,13 @@ import { useExperiments } from "@/hooks/useExperiments";
 import { useProjects } from "@/hooks/useProjects";
 import { useTasks } from "@/hooks/useTasks";
 import { useReports } from "@/hooks/useReports";
+import { useUserPreferences } from "@/hooks/useUserPreferences";
 
 const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { preferences } = useUserPreferences();
   
   // Get actual counts
   const { experiments } = useExperiments();
@@ -40,27 +43,32 @@ const Sidebar = () => {
   // Filter uncompleted tasks
   const uncompletedTasksCount = tasks.filter(task => task.status !== 'completed').length;
 
-  const menuItems = [
-    { icon: Home, label: "Dashboard", path: "/", badge: null },
-    { icon: Beaker, label: "Experiments", path: "/experiments", badge: experiments.length.toString() },
-    { icon: FolderOpen, label: "Projects", path: "/projects", badge: projects.length.toString() },
-    { icon: Calendar, label: "Calendar", path: "/calendar", badge: null },
-    { icon: CheckSquare, label: "Tasks", path: "/tasks", badge: uncompletedTasksCount.toString() },
-    { icon: BarChart3, label: "Analytics", path: "/analytics", badge: null },
-    { icon: FileText, label: "Reports", path: "/reports", badge: reports.length.toString() },
-    { icon: Package, label: "Inventory", path: "/inventory", badge: "!" },
-    { icon: Printer, label: "Label Printer", path: "/labels", badge: null },
-    { icon: ShoppingCart, label: "Order Portal", path: "/orders", badge: "2" },
-    { icon: MessageSquare, label: "Messages", path: "/messages", badge: "5" },
-    { icon: Video, label: "Video Chat", path: "/video-chat", badge: null },
-    { icon: Users, label: "Team", path: "/team", badge: null },
-    { icon: Settings, label: "Settings", path: "/settings", badge: null },
+  const allMenuItems = [
+    { icon: Home, label: "Dashboard", path: "/", badge: null, key: "dashboard" },
+    { icon: Beaker, label: "Experiments", path: "/experiments", badge: experiments.length.toString(), key: "experiments" },
+    { icon: FolderOpen, label: "Projects", path: "/projects", badge: projects.length.toString(), key: "projects" },
+    { icon: Calendar, label: "Calendar", path: "/calendar", badge: null, key: "calendar" },
+    { icon: CheckSquare, label: "Tasks", path: "/tasks", badge: uncompletedTasksCount.toString(), key: "tasks" },
+    { icon: BarChart3, label: "Analytics", path: "/analytics", badge: null, key: "analytics" },
+    { icon: FileText, label: "Reports", path: "/reports", badge: reports.length.toString(), key: "reports" },
+    { icon: Package, label: "Inventory", path: "/inventory", badge: "!", key: "inventory" },
+    { icon: Printer, label: "Label Printer", path: "/labels", badge: null, key: "labels" },
+    { icon: ShoppingCart, label: "Order Portal", path: "/orders", badge: "2", key: "orders" },
+    { icon: MessageSquare, label: "Messages", path: "/messages", badge: "5", key: "messages" },
+    { icon: Video, label: "Video Chat", path: "/video-chat", badge: null, key: "video-chat" },
+    { icon: Users, label: "Team", path: "/team", badge: null, key: "team" },
+    { icon: Settings, label: "Settings", path: "/settings", badge: null, key: "settings" },
   ];
 
   const adminItems = [
-    { icon: Users, label: "User Management", path: "/admin/users", badge: null },
-    { icon: Settings, label: "System Settings", path: "/admin/settings", badge: null },
+    { icon: Users, label: "User Management", path: "/admin/users", badge: null, key: "admin-users" },
+    { icon: Settings, label: "System Settings", path: "/admin/settings", badge: null, key: "admin-settings" },
   ];
+
+  // Filter out hidden pages
+  const hiddenPages = preferences?.hidden_pages || [];
+  const menuItems = allMenuItems.filter(item => !hiddenPages.includes(item.key));
+  const visibleAdminItems = adminItems.filter(item => !hiddenPages.includes(item.key));
 
   return (
     <div className={cn(
@@ -122,12 +130,12 @@ const Sidebar = () => {
         })}
 
         {/* Admin Section */}
-        {!collapsed && (
+        {!collapsed && visibleAdminItems.length > 0 && (
           <div className="pt-4 mt-4 border-t border-gray-200">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-2">
               Administration
             </p>
-            {adminItems.map((item) => {
+            {visibleAdminItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
                 <Button

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Bell, Search, Plus, User, Settings, LogOut, Shield, Beaker, FolderOpen, FileText, CheckSquare, Calendar } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { useNavigate } from "react-router-dom";
 import { useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +25,7 @@ import CreateEventDialog from "@/components/CreateEventDialog";
 
 const Header = () => {
   const { user, signOut } = useAuth();
+  const { profile, uploadAvatar } = useUserProfile();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
@@ -121,32 +123,13 @@ const Header = () => {
       return;
     }
 
-    try {
-      // Create a local URL for immediate display
-      const imageUrl = URL.createObjectURL(file);
-      
-      // Here you would typically upload to Supabase storage and update user metadata
-      // For now, we'll just show success message
-      toast({
-        title: "Success",
-        description: "Profile picture updated successfully",
-      });
-
-      // Store the image URL in localStorage for demo purposes
-      localStorage.setItem('user_avatar', imageUrl);
-      
-      // Force a re-render by updating a dummy state or refreshing
-      window.location.reload();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to upload profile picture",
-        variant: "destructive",
-      });
-    }
+    await uploadAvatar(file);
   };
 
   const getUserDisplayName = () => {
+    if (profile?.first_name || profile?.last_name) {
+      return `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+    }
     if (user?.user_metadata?.first_name || user?.user_metadata?.last_name) {
       return `${user.user_metadata.first_name || ''} ${user.user_metadata.last_name || ''}`.trim();
     }
@@ -154,6 +137,9 @@ const Header = () => {
   };
 
   const getUserInitials = () => {
+    if (profile?.first_name && profile?.last_name) {
+      return `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase();
+    }
     if (user?.user_metadata?.first_name && user?.user_metadata?.last_name) {
       return `${user.user_metadata.first_name[0]}${user.user_metadata.last_name[0]}`.toUpperCase();
     }
@@ -164,12 +150,7 @@ const Header = () => {
   };
 
   const getUserAvatarUrl = () => {
-    // Check localStorage first for uploaded avatar
-    const localAvatar = localStorage.getItem('user_avatar');
-    if (localAvatar) return localAvatar;
-    
-    // Fall back to user metadata avatar
-    return user?.user_metadata?.avatar_url;
+    return profile?.avatar_url || user?.user_metadata?.avatar_url;
   };
 
   const handleProfileClick = () => {
@@ -248,7 +229,7 @@ const Header = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-8 w-8 cursor-pointer" onClick={handleProfilePictureClick}>
+                  <Avatar className="h-8 w-8 cursor-pointer">
                     <AvatarImage src={getUserAvatarUrl()} alt="User" />
                     <AvatarFallback>{getUserInitials()}</AvatarFallback>
                   </Avatar>

@@ -195,6 +195,108 @@ export type Database = {
           },
         ]
       }
+      inventory_items: {
+        Row: {
+          category: string
+          cost: string | null
+          created_at: string
+          current_stock: number
+          expiry_date: string | null
+          id: string
+          last_ordered: string | null
+          location: string | null
+          max_stock: number
+          min_stock: number
+          name: string
+          status: string
+          supplier: string
+          unit: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          cost?: string | null
+          created_at?: string
+          current_stock?: number
+          expiry_date?: string | null
+          id?: string
+          last_ordered?: string | null
+          location?: string | null
+          max_stock?: number
+          min_stock?: number
+          name: string
+          status?: string
+          supplier: string
+          unit?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          cost?: string | null
+          created_at?: string
+          current_stock?: number
+          expiry_date?: string | null
+          id?: string
+          last_ordered?: string | null
+          location?: string | null
+          max_stock?: number
+          min_stock?: number
+          name?: string
+          status?: string
+          supplier?: string
+          unit?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      labels: {
+        Row: {
+          barcode_data: string | null
+          created_at: string
+          date: string | null
+          id: string
+          notes: string | null
+          quantity: number
+          researcher: string | null
+          subtitle: string | null
+          template_name: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          barcode_data?: string | null
+          created_at?: string
+          date?: string | null
+          id?: string
+          notes?: string | null
+          quantity?: number
+          researcher?: string | null
+          subtitle?: string | null
+          template_name: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          barcode_data?: string | null
+          created_at?: string
+          date?: string | null
+          id?: string
+          notes?: string | null
+          quantity?: number
+          researcher?: string | null
+          subtitle?: string | null
+          template_name?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       projects: {
         Row: {
           budget: string | null
@@ -379,6 +481,63 @@ export type Database = {
           phone?: string | null
           role?: string
           status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_preferences: {
+        Row: {
+          created_at: string
+          hidden_pages: string[] | null
+          id: string
+          preferences: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          hidden_pages?: string[] | null
+          id?: string
+          preferences?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          hidden_pages?: string[] | null
+          id?: string
+          preferences?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
           updated_at?: string
           user_id?: string
         }
