@@ -12,32 +12,30 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus } from "lucide-react";
 import { useReports } from "@/hooks/useReports";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
-const CreateReportDialog = () => {
+interface CreateReportDialogProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+const CreateReportDialog = ({ open, onOpenChange }: CreateReportDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     type: "experiment" as "experiment" | "activity" | "maintenance" | "inventory",
     status: "draft" as "draft" | "published" | "archived",
-    author: "",
     format: "PDF",
-    size: "",
-    downloads: 0,
   });
 
   const { createReport } = useReports();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,22 +50,27 @@ const CreateReportDialog = () => {
     }
 
     try {
-      await createReport.mutateAsync(formData);
+      await createReport.mutateAsync({
+        ...formData,
+        author: user?.email?.split('@')[0] || 'Unknown',
+        downloads: 0,
+      });
       toast({
         title: "Success",
         description: "Report created successfully",
       });
-      setIsOpen(false);
       setFormData({
         title: "",
         description: "",
         type: "experiment",
         status: "draft",
-        author: "",
         format: "PDF",
-        size: "",
-        downloads: 0,
       });
+      const shouldClose = onOpenChange ? true : true;
+      if (shouldClose) {
+        onOpenChange?.(false);
+        setIsOpen(false);
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -77,21 +80,19 @@ const CreateReportDialog = () => {
     }
   };
 
-  const handleInputChange = (field: string, value: string | number) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+  const dialogOpen = open !== undefined ? open : isOpen;
+  const setDialogOpen = onOpenChange || setIsOpen;
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          New Report
-        </Button>
-      </DialogTrigger>
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {!onOpenChange && (
+        <DialogTrigger asChild>
+          <Button className="gap-2">
+            <Plus className="h-4 w-4" />
+            Create Report
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Create New Report</DialogTitle>
@@ -105,8 +106,7 @@ const CreateReportDialog = () => {
             <Input
               id="title"
               value={formData.title}
-              onChange={(e) => handleInputChange("title", e.target.value)}
-              placeholder="Enter report title"
+              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
               required
             />
           </div>
@@ -116,8 +116,7 @@ const CreateReportDialog = () => {
             <Textarea
               id="description"
               value={formData.description}
-              onChange={(e) => handleInputChange("description", e.target.value)}
-              placeholder="Enter report description"
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               rows={3}
             />
           </div>
@@ -125,10 +124,7 @@ const CreateReportDialog = () => {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="type">Type</Label>
-              <Select
-                value={formData.type}
-                onValueChange={(value) => handleInputChange("type", value)}
-              >
+              <Select value={formData.type} onValueChange={(value: any) => setFormData(prev => ({ ...prev, type: value }))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -143,10 +139,7 @@ const CreateReportDialog = () => {
 
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) => handleInputChange("status", value)}
-              >
+              <Select value={formData.status} onValueChange={(value: any) => setFormData(prev => ({ ...prev, status: value }))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -160,43 +153,17 @@ const CreateReportDialog = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="author">Author</Label>
-            <Input
-              id="author"
-              value={formData.author}
-              onChange={(e) => handleInputChange("author", e.target.value)}
-              placeholder="Enter author name"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="format">Format</Label>
-              <Select
-                value={formData.format}
-                onValueChange={(value) => handleInputChange("format", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PDF">PDF</SelectItem>
-                  <SelectItem value="DOC">DOC</SelectItem>
-                  <SelectItem value="XLSX">XLSX</SelectItem>
-                  <SelectItem value="HTML">HTML</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="size">Size</Label>
-              <Input
-                id="size"
-                value={formData.size}
-                onChange={(e) => handleInputChange("size", e.target.value)}
-                placeholder="e.g., 2.5 MB"
-              />
-            </div>
+            <Label htmlFor="format">Format</Label>
+            <Select value={formData.format} onValueChange={(value) => setFormData(prev => ({ ...prev, format: value }))}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="PDF">PDF</SelectItem>
+                <SelectItem value="Word">Word Document</SelectItem>
+                <SelectItem value="Excel">Excel Spreadsheet</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex gap-2 pt-4">
@@ -206,7 +173,7 @@ const CreateReportDialog = () => {
             <Button
               type="button"
               variant="outline"
-              onClick={() => setIsOpen(false)}
+              onClick={() => setDialogOpen(false)}
             >
               Cancel
             </Button>

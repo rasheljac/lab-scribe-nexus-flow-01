@@ -22,9 +22,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     toolbar: [
       [{ 'header': [1, 2, 3, false] }],
       ['bold', 'italic', 'underline', 'strike'],
+      [{ 'script': 'sub'}, { 'script': 'super' }],
       [{ 'list': 'ordered'}, { 'list': 'bullet' }],
       ['blockquote', 'code-block'],
       ['link'],
+      [{ 'formula': true }],
       ['clean']
     ],
   };
@@ -32,9 +34,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const formats = [
     'header',
     'bold', 'italic', 'underline', 'strike',
+    'script',
     'list', 'bullet',
     'blockquote', 'code-block',
-    'link'
+    'link',
+    'formula'
   ];
 
   return (

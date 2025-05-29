@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -68,7 +69,7 @@ const Reports = () => {
     return matchesSearch && matchesType && matchesStatus;
   });
 
-  const handleViewReport = async (reportId: string) => {
+  const handleViewReport = async (reportId: string, title: string) => {
     try {
       // Increment downloads count
       const report = reports.find(r => r.id === reportId);
@@ -79,15 +80,21 @@ const Reports = () => {
         });
       }
       
-      // Simulate opening report
+      // Generate and show the comprehensive PDF report
+      await generateComprehensiveReport.mutateAsync({
+        title: title,
+        includeNotes: true,
+        includeAttachments: true
+      });
+
       toast({
-        title: "Report Opened",
-        description: "Report is now being viewed",
+        title: "Report Generated",
+        description: "Report has been generated and downloaded for viewing",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to open report",
+        description: "Failed to generate report for viewing",
         variant: "destructive",
       });
     }
@@ -344,7 +351,6 @@ const Reports = () => {
                         </Badge>
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                           <span>{report.format}</span>
-                          {report.size && <span>• {report.size}</span>}
                         </div>
                       </div>
 
@@ -354,19 +360,21 @@ const Reports = () => {
                           variant="outline" 
                           size="sm" 
                           className="flex-1"
-                          onClick={() => handleViewReport(report.id)}
+                          onClick={() => handleViewReport(report.id, report.title)}
+                          disabled={generateComprehensiveReport.isPending}
                         >
                           <Eye className="h-4 w-4 mr-1" />
-                          View
+                          {generateComprehensiveReport.isPending ? "Generating..." : "View"}
                         </Button>
                         <Button 
                           variant="outline" 
                           size="sm" 
                           className="flex-1"
                           onClick={() => handleDownloadReport(report.id, report.title)}
+                          disabled={generateComprehensiveReport.isPending}
                         >
                           <Download className="h-4 w-4 mr-1" />
-                          Download
+                          {generateComprehensiveReport.isPending ? "Downloading..." : "Download"}
                         </Button>
                       </div>
                     </CardContent>
