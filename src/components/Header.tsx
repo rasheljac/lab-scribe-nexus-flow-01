@@ -205,10 +205,10 @@ const Header = () => {
       </header>
 
       {/* Create Dialogs */}
-      <CreateExperimentDialog open={createExperimentOpen} onOpenChange={setCreateExperimentOpen} />
-      <CreateProjectDialog open={createProjectOpen} onOpenChange={setCreateProjectOpen} />
+      <CreateExperimentDialog />
+      <CreateProjectDialog />
       <CreateReportDialog open={createReportOpen} onOpenChange={setCreateReportOpen} />
-      <CreateTaskDialog open={createTaskOpen} onOpenChange={setCreateTaskOpen} />
+      <CreateTaskDialog />
       <CreateEventDialog open={createEventOpen} onOpenChange={setCreateEventOpen} />
     </>
   );
