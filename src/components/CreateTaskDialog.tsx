@@ -28,7 +28,7 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    priority: "medium",
+    priority: "medium" as "low" | "medium" | "high", // Type the priority properly
     category: "experiment",
     assignee: "",
     due_date: "",
@@ -72,7 +72,7 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
       setFormData({
         title: "",
         description: "",
-        priority: "medium",
+        priority: "medium" as "low" | "medium" | "high",
         category: "experiment",
         assignee: "",
         due_date: "",
@@ -135,7 +135,7 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="priority">Priority</Label>
-              <Select value={formData.priority} onValueChange={(value: any) => setFormData(prev => ({ ...prev, priority: value }))}>
+              <Select value={formData.priority} onValueChange={(value: "low" | "medium" | "high") => setFormData(prev => ({ ...prev, priority: value }))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

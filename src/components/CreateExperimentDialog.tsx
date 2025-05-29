@@ -58,6 +58,7 @@ const CreateExperimentDialog = ({ open, onOpenChange }: CreateExperimentDialogPr
         progress: 0,
         protocols: 0,
         samples: 0,
+        project_id: null, // Add the missing project_id field
       });
       toast({
         title: "Success",
