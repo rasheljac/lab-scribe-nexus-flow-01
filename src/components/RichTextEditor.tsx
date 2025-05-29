@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
@@ -25,7 +25,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       [{ 'script': 'sub'}, { 'script': 'super' }],
       [{ 'list': 'ordered'}, { 'list': 'bullet' }],
       ['blockquote', 'code-block'],
-      ['link'],
+      ['link', 'image'],
       [{ 'formula': true }],
       ['clean']
     ],
@@ -37,7 +37,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     'script',
     'list', 'bullet',
     'blockquote', 'code-block',
-    'link',
+    'link', 'image',
     'formula'
   ];
 

@@ -1,121 +1,193 @@
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { CheckSquare, Clock, AlertCircle, User, Calendar, Plus } from "lucide-react";
-import { useTasks } from "@/hooks/useTasks";
-import { useNavigate } from "react-router-dom";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { 
+  CheckCircle, 
+  Clock, 
+  AlertTriangle, 
+  Trash2, 
+  Edit,
+  Calendar,
+  User
+} from "lucide-react";
+import { useTasks, Task } from "@/hooks/useTasks";
 import { useToast } from "@/hooks/use-toast";
+import EditTaskDialog from "@/components/EditTaskDialog";
 
 const TaskList = () => {
-  const { tasks, updateTask } = useTasks();
-  const navigate = useNavigate();
+  const { tasks, isLoading, updateTask, deleteTask } = useTasks();
   const { toast } = useToast();
-
-  // Get recent tasks (limit to 5 for dashboard)
-  const recentTasks = tasks.slice(0, 5);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high":
-        return "bg-red-100 text-red-800";
+        return "bg-red-100 text-red-800 border-red-200";
       case "medium":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
       case "low":
-        return "bg-green-100 text-green-800";
+        return "bg-green-100 text-green-800 border-green-200";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "completed":
-        return <CheckSquare className="h-4 w-4 text-green-600" />;
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
       case "in_progress":
         return <Clock className="h-4 w-4 text-blue-600" />;
       case "pending":
-        return <AlertCircle className="h-4 w-4 text-orange-600" />;
+        return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
       default:
         return <Clock className="h-4 w-4 text-gray-600" />;
     }
   };
 
-  const handleTaskStatusChange = (taskId: string, completed: boolean) => {
-    const newStatus = completed ? "completed" : "pending";
-    updateTask.mutate({ id: taskId, status: newStatus });
+  const handleStatusChange = async (task: Task, newStatus: string) => {
+    try {
+      await updateTask.mutateAsync({
+        id: task.id,
+        status: newStatus,
+      });
+      toast({
+        title: "Success",
+        description: "Task status updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update task status",
+        variant: "destructive",
+      });
+    }
   };
 
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      await deleteTask.mutateAsync(taskId);
+      toast({
+        title: "Success",
+        description: "Task deleted successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete task",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (isLoading) {
+    return <div className="text-center py-4">Loading tasks...</div>;
+  }
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="flex items-center gap-2">
-          <CheckSquare className="h-5 w-5" />
-          Task Overview
-        </CardTitle>
-        <Button 
-          size="sm" 
-          variant="outline"
-          onClick={() => navigate("/tasks")}
-          className="gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          View All
-        </Button>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {recentTasks.map((task) => (
-            <div key={task.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-              <Checkbox 
-                checked={task.status === "completed"}
-                onCheckedChange={(checked) => handleTaskStatusChange(task.id, checked as boolean)}
-                className="mt-1"
-              />
-              <div className="flex-1 space-y-2">
-                <div className="flex items-center gap-2">
-                  {getStatusIcon(task.status)}
-                  <h4 className="font-medium text-sm">{task.title}</h4>
-                  <Badge className={getPriorityColor(task.priority)} variant="outline">
-                    {task.priority}
-                  </Badge>
-                </div>
-                <p className="text-xs text-gray-600">{task.description}</p>
-                <div className="flex items-center gap-4 text-xs text-gray-500">
-                  <div className="flex items-center gap-1">
-                    <User className="h-3 w-3" />
-                    <span>{task.assignee}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    <span>{task.due_date}</span>
-                  </div>
-                  <Badge variant="outline" className="text-xs">
-                    {task.category}
-                  </Badge>
-                </div>
+    <div className="space-y-4">
+      {tasks.map((task) => (
+        <Card key={task.id} className="hover:shadow-md transition-shadow">
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2">
+                {getStatusIcon(task.status)}
+                <CardTitle className="text-lg">{task.title}</CardTitle>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge className={getPriorityColor(task.priority)}>
+                  {task.priority}
+                </Badge>
+                <EditTaskDialog task={task} />
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Task</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete "{task.title}"? This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => handleDeleteTask(task.id)}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </div>
-          ))}
-          {recentTasks.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              <CheckSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No tasks found</p>
-              <Button 
-                size="sm" 
-                variant="outline" 
-                className="mt-2 gap-2"
-                onClick={() => navigate("/tasks")}
+            <div className="flex items-center gap-4 text-sm text-gray-500">
+              <div className="flex items-center gap-1">
+                <User className="h-3 w-3" />
+                <span>{task.assignee}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                <span>{new Date(task.due_date).toLocaleDateString()}</span>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div 
+              className="text-gray-700 prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: task.description || 'No description' }}
+            />
+            <div className="mt-4 flex gap-2">
+              <Button
+                size="sm"
+                variant={task.status === "pending" ? "default" : "outline"}
+                onClick={() => handleStatusChange(task, "pending")}
+                disabled={updateTask.isPending}
               >
-                <Plus className="h-4 w-4" />
-                Create Task
+                Pending
+              </Button>
+              <Button
+                size="sm"
+                variant={task.status === "in_progress" ? "default" : "outline"}
+                onClick={() => handleStatusChange(task, "in_progress")}
+                disabled={updateTask.isPending}
+              >
+                In Progress
+              </Button>
+              <Button
+                size="sm"
+                variant={task.status === "completed" ? "default" : "outline"}
+                onClick={() => handleStatusChange(task, "completed")}
+                disabled={updateTask.isPending}
+              >
+                Completed
               </Button>
             </div>
-          )}
+          </CardContent>
+        </Card>
+      ))}
+      {tasks.length === 0 && (
+        <div className="text-center py-8 text-gray-500">
+          No tasks found.
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 };
 
