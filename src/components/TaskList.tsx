@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -57,7 +56,7 @@ const TaskList = () => {
     }
   };
 
-  const handleStatusChange = async (task: Task, newStatus: string) => {
+  const handleStatusChange = async (task: Task, newStatus: "pending" | "in_progress" | "completed") => {
     try {
       await updateTask.mutateAsync({
         id: task.id,
