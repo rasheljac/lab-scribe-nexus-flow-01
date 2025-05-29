@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,7 +44,7 @@ const Users = () => {
       console.error("Error deleting user:", error);
       toast({
         title: "Error",
-        description: "Failed to delete user profile",
+        description: "User deletion requires admin privileges",
         variant: "destructive",
       });
     }
@@ -61,7 +60,7 @@ const Users = () => {
             <div className="max-w-7xl mx-auto">
               <div className="text-center py-12">
                 <p className="text-red-600">Error loading users: {error.message}</p>
-                <p className="text-gray-600 mt-2">Note: User management requires a profiles table to be set up in your database.</p>
+                <p className="text-gray-600 mt-2">Showing current authenticated user only.</p>
               </div>
             </div>
           </main>
@@ -81,7 +80,7 @@ const Users = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-                <p className="text-gray-600 mt-1">Manage system users and their permissions</p>
+                <p className="text-gray-600 mt-1">Manage user profile information</p>
               </div>
             </div>
 
@@ -174,7 +173,7 @@ const Users = () => {
                           <EditUserDialog user={user} />
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
+                              <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700" disabled>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </AlertDialogTrigger>
@@ -182,17 +181,11 @@ const Users = () => {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Delete User Profile</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Are you sure you want to delete this user profile? This action cannot be undone.
+                                  User deletion requires admin privileges and server-side implementation.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDeleteUser(user.id)}
-                                  className="bg-red-600 hover:bg-red-700"
-                                >
-                                  Delete
-                                </AlertDialogAction>
+                                <AlertDialogCancel>Close</AlertDialogCancel>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>

@@ -15,7 +15,6 @@ interface EditUserDialogProps {
 const EditUserDialog = ({ user }: EditUserDialogProps) => {
   const [open, setOpen] = useState(false);
   const [userData, setUserData] = useState({
-    email: user.email,
     first_name: user.raw_user_meta_data?.first_name || '',
     last_name: user.raw_user_meta_data?.last_name || '',
   });
@@ -30,7 +29,6 @@ const EditUserDialog = ({ user }: EditUserDialogProps) => {
       await updateUser.mutateAsync({
         id: user.id,
         userData: {
-          email: userData.email,
           user_metadata: {
             first_name: userData.first_name,
             last_name: userData.last_name,
@@ -70,10 +68,11 @@ const EditUserDialog = ({ user }: EditUserDialogProps) => {
             <Input
               id="email"
               type="email"
-              value={userData.email}
-              onChange={(e) => setUserData({ ...userData, email: e.target.value })}
-              required
+              value={user.email}
+              disabled
+              className="bg-gray-100"
             />
+            <p className="text-xs text-gray-500">Email cannot be changed</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="first_name">First Name</Label>

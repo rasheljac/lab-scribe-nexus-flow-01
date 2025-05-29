@@ -26,56 +26,32 @@ export const useUsers = () => {
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
       
-      // Try to fetch from profiles table first
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*');
-      
-      if (profilesError) {
-        console.log('Profiles table not found, using current user only');
-        // If profiles table doesn't exist, return current user info
-        return [{
-          id: user.id,
-          email: user.email || '',
-          created_at: user.created_at || '',
-          email_confirmed_at: user.email_confirmed_at || null,
-          last_sign_in_at: user.last_sign_in_at || null,
-          raw_user_meta_data: user.user_metadata || {}
-        }] as User[];
-      }
-      
-      return profilesData.map(profile => ({
-        id: profile.id,
-        email: profile.email || user.email || '',
-        created_at: profile.created_at || user.created_at || '',
-        email_confirmed_at: profile.email_confirmed_at || user.email_confirmed_at || null,
-        last_sign_in_at: profile.last_sign_in_at || user.last_sign_in_at || null,
-        raw_user_meta_data: {
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-          avatar_url: profile.avatar_url
-        }
-      })) as User[];
+      // Since there's no profiles table, return the current authenticated user
+      console.log('No profiles table found, using current user only');
+      return [{
+        id: user.id,
+        email: user.email || '',
+        created_at: user.created_at || '',
+        email_confirmed_at: user.email_confirmed_at || null,
+        last_sign_in_at: user.last_sign_in_at || null,
+        raw_user_meta_data: user.user_metadata || {}
+      }] as User[];
     },
     enabled: !!user,
   });
 
   const updateUser = useMutation({
     mutationFn: async ({ id, userData }: { id: string; userData: any }) => {
-      // Try to update profiles table
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({
+      // Update user metadata via Supabase Auth
+      const { data, error } = await supabase.auth.updateUser({
+        data: {
           first_name: userData.user_metadata?.first_name,
           last_name: userData.user_metadata?.last_name,
-          email: userData.email
-        })
-        .eq('id', id)
-        .select()
-        .single();
+        }
+      });
       
       if (error) throw error;
-      return data;
+      return data.user;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -84,13 +60,9 @@ export const useUsers = () => {
 
   const deleteUser = useMutation({
     mutationFn: async (id: string) => {
-      // Only allow deleting from profiles table
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
+      // Note: Regular users cannot delete other users via client-side code
+      // This would require admin privileges and server-side functions
+      throw new Error('User deletion requires admin privileges and server-side implementation');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
