@@ -11,32 +11,32 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus } from "lucide-react";
 import { useTasks } from "@/hooks/useTasks";
 import { useToast } from "@/hooks/use-toast";
-import RichTextEditor from "@/components/RichTextEditor";
+import { useAuth } from "@/hooks/useAuth";
 
-const CreateTaskDialog = () => {
+interface CreateTaskDialogProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    priority: "medium" as "low" | "medium" | "high",
-    status: "pending" as "pending" | "in_progress" | "completed",
+    priority: "medium",
+    category: "experiment",
     assignee: "",
     due_date: "",
-    category: "",
   });
 
   const { createTask } = useTasks();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,22 +50,38 @@ const CreateTaskDialog = () => {
       return;
     }
 
+    if (!formData.due_date) {
+      toast({
+        title: "Error",
+        description: "Due date is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      await createTask.mutateAsync(formData);
+      await createTask.mutateAsync({
+        ...formData,
+        assignee: formData.assignee || user?.email?.split('@')[0] || 'Unknown',
+        status: "pending",
+      });
       toast({
         title: "Success",
         description: "Task created successfully",
       });
-      setIsOpen(false);
       setFormData({
         title: "",
         description: "",
         priority: "medium",
-        status: "pending",
+        category: "experiment",
         assignee: "",
         due_date: "",
-        category: "",
       });
+      const shouldClose = onOpenChange ? true : true;
+      if (shouldClose) {
+        onOpenChange?.(false);
+        setIsOpen(false);
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -75,26 +91,24 @@ const CreateTaskDialog = () => {
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+  const dialogOpen = open !== undefined ? open : isOpen;
+  const setDialogOpen = onOpenChange || setIsOpen;
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          New Task
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {!onOpenChange && (
+        <DialogTrigger asChild>
+          <Button className="gap-2">
+            <Plus className="h-4 w-4" />
+            Create Task
+          </Button>
+        </DialogTrigger>
+      )}
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Create New Task</DialogTitle>
           <DialogDescription>
-            Add a new task to your laboratory workflow.
+            Create a new task and assign it to a team member.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -103,29 +117,25 @@ const CreateTaskDialog = () => {
             <Input
               id="title"
               value={formData.title}
-              onChange={(e) => handleInputChange("title", e.target.value)}
-              placeholder="Enter task title"
+              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
               required
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
-            <RichTextEditor
+            <Textarea
+              id="description"
               value={formData.description}
-              onChange={(value) => handleInputChange("description", value)}
-              placeholder="Enter task description..."
-              className="mt-2"
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              rows={3}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="priority">Priority</Label>
-              <Select
-                value={formData.priority}
-                onValueChange={(value) => handleInputChange("priority", value)}
-              >
+              <Select value={formData.priority} onValueChange={(value: any) => setFormData(prev => ({ ...prev, priority: value }))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -133,56 +143,50 @@ const CreateTaskDialog = () => {
                   <SelectItem value="low">Low</SelectItem>
                   <SelectItem value="medium">Medium</SelectItem>
                   <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="urgent">Urgent</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) => handleInputChange("status", value)}
-              >
+              <Label htmlFor="category">Category</Label>
+              <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="experiment">Experiment</SelectItem>
+                  <SelectItem value="analysis">Analysis</SelectItem>
+                  <SelectItem value="documentation">Documentation</SelectItem>
+                  <SelectItem value="maintenance">Maintenance</SelectItem>
+                  <SelectItem value="quality-control">Quality Control</SelectItem>
+                  <SelectItem value="administrative">Administrative</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="assignee">Assignee</Label>
-            <Input
-              id="assignee"
-              value={formData.assignee}
-              onChange={(e) => handleInputChange("assignee", e.target.value)}
-              placeholder="Enter assignee name"
-            />
-          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="assignee">Assignee</Label>
+              <Input
+                id="assignee"
+                value={formData.assignee}
+                onChange={(e) => setFormData(prev => ({ ...prev, assignee: e.target.value }))}
+                placeholder={user?.email?.split('@')[0] || 'Assignee name'}
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="due_date">Due Date</Label>
-            <Input
-              id="due_date"
-              type="date"
-              value={formData.due_date}
-              onChange={(e) => handleInputChange("due_date", e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="category">Category</Label>
-            <Input
-              id="category"
-              value={formData.category}
-              onChange={(e) => handleInputChange("category", e.target.value)}
-              placeholder="Enter task category"
-            />
+            <div className="space-y-2">
+              <Label htmlFor="due_date">Due Date *</Label>
+              <Input
+                id="due_date"
+                type="date"
+                value={formData.due_date}
+                onChange={(e) => setFormData(prev => ({ ...prev, due_date: e.target.value }))}
+                required
+              />
+            </div>
           </div>
 
           <div className="flex gap-2 pt-4">
@@ -192,7 +196,7 @@ const CreateTaskDialog = () => {
             <Button
               type="button"
               variant="outline"
-              onClick={() => setIsOpen(false)}
+              onClick={() => setDialogOpen(false)}
             >
               Cancel
             </Button>

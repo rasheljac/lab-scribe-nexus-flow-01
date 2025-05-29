@@ -1,185 +1,190 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus } from "lucide-react";
-import { useProjects, Project } from "@/hooks/useProjects";
+import { useProjects } from "@/hooks/useProjects";
 import { useToast } from "@/hooks/use-toast";
-import RichTextEditor from "@/components/RichTextEditor";
+import { useAuth } from "@/hooks/useAuth";
 
-const CreateProjectDialog = () => {
-  const [open, setOpen] = useState(false);
+interface CreateProjectDialogProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+const CreateProjectDialog = ({ open, onOpenChange }: CreateProjectDialogProps) => {
+  const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    status: "planning" as Project["status"],
-    progress: 0,
+    category: "research",
     start_date: "",
     end_date: "",
     budget: "",
-    category: "",
-    experiments_count: 0,
   });
 
   const { createProject } = useProjects();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!formData.title.trim()) {
+      toast({
+        title: "Error",
+        description: "Project title is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      await createProject.mutateAsync(formData);
+      await createProject.mutateAsync({
+        ...formData,
+        status: "planning",
+        progress: 0,
+        experiments_count: 0,
+      });
       toast({
         title: "Success",
-        description: "Project created successfully!",
+        description: "Project created successfully",
       });
-      setOpen(false);
       setFormData({
         title: "",
         description: "",
-        status: "planning",
-        progress: 0,
+        category: "research",
         start_date: "",
         end_date: "",
         budget: "",
-        category: "",
-        experiments_count: 0,
       });
+      const shouldClose = onOpenChange ? true : true;
+      if (shouldClose) {
+        onOpenChange?.(false);
+        setIsOpen(false);
+      }
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to create project",
         variant: "destructive",
       });
-      console.error(error);
     }
   };
 
+  const dialogOpen = open !== undefined ? open : isOpen;
+  const setDialogOpen = onOpenChange || setIsOpen;
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          New Project
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {!onOpenChange && (
+        <DialogTrigger asChild>
+          <Button className="gap-2">
+            <Plus className="h-4 w-4" />
+            Create Project
+          </Button>
+        </DialogTrigger>
+      )}
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Create New Project</DialogTitle>
+          <DialogDescription>
+            Start a new research project and organize your experiments.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="category">Category</Label>
-              <Input
-                id="category"
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                required
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="title">Title *</Label>
+            <Input
+              id="title"
+              value={formData.title}
+              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+              required
+            />
           </div>
 
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
-            <RichTextEditor
+            <Textarea
+              id="description"
               value={formData.description}
-              onChange={(value) => setFormData({ ...formData, description: value })}
-              placeholder="Enter project description..."
-              className="mt-2"
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              rows={3}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
+            <div className="space-y-2">
+              <Label htmlFor="category">Category</Label>
+              <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="research">Research</SelectItem>
+                  <SelectItem value="development">Development</SelectItem>
+                  <SelectItem value="clinical-trial">Clinical Trial</SelectItem>
+                  <SelectItem value="quality-control">Quality Control</SelectItem>
+                  <SelectItem value="regulatory">Regulatory</SelectItem>
+                  <SelectItem value="educational">Educational</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="budget">Budget</Label>
               <Input
                 id="budget"
                 value={formData.budget}
-                onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
-                placeholder="e.g. $50,000"
+                onChange={(e) => setFormData(prev => ({ ...prev, budget: e.target.value }))}
+                placeholder="e.g., $50,000"
               />
-            </div>
-            <div>
-              <Label htmlFor="status">Status</Label>
-              <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value as Project["status"] })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="planning">Planning</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="on_hold">On Hold</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="start_date">Start Date</Label>
               <Input
                 id="start_date"
                 type="date"
                 value={formData.start_date}
-                onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                required
+                onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
               />
             </div>
-            <div>
+
+            <div className="space-y-2">
               <Label htmlFor="end_date">End Date</Label>
               <Input
                 id="end_date"
                 type="date"
                 value={formData.end_date}
-                onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="progress">Progress (%)</Label>
-              <Input
-                id="progress"
-                type="number"
-                min="0"
-                max="100"
-                value={formData.progress}
-                onChange={(e) => setFormData({ ...formData, progress: parseInt(e.target.value) || 0 })}
-              />
-            </div>
-            <div>
-              <Label htmlFor="experiments_count">Experiments Count</Label>
-              <Input
-                id="experiments_count"
-                type="number"
-                min="0"
-                value={formData.experiments_count}
-                onChange={(e) => setFormData({ ...formData, experiments_count: parseInt(e.target.value) || 0 })}
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={createProject.isPending}>
+          <div className="flex gap-2 pt-4">
+            <Button type="submit" disabled={createProject.isPending} className="flex-1">
               {createProject.isPending ? "Creating..." : "Create Project"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDialogOpen(false)}
+            >
+              Cancel
             </Button>
           </div>
         </form>

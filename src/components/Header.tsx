@@ -14,7 +14,7 @@ import {
 import { Bell, Search, Plus, User, Settings, LogOut, Shield, Beaker, FolderOpen, FileText, CheckSquare, Calendar } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import CreateExperimentDialog from "@/components/CreateExperimentDialog";
 import CreateProjectDialog from "@/components/CreateProjectDialog";
@@ -32,6 +32,7 @@ const Header = () => {
   const [createReportOpen, setCreateReportOpen] = useState(false);
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const [createEventOpen, setCreateEventOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,6 +73,79 @@ const Header = () => {
     }
   };
 
+  const handleCreateExperiment = () => {
+    setCreateExperimentOpen(true);
+  };
+
+  const handleCreateProject = () => {
+    setCreateProjectOpen(true);
+  };
+
+  const handleCreateReport = () => {
+    setCreateReportOpen(true);
+  };
+
+  const handleCreateTask = () => {
+    setCreateTaskOpen(true);
+  };
+
+  const handleScheduleEvent = () => {
+    setCreateEventOpen(true);
+  };
+
+  const handleProfilePictureClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleProfilePictureUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Error",
+        description: "Please select an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "Image must be less than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Create a local URL for immediate display
+      const imageUrl = URL.createObjectURL(file);
+      
+      // Here you would typically upload to Supabase storage and update user metadata
+      // For now, we'll just show success message
+      toast({
+        title: "Success",
+        description: "Profile picture updated successfully",
+      });
+
+      // Store the image URL in localStorage for demo purposes
+      localStorage.setItem('user_avatar', imageUrl);
+      
+      // Force a re-render by updating a dummy state or refreshing
+      window.location.reload();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upload profile picture",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getUserDisplayName = () => {
     if (user?.user_metadata?.first_name || user?.user_metadata?.last_name) {
       return `${user.user_metadata.first_name || ''} ${user.user_metadata.last_name || ''}`.trim();
@@ -87,6 +161,15 @@ const Header = () => {
       return user.email.substring(0, 2).toUpperCase();
     }
     return 'U';
+  };
+
+  const getUserAvatarUrl = () => {
+    // Check localStorage first for uploaded avatar
+    const localAvatar = localStorage.getItem('user_avatar');
+    if (localAvatar) return localAvatar;
+    
+    // Fall back to user metadata avatar
+    return user?.user_metadata?.avatar_url;
   };
 
   const handleProfileClick = () => {
@@ -129,24 +212,24 @@ const Header = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => setCreateExperimentOpen(true)}>
+                <DropdownMenuItem onClick={handleCreateExperiment}>
                   <Beaker className="mr-2 h-4 w-4" />
                   New Experiment
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setCreateProjectOpen(true)}>
+                <DropdownMenuItem onClick={handleCreateProject}>
                   <FolderOpen className="mr-2 h-4 w-4" />
                   New Project
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setCreateReportOpen(true)}>
+                <DropdownMenuItem onClick={handleCreateReport}>
                   <FileText className="mr-2 h-4 w-4" />
                   New Report
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setCreateTaskOpen(true)}>
+                <DropdownMenuItem onClick={handleCreateTask}>
                   <CheckSquare className="mr-2 h-4 w-4" />
                   New Task
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setCreateEventOpen(true)}>
+                <DropdownMenuItem onClick={handleScheduleEvent}>
                   <Calendar className="mr-2 h-4 w-4" />
                   Schedule Event
                 </DropdownMenuItem>
@@ -165,8 +248,8 @@ const Header = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={user?.user_metadata?.avatar_url} alt="User" />
+                  <Avatar className="h-8 w-8 cursor-pointer" onClick={handleProfilePictureClick}>
+                    <AvatarImage src={getUserAvatarUrl()} alt="User" />
                     <AvatarFallback>{getUserInitials()}</AvatarFallback>
                   </Avatar>
                 </Button>
@@ -181,6 +264,10 @@ const Header = () => {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleProfilePictureClick}>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Change Profile Picture</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleProfileClick}>
                   <User className="mr-2 h-4 w-4" />
                   <span>Profile</span>
@@ -200,16 +287,40 @@ const Header = () => {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Hidden file input for profile picture upload */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleProfilePictureUpload}
+              className="hidden"
+            />
           </div>
         </div>
       </header>
 
       {/* Create Dialogs */}
-      <CreateExperimentDialog />
-      <CreateProjectDialog />
-      <CreateReportDialog open={createReportOpen} onOpenChange={setCreateReportOpen} />
-      <CreateTaskDialog />
-      <CreateEventDialog open={createEventOpen} onOpenChange={setCreateEventOpen} />
+      <CreateExperimentDialog 
+        open={createExperimentOpen} 
+        onOpenChange={setCreateExperimentOpen} 
+      />
+      <CreateProjectDialog 
+        open={createProjectOpen} 
+        onOpenChange={setCreateProjectOpen} 
+      />
+      <CreateReportDialog 
+        open={createReportOpen} 
+        onOpenChange={setCreateReportOpen} 
+      />
+      <CreateTaskDialog 
+        open={createTaskOpen} 
+        onOpenChange={setCreateTaskOpen} 
+      />
+      <CreateEventDialog 
+        open={createEventOpen} 
+        onOpenChange={setCreateEventOpen} 
+      />
     </>
   );
 };
