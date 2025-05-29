@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, FileText, Beaker, CheckSquare, Users } from "lucide-react";
+import { Plus, Calendar, FileText, Beaker, CheckSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import CreateEventDialog from "@/components/CreateEventDialog";
 import { useState } from "react";
@@ -45,13 +45,6 @@ const QuickActions = () => {
       icon: FileText,
       action: () => navigate("/reports"),
       color: "bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
-    },
-    {
-      title: "Manage Team",
-      description: "Add team members",
-      icon: Users,
-      action: () => navigate("/team"),
-      color: "bg-pink-50 text-pink-600 hover:bg-pink-100"
     }
   ];
 

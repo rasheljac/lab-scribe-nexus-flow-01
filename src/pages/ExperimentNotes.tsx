@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
@@ -21,7 +20,6 @@ import { Label } from "@/components/ui/label";
 import { 
   ArrowLeft, 
   Plus, 
-  Edit, 
   Trash2, 
   Loader2,
   StickyNote,
@@ -30,6 +28,7 @@ import {
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import EditNoteDialog from "@/components/EditNoteDialog";
+import RichTextEditor from "@/components/RichTextEditor";
 import { useExperiments } from "@/hooks/useExperiments";
 import { useExperimentNotes } from "@/hooks/useExperimentNotes";
 import { useToast } from "@/hooks/use-toast";
@@ -125,7 +124,7 @@ const ExperimentNotes = () => {
                     Add Note
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Create New Note</DialogTitle>
                   </DialogHeader>
@@ -141,11 +140,11 @@ const ExperimentNotes = () => {
                     </div>
                     <div>
                       <Label htmlFor="content">Content</Label>
-                      <Textarea
-                        id="content"
+                      <RichTextEditor
                         value={newNote.content}
-                        onChange={(e) => setNewNote({ ...newNote, content: e.target.value })}
-                        rows={6}
+                        onChange={(value) => setNewNote({ ...newNote, content: value })}
+                        placeholder="Enter your note content..."
+                        className="mt-2"
                       />
                     </div>
                     <div className="flex justify-end gap-2">
@@ -214,7 +213,10 @@ const ExperimentNotes = () => {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-gray-700 whitespace-pre-wrap">{note.content}</p>
+                      <div 
+                        className="text-gray-700 prose prose-sm max-w-none"
+                        dangerouslySetInnerHTML={{ __html: note.content || '' }}
+                      />
                     </CardContent>
                   </Card>
                 ))}

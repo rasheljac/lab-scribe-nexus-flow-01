@@ -22,6 +22,7 @@ import Orders from "./pages/Orders";
 import Messages from "./pages/Messages";
 import VideoChat from "./pages/VideoChat";
 import Team from "./pages/Team";
+import Users from "./pages/Users";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -118,7 +119,7 @@ const App = () => (
             } />
             <Route path="/admin/users" element={
               <ProtectedRoute>
-                <Index />
+                <Users />
               </ProtectedRoute>
             } />
             <Route path="/admin/settings" element={

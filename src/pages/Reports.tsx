@@ -20,6 +20,7 @@ import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import CreateReportDialog from "@/components/CreateReportDialog";
 import { useReports } from "@/hooks/useReports";
+import { useEnhancedReports } from "@/hooks/useEnhancedReports";
 import { useToast } from "@/hooks/use-toast";
 
 const Reports = () => {
@@ -28,6 +29,7 @@ const Reports = () => {
   const [filterStatus, setFilterStatus] = useState("all");
 
   const { reports, isLoading, error, updateReport, deleteReport } = useReports();
+  const { generateComprehensiveReport } = useEnhancedReports();
   const { toast } = useToast();
 
   const getTypeColor = (type: string) => {
@@ -102,21 +104,16 @@ const Reports = () => {
         });
       }
 
-      // Create a blob for download simulation
-      const content = `Report: ${title}\nGenerated on: ${new Date().toLocaleString()}\n\nThis is a sample report content.`;
-      const blob = new Blob([content], { type: 'text/plain' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${title}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      // Generate comprehensive PDF report
+      await generateComprehensiveReport.mutateAsync({
+        title: title,
+        includeNotes: true,
+        includeAttachments: true
+      });
 
       toast({
         title: "Download Started",
-        description: "Report download has begun",
+        description: "Comprehensive PDF report download has begun",
       });
     } catch (error) {
       toast({

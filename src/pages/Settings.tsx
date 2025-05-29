@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,19 +22,22 @@ import {
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Settings = () => {
   const { user, signOut } = useAuth();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("profile");
 
   // Profile settings
   const [profileData, setProfileData] = useState({
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@kapelczak.com",
-    phone: "+1 (555) 123-4567",
-    department: "Biochemistry",
-    role: "Senior Researcher",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    department: "",
+    role: "",
   });
 
   // Notification settings
@@ -57,16 +60,86 @@ const Settings = () => {
     dataRetention: "1year",
   });
 
-  const handleProfileUpdate = () => {
-    console.log("Updating profile:", profileData);
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        firstName: user.user_metadata?.first_name || "",
+        lastName: user.user_metadata?.last_name || "",
+        email: user.email || "",
+        phone: user.user_metadata?.phone || "",
+        department: user.user_metadata?.department || "",
+        role: user.user_metadata?.role || "",
+      });
+    }
+  }, [user]);
+
+  const handleProfileUpdate = async () => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        email: profileData.email,
+        data: {
+          first_name: profileData.firstName,
+          last_name: profileData.lastName,
+          phone: profileData.phone,
+          department: profileData.department,
+          role: profileData.role,
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Profile updated successfully!",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update profile",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePasswordUpdate = async (currentPassword: string, newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Password updated successfully!",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update password",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleNotificationUpdate = () => {
-    console.log("Updating notifications:", notifications);
+    // Store notifications in local storage or user metadata
+    localStorage.setItem('notifications', JSON.stringify(notifications));
+    toast({
+      title: "Success",
+      description: "Notification preferences saved!",
+    });
   };
 
   const handleSystemUpdate = () => {
-    console.log("Updating system settings:", systemSettings);
+    // Store system settings in local storage
+    localStorage.setItem('systemSettings', JSON.stringify(systemSettings));
+    toast({
+      title: "Success",
+      description: "System settings saved!",
+    });
   };
 
   return (
@@ -119,9 +192,9 @@ const Settings = () => {
                     {/* Avatar Section */}
                     <div className="flex items-center gap-6">
                       <Avatar className="h-24 w-24">
-                        <AvatarImage src="/avatars/you.jpg" />
+                        <AvatarImage src={user?.user_metadata?.avatar_url} />
                         <AvatarFallback className="text-xl">
-                          {profileData.firstName[0]}{profileData.lastName[0]}
+                          {profileData.firstName?.[0]}{profileData.lastName?.[0]}
                         </AvatarFallback>
                       </Avatar>
                       <div>
