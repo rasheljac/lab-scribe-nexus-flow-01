@@ -36,6 +36,18 @@ const Header = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchTerm.trim()) {
+      // Implement actual search functionality based on current page
+      const currentPath = window.location.pathname;
+      if (currentPath.includes('/experiments')) {
+        navigate(`/experiments?search=${encodeURIComponent(searchTerm)}`);
+      } else if (currentPath.includes('/projects')) {
+        navigate(`/projects?search=${encodeURIComponent(searchTerm)}`);
+      } else if (currentPath.includes('/reports')) {
+        navigate(`/reports?search=${encodeURIComponent(searchTerm)}`);
+      } else {
+        // Default to experiments search
+        navigate(`/experiments?search=${encodeURIComponent(searchTerm)}`);
+      }
       toast({
         title: "Search",
         description: `Searching for: ${searchTerm}`,
