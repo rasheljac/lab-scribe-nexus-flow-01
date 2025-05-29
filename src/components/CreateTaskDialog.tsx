@@ -28,7 +28,7 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    priority: "medium" as "low" | "medium" | "high", // Type the priority properly
+    priority: "medium" as "low" | "medium" | "high",
     category: "experiment",
     assignee: "",
     due_date: "",
@@ -83,6 +83,7 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
         setIsOpen(false);
       }
     } catch (error) {
+      console.error("Error creating task:", error);
       toast({
         title: "Error",
         description: "Failed to create task",
@@ -143,7 +144,6 @@ const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
                   <SelectItem value="low">Low</SelectItem>
                   <SelectItem value="medium">Medium</SelectItem>
                   <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
                 </SelectContent>
               </Select>
             </div>
