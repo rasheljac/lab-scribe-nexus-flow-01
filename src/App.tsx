@@ -24,6 +24,7 @@ import VideoChat from "./pages/VideoChat";
 import Team from "./pages/Team";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
+import SystemSettings from "./pages/SystemSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -124,7 +125,7 @@ const App = () => (
             } />
             <Route path="/admin/settings" element={
               <ProtectedRoute>
-                <Index />
+                <SystemSettings />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

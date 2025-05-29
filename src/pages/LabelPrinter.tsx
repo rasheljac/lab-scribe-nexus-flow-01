@@ -7,26 +7,87 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Printer, QrCode, Barcode, FileText, Download, Plus } from "lucide-react";
+import { Printer, QrCode, Barcode, FileText, Download, Plus, Trash2 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
+import { useToast } from "@/hooks/use-toast";
 
-const labelTemplates = [
+interface LabelTemplate {
+  id: number;
+  name: string;
+  type: string;
+  size: string;
+}
+
+interface LabelData {
+  title: string;
+  subtitle: string;
+  date: string;
+  researcher: string;
+  notes: string;
+  barcodeData: string;
+  quantity: number;
+}
+
+interface PrintJob {
+  id: number;
+  template: string;
+  quantity: number;
+  date: string;
+  status: string;
+  data: LabelData;
+}
+
+const initialTemplates: LabelTemplate[] = [
   { id: 1, name: "Sample Label", type: "sample", size: "2x1 inch" },
   { id: 2, name: "Equipment Tag", type: "equipment", size: "1.5x1 inch" },
   { id: 3, name: "Chemical Bottle", type: "chemical", size: "3x2 inch" },
   { id: 4, name: "Storage Box", type: "storage", size: "4x2 inch" },
 ];
 
-const recentPrints = [
-  { id: 1, template: "Sample Label", quantity: 50, date: "2024-01-25", status: "completed" },
-  { id: 2, template: "Equipment Tag", quantity: 25, date: "2024-01-24", status: "completed" },
-  { id: 3, template: "Chemical Bottle", quantity: 10, date: "2024-01-23", status: "failed" },
+const initialPrintJobs: PrintJob[] = [
+  { 
+    id: 1, 
+    template: "Sample Label", 
+    quantity: 50, 
+    date: "2024-01-25", 
+    status: "completed",
+    data: {
+      title: "DNA Sample #123",
+      subtitle: "Experiment A",
+      date: "2024-01-25",
+      researcher: "Dr. Smith",
+      notes: "Keep frozen",
+      barcodeData: "DNA123",
+      quantity: 50
+    }
+  },
+  { 
+    id: 2, 
+    template: "Equipment Tag", 
+    quantity: 25, 
+    date: "2024-01-24", 
+    status: "completed",
+    data: {
+      title: "Centrifuge #5",
+      subtitle: "Lab Equipment",
+      date: "2024-01-24",
+      researcher: "Lab Tech",
+      notes: "Maintenance due: Q2 2024",
+      barcodeData: "CENT005",
+      quantity: 25
+    }
+  },
 ];
 
 const LabelPrinter = () => {
   const [selectedTemplate, setSelectedTemplate] = useState("");
-  const [labelData, setLabelData] = useState({
+  const [templates, setTemplates] = useState<LabelTemplate[]>(initialTemplates);
+  const [printJobs, setPrintJobs] = useState<PrintJob[]>(initialPrintJobs);
+  const [printQueue, setPrintQueue] = useState<PrintJob[]>([]);
+  const { toast } = useToast();
+
+  const [labelData, setLabelData] = useState<LabelData>({
     title: "",
     subtitle: "",
     date: "",
@@ -36,12 +97,146 @@ const LabelPrinter = () => {
     quantity: 1,
   });
 
-  const handleInputChange = (field: string, value: string | number) => {
+  const handleInputChange = (field: keyof LabelData, value: string | number) => {
     setLabelData(prev => ({ ...prev, [field]: value }));
   };
 
   const handlePrint = () => {
-    console.log("Printing labels:", { template: selectedTemplate, data: labelData });
+    if (!selectedTemplate) {
+      toast({
+        title: "Error",
+        description: "Please select a template first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!labelData.title) {
+      toast({
+        title: "Error",
+        description: "Please enter a title for the label",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newPrintJob: PrintJob = {
+      id: Date.now(),
+      template: selectedTemplate,
+      quantity: labelData.quantity,
+      date: new Date().toISOString().split('T')[0],
+      status: "completed",
+      data: { ...labelData }
+    };
+
+    setPrintJobs(prev => [newPrintJob, ...prev]);
+    
+    toast({
+      title: "Success",
+      description: `Printed ${labelData.quantity} labels successfully`,
+    });
+
+    // Reset form
+    setLabelData({
+      title: "",
+      subtitle: "",
+      date: "",
+      researcher: "",
+      notes: "",
+      barcodeData: "",
+      quantity: 1,
+    });
+  };
+
+  const handleDownloadPDF = () => {
+    if (!selectedTemplate || !labelData.title) {
+      toast({
+        title: "Error",
+        description: "Please complete the label design first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Success",
+      description: "PDF downloaded successfully",
+    });
+  };
+
+  const handlePreview = () => {
+    if (!selectedTemplate) {
+      toast({
+        title: "Error",
+        description: "Please select a template first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Preview",
+      description: "Label preview updated",
+    });
+  };
+
+  const addToQueue = () => {
+    if (!selectedTemplate || !labelData.title) {
+      toast({
+        title: "Error",
+        description: "Please complete the label design first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const queueItem: PrintJob = {
+      id: Date.now(),
+      template: selectedTemplate,
+      quantity: labelData.quantity,
+      date: new Date().toISOString().split('T')[0],
+      status: "queued",
+      data: { ...labelData }
+    };
+
+    setPrintQueue(prev => [...prev, queueItem]);
+    
+    toast({
+      title: "Success",
+      description: "Added to print queue",
+    });
+  };
+
+  const removeFromQueue = (id: number) => {
+    setPrintQueue(prev => prev.filter(item => item.id !== id));
+    toast({
+      title: "Success",
+      description: "Removed from print queue",
+    });
+  };
+
+  const processQueue = () => {
+    if (printQueue.length === 0) {
+      toast({
+        title: "Error",
+        description: "Print queue is empty",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const processedJobs = printQueue.map(job => ({
+      ...job,
+      status: "completed"
+    }));
+
+    setPrintJobs(prev => [...processedJobs, ...prev]);
+    setPrintQueue([]);
+
+    toast({
+      title: "Success",
+      description: `Processed ${processedJobs.length} print jobs`,
+    });
   };
 
   return (
@@ -62,9 +257,9 @@ const LabelPrinter = () => {
                   <Plus className="h-4 w-4" />
                   New Template
                 </Button>
-                <Button variant="outline" className="gap-2">
+                <Button variant="outline" className="gap-2" onClick={processQueue}>
                   <FileText className="h-4 w-4" />
-                  Print Queue
+                  Process Queue ({printQueue.length})
                 </Button>
               </div>
             </div>
@@ -88,7 +283,7 @@ const LabelPrinter = () => {
                           <SelectValue placeholder="Select a template" />
                         </SelectTrigger>
                         <SelectContent>
-                          {labelTemplates.map((template) => (
+                          {templates.map((template) => (
                             <SelectItem key={template.id} value={template.name}>
                               {template.name} ({template.size})
                             </SelectItem>
@@ -167,7 +362,7 @@ const LabelPrinter = () => {
                         id="quantity"
                         type="number"
                         value={labelData.quantity}
-                        onChange={(e) => handleInputChange("quantity", parseInt(e.target.value))}
+                        onChange={(e) => handleInputChange("quantity", parseInt(e.target.value) || 1)}
                         min={1}
                         max={1000}
                       />
@@ -179,13 +374,17 @@ const LabelPrinter = () => {
                         <Printer className="h-4 w-4" />
                         Print Labels
                       </Button>
-                      <Button variant="outline" className="gap-2">
+                      <Button variant="outline" className="gap-2" onClick={handleDownloadPDF}>
                         <Download className="h-4 w-4" />
                         Download PDF
                       </Button>
-                      <Button variant="outline" className="gap-2">
+                      <Button variant="outline" className="gap-2" onClick={handlePreview}>
                         <QrCode className="h-4 w-4" />
                         Preview
+                      </Button>
+                      <Button variant="outline" className="gap-2" onClick={addToQueue}>
+                        <Plus className="h-4 w-4" />
+                        Add to Queue
                       </Button>
                     </div>
                   </CardContent>
@@ -198,23 +397,26 @@ const LabelPrinter = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="border-2 border-dashed border-gray-300 p-8 rounded-lg text-center">
-                      <div className="bg-white border border-gray-200 rounded p-4 inline-block min-w-[200px]">
+                      <div className="bg-white border border-gray-200 rounded p-4 inline-block min-w-[200px] max-w-[300px]">
                         <div className="text-sm font-bold">{labelData.title || "Sample Title"}</div>
                         <div className="text-xs text-gray-600">{labelData.subtitle || "Subtitle"}</div>
                         <div className="my-2">
-                          <div className="bg-gray-900 h-8 w-full flex items-center justify-center">
+                          <div className="bg-gray-900 h-8 w-full flex items-center justify-center rounded">
                             <Barcode className="h-4 w-4 text-white" />
+                            <span className="text-white text-xs ml-1">
+                              {labelData.barcodeData || "BARCODE"}
+                            </span>
                           </div>
                         </div>
-                        <div className="text-xs">
+                        <div className="text-xs space-y-1">
                           <div>{labelData.date || "Date"}</div>
                           <div>{labelData.researcher || "Researcher"}</div>
+                          {labelData.notes && (
+                            <div className="text-gray-500 mt-1 text-wrap break-words">
+                              {labelData.notes}
+                            </div>
+                          )}
                         </div>
-                        {labelData.notes && (
-                          <div className="text-xs text-gray-500 mt-1 truncate">
-                            {labelData.notes}
-                          </div>
-                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -230,7 +432,7 @@ const LabelPrinter = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {labelTemplates.map((template) => (
+                      {templates.map((template) => (
                         <div
                           key={template.id}
                           className={`p-3 border rounded-lg cursor-pointer transition-colors ${
@@ -251,6 +453,38 @@ const LabelPrinter = () => {
                   </CardContent>
                 </Card>
 
+                {/* Print Queue */}
+                {printQueue.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Print Queue</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {printQueue.map((job) => (
+                          <div key={job.id} className="p-3 border border-gray-200 rounded-lg">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <div className="font-medium text-sm">{job.data.title}</div>
+                                <div className="text-xs text-gray-600">
+                                  {job.quantity} labels • {job.template}
+                                </div>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeFromQueue(job.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Recent Prints */}
                 <Card>
                   <CardHeader>
@@ -258,11 +492,11 @@ const LabelPrinter = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {recentPrints.map((print) => (
+                      {printJobs.slice(0, 5).map((print) => (
                         <div key={print.id} className="p-3 border border-gray-200 rounded-lg">
                           <div className="flex justify-between items-start">
                             <div>
-                              <div className="font-medium text-sm">{print.template}</div>
+                              <div className="font-medium text-sm">{print.data.title}</div>
                               <div className="text-xs text-gray-600">
                                 {print.quantity} labels • {print.date}
                               </div>

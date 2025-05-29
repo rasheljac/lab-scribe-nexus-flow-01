@@ -5,11 +5,30 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Filter, Package, AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { Plus, Search, AlertTriangle, CheckCircle, Clock, Package, Edit, ShoppingCart } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
+import AddInventoryItemDialog from "@/components/AddInventoryItemDialog";
+import EditInventoryItemDialog from "@/components/EditInventoryItemDialog";
+import { useToast } from "@/hooks/use-toast";
 
-const inventory = [
+interface InventoryItem {
+  id: number;
+  name: string;
+  category: string;
+  supplier: string;
+  currentStock: number;
+  minStock: number;
+  maxStock: number;
+  unit: string;
+  location: string;
+  expiryDate: string;
+  status: string;
+  lastOrdered: string;
+  cost: string;
+}
+
+const initialInventory: InventoryItem[] = [
   {
     id: 1,
     name: "Pipette Tips (10μL)",
@@ -73,9 +92,13 @@ const inventory = [
 ];
 
 const Inventory = () => {
+  const [inventory, setInventory] = useState<InventoryItem[]>(initialInventory);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const { toast } = useToast();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -107,6 +130,29 @@ const Inventory = () => {
     }
   };
 
+  const handleAddItem = (newItem: Omit<InventoryItem, 'id'>) => {
+    const id = Math.max(...inventory.map(item => item.id)) + 1;
+    setInventory(prev => [...prev, { ...newItem, id }]);
+  };
+
+  const handleUpdateItem = (id: number, updatedItem: Partial<InventoryItem>) => {
+    setInventory(prev => prev.map(item => 
+      item.id === id ? { ...item, ...updatedItem } : item
+    ));
+  };
+
+  const handleEditItem = (item: InventoryItem) => {
+    setEditingItem(item);
+    setEditDialogOpen(true);
+  };
+
+  const handleOrderItem = (item: InventoryItem) => {
+    toast({
+      title: "Order Placed",
+      description: `Order placed for ${item.name} from ${item.supplier}`,
+    });
+  };
+
   const filteredInventory = inventory.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.supplier.toLowerCase().includes(searchTerm.toLowerCase());
@@ -114,6 +160,8 @@ const Inventory = () => {
     const matchesStatus = filterStatus === "all" || item.status === filterStatus;
     return matchesSearch && matchesCategory && matchesStatus;
   });
+
+  const lowStockItems = inventory.filter(item => item.status === "low_stock" || item.status === "out_of_stock");
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -129,14 +177,13 @@ const Inventory = () => {
                 <p className="text-gray-600 mt-1">Track and manage laboratory supplies and equipment</p>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" className="gap-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  Low Stock Alert
-                </Button>
-                <Button className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add Item
-                </Button>
+                {lowStockItems.length > 0 && (
+                  <Button variant="outline" className="gap-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    Low Stock Alert ({lowStockItems.length})
+                  </Button>
+                )}
+                <AddInventoryItemDialog onAddItem={handleAddItem} />
               </div>
             </div>
 
@@ -268,11 +315,11 @@ const Inventory = () => {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-green-600">{item.cost}</span>
-                        <Button variant="outline" size="sm">
-                          Edit
+                        <Button variant="outline" size="sm" onClick={() => handleEditItem(item)}>
+                          <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" size="sm">
-                          Order
+                        <Button variant="outline" size="sm" onClick={() => handleOrderItem(item)}>
+                          <ShoppingCart className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
@@ -283,6 +330,13 @@ const Inventory = () => {
           </div>
         </main>
       </div>
+
+      <EditInventoryItemDialog
+        item={editingItem}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onUpdateItem={handleUpdateItem}
+      />
     </div>
   );
 };
