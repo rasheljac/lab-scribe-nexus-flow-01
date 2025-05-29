@@ -28,7 +28,15 @@ export const useUserPreferences = () => {
         .single();
 
       if (error && error.code !== 'PGRST116') throw error;
-      setPreferences(data);
+      
+      if (data) {
+        // Convert the data to match our interface
+        const convertedData: UserPreferences = {
+          ...data,
+          preferences: (data.preferences as Record<string, any>) || {}
+        };
+        setPreferences(convertedData);
+      }
     } catch (error) {
       console.error('Error fetching user preferences:', error);
     } finally {
@@ -50,8 +58,16 @@ export const useUserPreferences = () => {
         .single();
 
       if (error) throw error;
-      setPreferences(data);
-      return data;
+      
+      if (data) {
+        // Convert the data to match our interface
+        const convertedData: UserPreferences = {
+          ...data,
+          preferences: (data.preferences as Record<string, any>) || {}
+        };
+        setPreferences(convertedData);
+        return convertedData;
+      }
     } catch (error) {
       console.error('Error updating user preferences:', error);
     }
