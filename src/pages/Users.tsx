@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Search, Users as UsersIcon, Edit, Trash2, Loader2 } from "lucide-react";
+import { Search, Users as UsersIcon, Trash2, Loader2 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import { useUsers } from "@/hooks/useUsers";
@@ -39,13 +39,13 @@ const Users = () => {
       await deleteUser.mutateAsync(userId);
       toast({
         title: "Success",
-        description: "User deleted successfully!",
+        description: "User profile deleted successfully!",
       });
     } catch (error) {
       console.error("Error deleting user:", error);
       toast({
         title: "Error",
-        description: "Failed to delete user",
+        description: "Failed to delete user profile",
         variant: "destructive",
       });
     }
@@ -61,6 +61,7 @@ const Users = () => {
             <div className="max-w-7xl mx-auto">
               <div className="text-center py-12">
                 <p className="text-red-600">Error loading users: {error.message}</p>
+                <p className="text-gray-600 mt-2">Note: User management requires a profiles table to be set up in your database.</p>
               </div>
             </div>
           </main>
@@ -179,9 +180,9 @@ const Users = () => {
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                <AlertDialogTitle>Delete User Profile</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Are you sure you want to delete this user? This action cannot be undone.
+                                  Are you sure you want to delete this user profile? This action cannot be undone.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>

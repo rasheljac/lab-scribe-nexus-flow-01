@@ -11,10 +11,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Edit } from "lucide-react";
 import { useExperimentNotes, ExperimentNote } from "@/hooks/useExperimentNotes";
 import { useToast } from "@/hooks/use-toast";
+import RichTextEditor from "@/components/RichTextEditor";
 
 interface EditNoteDialogProps {
   note: ExperimentNote;
@@ -69,7 +69,7 @@ const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
           <Edit className="h-3 w-3" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Note</DialogTitle>
           <DialogDescription>
@@ -89,11 +89,11 @@ const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
 
           <div className="space-y-2">
             <Label htmlFor="content">Content</Label>
-            <Textarea
-              id="content"
+            <RichTextEditor
               value={formData.content}
-              onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-              rows={8}
+              onChange={(value) => setFormData(prev => ({ ...prev, content: value }))}
+              placeholder="Enter your note content..."
+              className="mt-2"
             />
           </div>
 

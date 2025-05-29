@@ -26,17 +26,54 @@ export const useUsers = () => {
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
       
-      const { data, error } = await supabase.auth.admin.listUsers();
+      // Try to fetch from profiles table first
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*');
       
-      if (error) throw error;
-      return data.users as User[];
+      if (profilesError) {
+        console.log('Profiles table not found, using current user only');
+        // If profiles table doesn't exist, return current user info
+        return [{
+          id: user.id,
+          email: user.email || '',
+          created_at: user.created_at || '',
+          email_confirmed_at: user.email_confirmed_at || null,
+          last_sign_in_at: user.last_sign_in_at || null,
+          raw_user_meta_data: user.user_metadata || {}
+        }] as User[];
+      }
+      
+      return profilesData.map(profile => ({
+        id: profile.id,
+        email: profile.email || user.email || '',
+        created_at: profile.created_at || user.created_at || '',
+        email_confirmed_at: profile.email_confirmed_at || user.email_confirmed_at || null,
+        last_sign_in_at: profile.last_sign_in_at || user.last_sign_in_at || null,
+        raw_user_meta_data: {
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+          avatar_url: profile.avatar_url
+        }
+      })) as User[];
     },
     enabled: !!user,
   });
 
   const updateUser = useMutation({
     mutationFn: async ({ id, userData }: { id: string; userData: any }) => {
-      const { data, error } = await supabase.auth.admin.updateUserById(id, userData);
+      // Try to update profiles table
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({
+          first_name: userData.user_metadata?.first_name,
+          last_name: userData.user_metadata?.last_name,
+          email: userData.email
+        })
+        .eq('id', id)
+        .select()
+        .single();
+      
       if (error) throw error;
       return data;
     },
@@ -47,7 +84,12 @@ export const useUsers = () => {
 
   const deleteUser = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.auth.admin.deleteUser(id);
+      // Only allow deleting from profiles table
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', id);
+      
       if (error) throw error;
     },
     onSuccess: () => {

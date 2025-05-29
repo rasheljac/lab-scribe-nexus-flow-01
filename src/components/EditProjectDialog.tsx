@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -22,6 +21,7 @@ import {
 import { Settings } from "lucide-react";
 import { useProjects, Project } from "@/hooks/useProjects";
 import { useToast } from "@/hooks/use-toast";
+import RichTextEditor from "@/components/RichTextEditor";
 
 interface EditProjectDialogProps {
   project: Project;
@@ -89,7 +89,7 @@ const EditProjectDialog = ({ project }: EditProjectDialogProps) => {
           Edit
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Project</DialogTitle>
           <DialogDescription>
@@ -109,11 +109,11 @@ const EditProjectDialog = ({ project }: EditProjectDialogProps) => {
 
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
+            <RichTextEditor
               value={formData.description}
-              onChange={(e) => handleInputChange("description", e.target.value)}
-              rows={3}
+              onChange={(value) => handleInputChange("description", value)}
+              placeholder="Enter project description..."
+              className="mt-2"
             />
           </div>
 

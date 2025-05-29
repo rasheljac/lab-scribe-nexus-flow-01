@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -22,6 +21,7 @@ import {
 import { Edit } from "lucide-react";
 import { useExperiments, Experiment } from "@/hooks/useExperiments";
 import { useToast } from "@/hooks/use-toast";
+import RichTextEditor from "@/components/RichTextEditor";
 
 interface EditExperimentDialogProps {
   experiment: Experiment;
@@ -91,7 +91,7 @@ const EditExperimentDialog = ({ experiment }: EditExperimentDialogProps) => {
           Edit
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Experiment</DialogTitle>
           <DialogDescription>
@@ -111,11 +111,11 @@ const EditExperimentDialog = ({ experiment }: EditExperimentDialogProps) => {
 
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
+            <RichTextEditor
               value={formData.description}
-              onChange={(e) => handleInputChange("description", e.target.value)}
-              rows={3}
+              onChange={(value) => handleInputChange("description", value)}
+              placeholder="Enter experiment description..."
+              className="mt-2"
             />
           </div>
 

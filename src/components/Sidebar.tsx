@@ -22,20 +22,28 @@ import {
   ChevronRight
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useExperiments } from "@/hooks/useExperiments";
+import { useProjects } from "@/hooks/useProjects";
+import { useTasks } from "@/hooks/useTasks";
 
 const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Get actual counts
+  const { experiments } = useExperiments();
+  const { projects } = useProjects();
+  const { tasks } = useTasks();
 
   const menuItems = [
     { icon: Home, label: "Dashboard", path: "/", badge: null },
-    { icon: Beaker, label: "Experiments", path: "/experiments", badge: "12" },
-    { icon: FolderOpen, label: "Projects", path: "/projects", badge: "5" },
+    { icon: Beaker, label: "Experiments", path: "/experiments", badge: experiments.length.toString() },
+    { icon: FolderOpen, label: "Projects", path: "/projects", badge: projects.length.toString() },
     { icon: Calendar, label: "Calendar", path: "/calendar", badge: null },
-    { icon: CheckSquare, label: "Tasks", path: "/tasks", badge: "8" },
+    { icon: CheckSquare, label: "Tasks", path: "/tasks", badge: tasks.length.toString() },
     { icon: BarChart3, label: "Analytics", path: "/analytics", badge: null },
-    { icon: FileText, label: "Reports", path: "/reports", badge: "3" },
+    { icon: FileText, label: "Reports", path: "/reports", badge: null },
     { icon: Package, label: "Inventory", path: "/inventory", badge: "!" },
     { icon: Printer, label: "Label Printer", path: "/labels", badge: null },
     { icon: ShoppingCart, label: "Order Portal", path: "/orders", badge: "2" },

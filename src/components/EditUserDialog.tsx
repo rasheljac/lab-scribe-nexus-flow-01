@@ -41,13 +41,13 @@ const EditUserDialog = ({ user }: EditUserDialogProps) => {
       setOpen(false);
       toast({
         title: "Success",
-        description: "User updated successfully!",
+        description: "User profile updated successfully!",
       });
     } catch (error) {
       console.error("Error updating user:", error);
       toast({
         title: "Error",
-        description: "Failed to update user",
+        description: "Failed to update user profile",
         variant: "destructive",
       });
     }
@@ -62,7 +62,7 @@ const EditUserDialog = ({ user }: EditUserDialogProps) => {
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit User</DialogTitle>
+          <DialogTitle>Edit User Profile</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
