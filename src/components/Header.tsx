@@ -77,6 +77,18 @@ const Header = () => {
     return 'U';
   };
 
+  const handleProfileClick = () => {
+    navigate("/admin/users");
+  };
+
+  const handleSettingsClick = () => {
+    navigate("/settings");
+  };
+
+  const handleAdminClick = () => {
+    navigate("/admin/users");
+  };
+
   return (
     <>
       <header className="bg-white border-b border-gray-200 px-6 py-4">
@@ -157,15 +169,15 @@ const Header = () => {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate("/admin/users")}>
+                <DropdownMenuItem onClick={handleProfileClick}>
                   <User className="mr-2 h-4 w-4" />
                   <span>Profile</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/settings")}>
+                <DropdownMenuItem onClick={handleSettingsClick}>
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/admin/users")}>
+                <DropdownMenuItem onClick={handleAdminClick}>
                   <Shield className="mr-2 h-4 w-4" />
                   <span>Admin Panel</span>
                 </DropdownMenuItem>

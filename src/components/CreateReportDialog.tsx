@@ -54,6 +54,7 @@ const CreateReportDialog = ({ open, onOpenChange }: CreateReportDialogProps) => 
         ...formData,
         author: user?.email?.split('@')[0] || 'Unknown',
         downloads: 0,
+        size: null, // Add the missing size property
       });
       toast({
         title: "Success",
