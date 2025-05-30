@@ -29,9 +29,7 @@ import {
 import { 
   ArrowLeft, 
   Plus, 
-  Edit3, 
   Trash2, 
-  Save,
   Loader2,
   FileText,
   Calendar
@@ -39,6 +37,7 @@ import {
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import RichTextEditor from "@/components/RichTextEditor";
+import EditIdeaNoteDialog from "@/components/EditIdeaNoteDialog";
 import { useIdeaNotes } from "@/hooks/useIdeaNotes";
 import { useExperimentIdeas } from "@/hooks/useExperimentIdeas";
 import { useToast } from "@/hooks/use-toast";
@@ -48,11 +47,10 @@ const IdeaNotes = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingNote, setEditingNote] = useState<any>(null);
   const [newNoteTitle, setNewNoteTitle] = useState("");
   const [newNoteContent, setNewNoteContent] = useState("");
 
-  const { notes, isLoading, error, createNote, updateNote, deleteNote } = useIdeaNotes(ideaId!);
+  const { notes, isLoading, error, createNote, deleteNote } = useIdeaNotes(ideaId!);
   const { ideas } = useExperimentIdeas();
   
   const currentIdea = ideas.find(idea => idea.id === ideaId);
@@ -87,39 +85,6 @@ const IdeaNotes = () => {
       toast({
         title: "Error",
         description: "Failed to create note",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleUpdateNote = async () => {
-    if (!editingNote?.title.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a note title",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      await updateNote.mutateAsync({
-        id: editingNote.id,
-        title: editingNote.title,
-        content: editingNote.content,
-      });
-      
-      setEditingNote(null);
-      
-      toast({
-        title: "Success",
-        description: "Note updated successfully!",
-      });
-    } catch (error) {
-      console.error("Error updating note:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update note",
         variant: "destructive",
       });
     }
@@ -257,12 +222,18 @@ const IdeaNotes = () => {
                 </CardHeader>
                 <CardContent>
                   {currentIdea.description && (
-                    <p className="text-gray-700 mb-4">{currentIdea.description}</p>
+                    <div 
+                      className="prose max-w-none mb-4"
+                      dangerouslySetInnerHTML={{ __html: currentIdea.description }}
+                    />
                   )}
                   {currentIdea.hypothesis && (
                     <div className="mb-4">
                       <h4 className="font-medium text-gray-900 mb-2">Hypothesis</h4>
-                      <p className="text-gray-700">{currentIdea.hypothesis}</p>
+                      <div 
+                        className="prose max-w-none text-gray-700"
+                        dangerouslySetInnerHTML={{ __html: currentIdea.hypothesis }}
+                      />
                     </div>
                   )}
                 </CardContent>
@@ -284,66 +255,7 @@ const IdeaNotes = () => {
                           <CardTitle className="text-lg">{note.title}</CardTitle>
                         </div>
                         <div className="flex gap-2">
-                          <Dialog 
-                            open={editingNote?.id === note.id} 
-                            onOpenChange={(open) => !open && setEditingNote(null)}
-                          >
-                            <DialogTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setEditingNote({ ...note })}
-                              >
-                                <Edit3 className="h-4 w-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                              <DialogHeader>
-                                <DialogTitle>Edit Note</DialogTitle>
-                              </DialogHeader>
-                              <div className="space-y-4">
-                                <div>
-                                  <Label htmlFor="edit-title">Note Title</Label>
-                                  <Input
-                                    id="edit-title"
-                                    value={editingNote?.title || ""}
-                                    onChange={(e) => setEditingNote({
-                                      ...editingNote,
-                                      title: e.target.value
-                                    })}
-                                  />
-                                </div>
-                                <div>
-                                  <Label htmlFor="edit-content">Content</Label>
-                                  <RichTextEditor
-                                    value={editingNote?.content || ""}
-                                    onChange={(content) => setEditingNote({
-                                      ...editingNote,
-                                      content
-                                    })}
-                                  />
-                                </div>
-                              </div>
-                              <DialogFooter>
-                                <Button
-                                  variant="outline"
-                                  onClick={() => setEditingNote(null)}
-                                >
-                                  Cancel
-                                </Button>
-                                <Button
-                                  onClick={handleUpdateNote}
-                                  disabled={updateNote.isPending}
-                                >
-                                  {updateNote.isPending && (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  )}
-                                  <Save className="mr-2 h-4 w-4" />
-                                  Save Changes
-                                </Button>
-                              </DialogFooter>
-                            </DialogContent>
-                          </Dialog>
+                          <EditIdeaNoteDialog note={note} ideaId={ideaId!} />
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,12 +10,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Plus, X } from "lucide-react";
 import { useExperimentIdeas, ExperimentIdea } from "@/hooks/useExperimentIdeas";
 import { useToast } from "@/hooks/use-toast";
+import RichTextEditor from "@/components/RichTextEditor";
 
 interface EditIdeaDialogProps {
   idea: ExperimentIdea;
@@ -128,31 +127,28 @@ const EditIdeaDialog = ({ idea }: EditIdeaDialogProps) => {
 
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
+                <RichTextEditor
                   value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  rows={3}
+                  onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
+                  placeholder="Brief overview of the experimental idea..."
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="hypothesis">Hypothesis</Label>
-                <Textarea
-                  id="hypothesis"
+                <RichTextEditor
                   value={formData.hypothesis}
-                  onChange={(e) => setFormData(prev => ({ ...prev, hypothesis: e.target.value }))}
-                  rows={2}
+                  onChange={(value) => setFormData(prev => ({ ...prev, hypothesis: value }))}
+                  placeholder="What do you expect to find or prove?"
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="methodology">Methodology</Label>
-                <Textarea
-                  id="methodology"
+                <RichTextEditor
                   value={formData.methodology}
-                  onChange={(e) => setFormData(prev => ({ ...prev, methodology: e.target.value }))}
-                  rows={3}
+                  onChange={(value) => setFormData(prev => ({ ...prev, methodology: value }))}
+                  placeholder="How would you approach this experiment?"
                 />
               </div>
             </div>
@@ -160,21 +156,19 @@ const EditIdeaDialog = ({ idea }: EditIdeaDialogProps) => {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="required_materials">Required Materials</Label>
-                <Textarea
-                  id="required_materials"
+                <RichTextEditor
                   value={formData.required_materials}
-                  onChange={(e) => setFormData(prev => ({ ...prev, required_materials: e.target.value }))}
-                  rows={3}
+                  onChange={(value) => setFormData(prev => ({ ...prev, required_materials: value }))}
+                  placeholder="List equipment, chemicals, samples needed..."
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="expected_outcomes">Expected Outcomes</Label>
-                <Textarea
-                  id="expected_outcomes"
+                <RichTextEditor
                   value={formData.expected_outcomes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, expected_outcomes: e.target.value }))}
-                  rows={2}
+                  onChange={(value) => setFormData(prev => ({ ...prev, expected_outcomes: value }))}
+                  placeholder="What results do you anticipate?"
                 />
               </div>
 
