@@ -10,6 +10,26 @@ export const useIdeaReports = () => {
   const queryClient = useQueryClient();
   const { ideas } = useExperimentIdeas();
 
+  // Helper function to strip HTML and extract plain text
+  const stripHtml = (html: string) => {
+    if (!html) return '';
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+  };
+
+  // Helper function to extract images from HTML content
+  const extractImages = (html: string) => {
+    if (!html) return [];
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    const images = tmp.querySelectorAll('img');
+    return Array.from(images).map(img => ({
+      src: img.src,
+      alt: img.alt || 'Image'
+    }));
+  };
+
   const generateIdeaReport = useMutation({
     mutationFn: async ({ ideaId, includeNotes = false }: { ideaId: string; includeNotes?: boolean }) => {
       if (!user) throw new Error('User not authenticated');
@@ -56,7 +76,8 @@ export const useIdeaReports = () => {
         pdf.text('Description:', 20, yPosition);
         yPosition += 10;
         pdf.setFontSize(10);
-        const descriptionLines = pdf.splitTextToSize(idea.description, 170);
+        const plainDescription = stripHtml(idea.description);
+        const descriptionLines = pdf.splitTextToSize(plainDescription, 170);
         pdf.text(descriptionLines, 20, yPosition);
         yPosition += descriptionLines.length * 5 + 10;
       }
@@ -67,7 +88,8 @@ export const useIdeaReports = () => {
         pdf.text('Hypothesis:', 20, yPosition);
         yPosition += 10;
         pdf.setFontSize(10);
-        const hypothesisLines = pdf.splitTextToSize(idea.hypothesis, 170);
+        const plainHypothesis = stripHtml(idea.hypothesis);
+        const hypothesisLines = pdf.splitTextToSize(plainHypothesis, 170);
         pdf.text(hypothesisLines, 20, yPosition);
         yPosition += hypothesisLines.length * 5 + 10;
       }
@@ -78,7 +100,8 @@ export const useIdeaReports = () => {
         pdf.text('Methodology:', 20, yPosition);
         yPosition += 10;
         pdf.setFontSize(10);
-        const methodologyLines = pdf.splitTextToSize(idea.methodology, 170);
+        const plainMethodology = stripHtml(idea.methodology);
+        const methodologyLines = pdf.splitTextToSize(plainMethodology, 170);
         pdf.text(methodologyLines, 20, yPosition);
         yPosition += methodologyLines.length * 5 + 10;
       }
@@ -89,7 +112,8 @@ export const useIdeaReports = () => {
         pdf.text('Required Materials:', 20, yPosition);
         yPosition += 10;
         pdf.setFontSize(10);
-        const materialsLines = pdf.splitTextToSize(idea.required_materials, 170);
+        const plainMaterials = stripHtml(idea.required_materials);
+        const materialsLines = pdf.splitTextToSize(plainMaterials, 170);
         pdf.text(materialsLines, 20, yPosition);
         yPosition += materialsLines.length * 5 + 10;
       }
@@ -100,7 +124,8 @@ export const useIdeaReports = () => {
         pdf.text('Expected Outcomes:', 20, yPosition);
         yPosition += 10;
         pdf.setFontSize(10);
-        const outcomesLines = pdf.splitTextToSize(idea.expected_outcomes, 170);
+        const plainOutcomes = stripHtml(idea.expected_outcomes);
+        const outcomesLines = pdf.splitTextToSize(plainOutcomes, 170);
         pdf.text(outcomesLines, 20, yPosition);
         yPosition += outcomesLines.length * 5 + 10;
       }
@@ -132,7 +157,7 @@ export const useIdeaReports = () => {
         yPosition += 20;
       }
 
-      // Notes section
+      // Notes section with improved handling
       if (includeNotes && notes.length > 0) {
         // Add new page for notes if needed
         if (yPosition > 250) {
@@ -144,7 +169,9 @@ export const useIdeaReports = () => {
         pdf.text('Research Notes:', 20, yPosition);
         yPosition += 15;
 
-        notes.forEach((note, index) => {
+        for (let index = 0; index < notes.length; index++) {
+          const note = notes[index];
+          
           // Check if we need a new page
           if (yPosition > 250) {
             pdf.addPage();
@@ -161,13 +188,37 @@ export const useIdeaReports = () => {
 
           if (note.content) {
             pdf.setFontSize(10);
-            // Strip HTML tags for PDF
-            const plainTextContent = note.content.replace(/<[^>]*>/g, '');
-            const contentLines = pdf.splitTextToSize(plainTextContent, 170);
-            pdf.text(contentLines, 20, yPosition);
-            yPosition += contentLines.length * 4 + 15;
+            
+            // Extract plain text and images from rich text content
+            const plainTextContent = stripHtml(note.content);
+            const images = extractImages(note.content);
+            
+            // Add plain text content
+            if (plainTextContent) {
+              const contentLines = pdf.splitTextToSize(plainTextContent, 170);
+              pdf.text(contentLines, 20, yPosition);
+              yPosition += contentLines.length * 4 + 10;
+            }
+
+            // Add note about images if they exist
+            if (images.length > 0) {
+              pdf.setFontSize(8);
+              pdf.text(`[Note: This note contains ${images.length} image(s) - images are not displayed in PDF]`, 20, yPosition);
+              yPosition += 8;
+              
+              // List image alt texts if available
+              images.forEach((img, imgIndex) => {
+                if (img.alt && img.alt !== 'Image') {
+                  pdf.text(`  Image ${imgIndex + 1}: ${img.alt}`, 25, yPosition);
+                  yPosition += 6;
+                }
+              });
+              yPosition += 10;
+            }
           }
-        });
+          
+          yPosition += 5;
+        }
       }
 
       // Save the report to database
@@ -269,7 +320,8 @@ export const useIdeaReports = () => {
         yPosition += 6;
         
         if (idea.description) {
-          const descLines = pdf.splitTextToSize(idea.description, 160);
+          const plainDescription = stripHtml(idea.description);
+          const descLines = pdf.splitTextToSize(plainDescription, 160);
           pdf.text(descLines.slice(0, 2), 25, yPosition); // Limit to 2 lines
           yPosition += Math.min(descLines.length, 2) * 4;
         }

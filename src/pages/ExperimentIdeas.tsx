@@ -33,6 +33,8 @@ import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import CreateIdeaDialog from "@/components/CreateIdeaDialog";
 import EditIdeaDialog from "@/components/EditIdeaDialog";
+import IdeaReportDialog from "@/components/IdeaReportDialog";
+import RichTextDisplay from "@/components/RichTextDisplay";
 import { useExperimentIdeas } from "@/hooks/useExperimentIdeas";
 import { useToast } from "@/hooks/use-toast";
 
@@ -174,7 +176,10 @@ const ExperimentIdeas = () => {
                 <h1 className="text-3xl font-bold text-gray-900">Experiment Ideas</h1>
                 <p className="text-gray-600 mt-1">Document and develop your experimental concepts</p>
               </div>
-              <CreateIdeaDialog />
+              <div className="flex gap-2">
+                <IdeaReportDialog variant="all" />
+                <CreateIdeaDialog />
+              </div>
             </div>
 
             <div className="flex items-center gap-4">
@@ -253,14 +258,22 @@ const ExperimentIdeas = () => {
                         </div>
                       </div>
                       {idea.description && (
-                        <p className="text-sm text-gray-600 mt-2">{idea.description}</p>
+                        <RichTextDisplay 
+                          content={idea.description}
+                          className="text-sm text-gray-600 mt-2"
+                          maxLength={150}
+                        />
                       )}
                     </CardHeader>
                     <CardContent className="space-y-4">
                       {idea.hypothesis && (
                         <div>
                           <h4 className="font-medium text-sm text-gray-900 mb-1">Hypothesis</h4>
-                          <p className="text-sm text-gray-600">{idea.hypothesis}</p>
+                          <RichTextDisplay 
+                            content={idea.hypothesis}
+                            className="text-sm text-gray-600"
+                            maxLength={100}
+                          />
                         </div>
                       )}
 
@@ -309,6 +322,11 @@ const ExperimentIdeas = () => {
                           Notes
                         </Button>
                         <EditIdeaDialog idea={idea} />
+                        <IdeaReportDialog 
+                          ideaId={idea.id} 
+                          ideaTitle={idea.title}
+                          variant="single" 
+                        />
                         {idea.status === 'ready' && (
                           <Button
                             size="sm"
