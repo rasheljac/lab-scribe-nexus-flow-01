@@ -53,6 +53,12 @@ const Projects = () => {
     return experiments.filter(exp => exp.project_id === projectId);
   };
 
+  const stripHtmlTags = (html: string) => {
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+  };
+
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (project.description && project.description.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -177,7 +183,7 @@ const Projects = () => {
                           </div>
                         </div>
                         <p className="text-sm text-gray-600 mt-2">
-                          {project.description}
+                          {project.description ? stripHtmlTags(project.description) : ""}
                         </p>
                       </CardHeader>
                       <CardContent className="space-y-4" onClick={() => handleProjectClick(project.id)}>

@@ -75,6 +75,12 @@ const ProjectExperiments = () => {
     }
   };
 
+  const stripHtmlTags = (html: string) => {
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+  };
+
   const filteredExperiments = projectExperiments.filter(exp => {
     const matchesSearch = exp.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (exp.description && exp.description.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -218,7 +224,7 @@ const ProjectExperiments = () => {
                         className="text-sm text-gray-600 mt-2 cursor-pointer"
                         onClick={() => handleExperimentClick(experiment.id)}
                       >
-                        {experiment.description}
+                        {experiment.description ? stripHtmlTags(experiment.description) : ""}
                       </p>
                     </CardHeader>
                     <CardContent className="space-y-4">
