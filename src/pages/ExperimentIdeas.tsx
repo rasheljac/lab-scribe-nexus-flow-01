@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +26,8 @@ import {
   ArrowRight,
   Calendar,
   DollarSign,
-  Tag
+  Tag,
+  FileText
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
@@ -299,6 +299,15 @@ const ExperimentIdeas = () => {
                       </div>
 
                       <div className="flex gap-2 pt-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => navigate(`/experiment-ideas/${idea.id}/notes`)}
+                          className="gap-1"
+                        >
+                          <FileText className="h-3 w-3" />
+                          Notes
+                        </Button>
                         <EditIdeaDialog idea={idea} />
                         {idea.status === 'ready' && (
                           <Button

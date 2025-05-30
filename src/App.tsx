@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import Experiments from "./pages/Experiments";
 import ExperimentNotes from "./pages/ExperimentNotes";
 import ExperimentIdeas from "./pages/ExperimentIdeas";
+import IdeaNotes from "./pages/IdeaNotes";
 import Calendar from "./pages/Calendar";
 import Tasks from "./pages/Tasks";
 import Projects from "./pages/Projects";
@@ -57,6 +58,11 @@ const App = () => (
             <Route path="/experiment-ideas" element={
               <ProtectedRoute>
                 <ExperimentIdeas />
+              </ProtectedRoute>
+            } />
+            <Route path="/experiment-ideas/:ideaId/notes" element={
+              <ProtectedRoute>
+                <IdeaNotes />
               </ProtectedRoute>
             } />
             <Route path="/calendar" element={

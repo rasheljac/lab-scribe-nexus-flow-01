@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,10 +18,12 @@ import {
   Printer,
   ShoppingCart,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Lightbulb
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useExperiments } from "@/hooks/useExperiments";
+import { useExperimentIdeas } from "@/hooks/useExperimentIdeas";
 import { useProjects } from "@/hooks/useProjects";
 import { useTasks } from "@/hooks/useTasks";
 import { useReports } from "@/hooks/useReports";
@@ -36,6 +37,7 @@ const Sidebar = () => {
   
   // Get actual counts
   const { experiments } = useExperiments();
+  const { ideas } = useExperimentIdeas();
   const { projects } = useProjects();
   const { tasks } = useTasks();
   const { reports } = useReports();
@@ -46,6 +48,7 @@ const Sidebar = () => {
   const allMenuItems = [
     { icon: Home, label: "Dashboard", path: "/", badge: null, key: "dashboard" },
     { icon: Beaker, label: "Experiments", path: "/experiments", badge: experiments.length.toString(), key: "experiments" },
+    { icon: Lightbulb, label: "Experiment Ideas", path: "/experiment-ideas", badge: ideas.length.toString(), key: "experiment-ideas" },
     { icon: FolderOpen, label: "Projects", path: "/projects", badge: projects.length.toString(), key: "projects" },
     { icon: Calendar, label: "Calendar", path: "/calendar", badge: null, key: "calendar" },
     { icon: CheckSquare, label: "Tasks", path: "/tasks", badge: uncompletedTasksCount.toString(), key: "tasks" },
