@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -190,12 +190,16 @@ const Settings = () => {
 
   const handleNotificationChange = async (type: string, enabled: boolean) => {
     try {
-      const currentNotifications = preferences?.preferences?.notifications || {};
+      const currentPreferences = preferences?.preferences || {};
+      const currentNotifications = currentPreferences.notifications || {};
+      
       await updatePreferences({
-        ...preferences?.preferences,
-        notifications: {
-          ...currentNotifications,
-          [type]: enabled
+        preferences: {
+          ...currentPreferences,
+          notifications: {
+            ...currentNotifications,
+            [type]: enabled
+          }
         }
       });
       
@@ -269,7 +273,7 @@ const Settings = () => {
                       alt="Profile picture" 
                     />
                     <AvatarFallback className="text-lg">
-                      {firstName?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
+                      {profile?.first_name?.[0] || user?.user_metadata?.first_name?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
                   <div>
@@ -370,31 +374,6 @@ const Settings = () => {
                 <div className="space-y-4">
                   <h3 className="font-medium">Change Password</h3>
                   <div className="grid grid-cols-1 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="currentPassword">Current Password</Label>
-                      <div className="relative">
-                        <Input
-                          id="currentPassword"
-                          type={showCurrentPassword ? "text" : "password"}
-                          value={currentPassword}
-                          onChange={(e) => setCurrentPassword(e.target.value)}
-                          placeholder="Enter current password"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                        >
-                          {showCurrentPassword ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="newPassword">New Password</Label>
                       <div className="relative">

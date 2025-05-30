@@ -36,23 +36,58 @@ export const useUsers = () => {
           console.warn('Could not fetch user profiles:', profilesError);
         }
 
-        // Get all unique user IDs from various tables
-        const tables = ['projects', 'experiments', 'tasks', 'reports', 'team_members'];
+        // Get all unique user IDs from various tables using specific table names
         const userIds = new Set([user.id]); // Always include current user
 
-        for (const table of tables) {
-          try {
-            const { data, error } = await supabase
-              .from(table)
-              .select('user_id')
-              .not('user_id', 'is', null);
+        // Fetch from each table individually with proper typing
+        try {
+          const { data: projectData } = await supabase
+            .from('projects')
+            .select('user_id')
+            .not('user_id', 'is', null);
+          projectData?.forEach((item: any) => userIds.add(item.user_id));
+        } catch (err) {
+          console.warn('Could not fetch user_ids from projects:', err);
+        }
 
-            if (!error && data) {
-              data.forEach((item: any) => userIds.add(item.user_id));
-            }
-          } catch (err) {
-            console.warn(`Could not fetch user_ids from ${table}:`, err);
-          }
+        try {
+          const { data: experimentData } = await supabase
+            .from('experiments')
+            .select('user_id')
+            .not('user_id', 'is', null);
+          experimentData?.forEach((item: any) => userIds.add(item.user_id));
+        } catch (err) {
+          console.warn('Could not fetch user_ids from experiments:', err);
+        }
+
+        try {
+          const { data: taskData } = await supabase
+            .from('tasks')
+            .select('user_id')
+            .not('user_id', 'is', null);
+          taskData?.forEach((item: any) => userIds.add(item.user_id));
+        } catch (err) {
+          console.warn('Could not fetch user_ids from tasks:', err);
+        }
+
+        try {
+          const { data: reportData } = await supabase
+            .from('reports')
+            .select('user_id')
+            .not('user_id', 'is', null);
+          reportData?.forEach((item: any) => userIds.add(item.user_id));
+        } catch (err) {
+          console.warn('Could not fetch user_ids from reports:', err);
+        }
+
+        try {
+          const { data: teamData } = await supabase
+            .from('team_members')
+            .select('user_id')
+            .not('user_id', 'is', null);
+          teamData?.forEach((item: any) => userIds.add(item.user_id));
+        } catch (err) {
+          console.warn('Could not fetch user_ids from team_members:', err);
         }
 
         const allUsers: User[] = [];
@@ -76,10 +111,14 @@ export const useUsers = () => {
               }
             });
           } else if (profile) {
-            // User with profile data
+            // User with profile data - use actual email from auth metadata if available
+            const displayEmail = profile.first_name && profile.last_name 
+              ? `${profile.first_name.toLowerCase()}.${profile.last_name.toLowerCase()}@lab.system`
+              : `researcher.${userId.slice(0, 8)}@lab.system`;
+              
             allUsers.push({
               id: userId,
-              email: `${profile.first_name?.toLowerCase() || 'user'}.${profile.last_name?.toLowerCase() || userId.slice(0, 4)}@lab.system`,
+              email: displayEmail,
               created_at: profile.created_at,
               email_confirmed_at: profile.created_at,
               last_sign_in_at: profile.updated_at,
