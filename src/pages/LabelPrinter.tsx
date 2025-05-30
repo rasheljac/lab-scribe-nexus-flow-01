@@ -125,96 +125,127 @@ const LabelPrinter = () => {
         format: 'a4'
       });
 
-      // Define label dimensions (2x1 inch = ~51x25mm)
-      const labelWidth = 80;
-      const labelHeight = 50;
+      // Define label dimensions (matching preview proportions)
+      const labelWidth = 60;
+      const labelHeight = 40;
       const startX = 20;
       const startY = 30;
+      const padding = 4;
 
-      // Draw label border
-      doc.setDrawColor(0, 0, 0);
+      // Draw label border with rounded corners effect
+      doc.setDrawColor(200, 200, 200);
       doc.setLineWidth(0.5);
       doc.rect(startX, startY, labelWidth, labelHeight);
+
+      // White background
+      doc.setFillColor(255, 255, 255);
+      doc.rect(startX, startY, labelWidth, labelHeight, 'F');
+
+      let currentY = startY + padding + 4;
 
       // Add title
       doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
-      const titleLines = doc.splitTextToSize(labelData.title, labelWidth - 10);
-      doc.text(titleLines, startX + 5, startY + 8);
+      doc.setTextColor(0, 0, 0);
+      const titleText = labelData.title || "Sample Title";
+      const titleWidth = doc.getTextWidth(titleText);
+      const titleX = startX + (labelWidth - titleWidth) / 2; // Center align
+      doc.text(titleText, titleX, currentY);
+      currentY += 5;
 
       // Add subtitle if present
-      let currentY = startY + 8 + (titleLines.length * 4);
       if (labelData.subtitle) {
         doc.setFontSize(9);
         doc.setFont(undefined, 'normal');
-        doc.setTextColor(100, 100, 100);
-        const subtitleLines = doc.splitTextToSize(labelData.subtitle, labelWidth - 10);
-        doc.text(subtitleLines, startX + 5, currentY + 3);
-        currentY += subtitleLines.length * 3 + 2;
-        doc.setTextColor(0, 0, 0);
+        doc.setTextColor(120, 120, 120);
+        const subtitleText = labelData.subtitle;
+        const subtitleWidth = doc.getTextWidth(subtitleText);
+        const subtitleX = startX + (labelWidth - subtitleWidth) / 2; // Center align
+        doc.text(subtitleText, subtitleX, currentY);
+        currentY += 4;
       }
 
-      // Add barcode area
+      currentY += 2;
+
+      // Add barcode area (matching the preview style exactly)
       if (labelData.barcode_data) {
-        currentY += 3;
         const barcodeHeight = 8;
-        const barcodeWidth = labelWidth - 10;
+        const barcodeWidth = labelWidth - (padding * 2);
+        const barcodeX = startX + padding;
         
-        // Draw barcode background
-        doc.setFillColor(0, 0, 0);
-        doc.rect(startX + 5, currentY, barcodeWidth, barcodeHeight, 'F');
+        // Dark background for barcode
+        doc.setFillColor(35, 35, 55); // Dark blue-grey color matching preview
+        doc.rect(barcodeX, currentY, barcodeWidth, barcodeHeight, 'F');
+        
+        // Add barcode lines (simulating barcode appearance)
+        doc.setDrawColor(255, 255, 255);
+        doc.setLineWidth(0.3);
+        for (let i = 0; i < 10; i++) {
+          const lineX = barcodeX + 2 + (i * (barcodeWidth - 4) / 10);
+          doc.line(lineX, currentY + 1, lineX, currentY + barcodeHeight - 1);
+        }
         
         // Add barcode text
         doc.setFontSize(6);
         doc.setTextColor(255, 255, 255);
-        doc.setFont(undefined, 'normal');
-        doc.text(labelData.barcode_data, startX + 7, currentY + 5);
-        doc.setTextColor(0, 0, 0);
+        const barcodeText = labelData.barcode_data.toUpperCase();
+        const barcodeTextWidth = doc.getTextWidth(barcodeText);
+        const barcodeTextX = barcodeX + (barcodeWidth - barcodeTextWidth) / 2;
+        doc.text(barcodeText, barcodeTextX, currentY + barcodeHeight - 1);
         
-        currentY += barcodeHeight + 2;
+        currentY += barcodeHeight + 3;
       }
 
-      // Add date and researcher info
-      doc.setFontSize(7);
+      // Add date and researcher info (matching preview layout)
+      doc.setFontSize(8);
       doc.setFont(undefined, 'normal');
+      doc.setTextColor(0, 0, 0);
       
       if (labelData.date) {
-        doc.text(`Date: ${labelData.date}`, startX + 5, currentY + 3);
+        const dateText = labelData.date;
+        const dateWidth = doc.getTextWidth(dateText);
+        const dateX = startX + (labelWidth - dateWidth) / 2; // Center align
+        doc.text(dateText, dateX, currentY);
         currentY += 3;
       }
       
       if (labelData.researcher) {
-        doc.text(`Researcher: ${labelData.researcher}`, startX + 5, currentY + 3);
+        const researcherText = labelData.researcher;
+        const researcherWidth = doc.getTextWidth(researcherText);
+        const researcherX = startX + (labelWidth - researcherWidth) / 2; // Center align
+        doc.text(researcherText, researcherX, currentY);
         currentY += 3;
       }
 
-      // Add notes if present and there's space
+      // Add notes if present and there's space (smaller font, bottom of label)
       if (labelData.notes && currentY < startY + labelHeight - 8) {
         doc.setFontSize(6);
-        doc.setTextColor(80, 80, 80);
-        const notesLines = doc.splitTextToSize(labelData.notes, labelWidth - 10);
-        const availableSpace = Math.floor((startY + labelHeight - 5 - currentY) / 2);
+        doc.setTextColor(100, 100, 100);
+        const maxNoteWidth = labelWidth - (padding * 2);
+        const notesLines = doc.splitTextToSize(labelData.notes, maxNoteWidth);
+        const availableSpace = Math.floor((startY + labelHeight - padding - currentY) / 2);
         const linesToShow = Math.min(notesLines.length, availableSpace);
         
         for (let i = 0; i < linesToShow; i++) {
-          if (currentY + 2 < startY + labelHeight - 3) {
-            doc.text(notesLines[i], startX + 5, currentY + 2);
+          if (currentY + 2 < startY + labelHeight - padding) {
+            const noteLineWidth = doc.getTextWidth(notesLines[i]);
+            const noteX = startX + (labelWidth - noteLineWidth) / 2; // Center align
+            doc.text(notesLines[i], noteX, currentY);
             currentY += 2;
           }
         }
-        doc.setTextColor(0, 0, 0);
       }
 
-      // Add multiple copies if quantity > 1
+      // Add multiple copies if quantity > 1 (same styling for each)
       if (labelData.quantity > 1) {
         const labelsPerRow = 2;
-        const labelsPerPage = 10;
+        const labelsPerPage = 8;
         
         for (let i = 1; i < Math.min(labelData.quantity, labelsPerPage); i++) {
           const row = Math.floor(i / labelsPerRow);
           const col = i % labelsPerRow;
-          const x = startX + col * (labelWidth + 10);
-          const y = startY + row * (labelHeight + 10);
+          const x = startX + col * (labelWidth + 15);
+          const y = startY + row * (labelHeight + 15);
           
           // Check if we need a new page
           if (y + labelHeight > 280) {
@@ -222,48 +253,71 @@ const LabelPrinter = () => {
             break;
           }
           
-          // Draw the same label at new position
-          doc.setDrawColor(0, 0, 0);
+          // Repeat the exact same label design
+          doc.setDrawColor(200, 200, 200);
           doc.setLineWidth(0.5);
           doc.rect(x, y, labelWidth, labelHeight);
-          
-          // Repeat all label content at new position
+          doc.setFillColor(255, 255, 255);
+          doc.rect(x, y, labelWidth, labelHeight, 'F');
+
+          let labelY = y + padding + 4;
+
+          // Title
           doc.setFontSize(12);
           doc.setFont(undefined, 'bold');
           doc.setTextColor(0, 0, 0);
-          doc.text(titleLines, x + 5, y + 8);
-          
-          // Continue with other elements...
-          let labelY = y + 8 + (titleLines.length * 4);
-          
+          const titleWidth = doc.getTextWidth(titleText);
+          const titleX = x + (labelWidth - titleWidth) / 2;
+          doc.text(titleText, titleX, labelY);
+          labelY += 5;
+
+          // Subtitle
           if (labelData.subtitle) {
             doc.setFontSize(9);
             doc.setFont(undefined, 'normal');
-            doc.setTextColor(100, 100, 100);
-            const subtitleLines = doc.splitTextToSize(labelData.subtitle, labelWidth - 10);
-            doc.text(subtitleLines, x + 5, labelY + 3);
-            labelY += subtitleLines.length * 3 + 2;
-            doc.setTextColor(0, 0, 0);
+            doc.setTextColor(120, 120, 120);
+            const subtitleWidth = doc.getTextWidth(labelData.subtitle);
+            const subtitleX = x + (labelWidth - subtitleWidth) / 2;
+            doc.text(labelData.subtitle, subtitleX, labelY);
+            labelY += 4;
           }
-          
+
+          labelY += 2;
+
+          // Barcode
           if (labelData.barcode_data) {
-            labelY += 3;
-            doc.setFillColor(0, 0, 0);
-            doc.rect(x + 5, labelY, labelWidth - 10, 8, 'F');
+            const barcodeX = x + padding;
+            doc.setFillColor(35, 35, 55);
+            doc.rect(barcodeX, labelY, labelWidth - (padding * 2), 8, 'F');
+            
+            doc.setDrawColor(255, 255, 255);
+            doc.setLineWidth(0.3);
+            for (let j = 0; j < 10; j++) {
+              const lineX = barcodeX + 2 + (j * (labelWidth - padding * 2 - 4) / 10);
+              doc.line(lineX, labelY + 1, lineX, labelY + 7);
+            }
+            
             doc.setFontSize(6);
             doc.setTextColor(255, 255, 255);
-            doc.text(labelData.barcode_data, x + 7, labelY + 5);
-            doc.setTextColor(0, 0, 0);
-            labelY += 10;
+            const barcodeTextWidth = doc.getTextWidth(labelData.barcode_data.toUpperCase());
+            const barcodeTextX = barcodeX + ((labelWidth - padding * 2) - barcodeTextWidth) / 2;
+            doc.text(labelData.barcode_data.toUpperCase(), barcodeTextX, labelY + 7);
+            labelY += 11;
           }
-          
-          doc.setFontSize(7);
+
+          // Date and researcher
+          doc.setFontSize(8);
+          doc.setTextColor(0, 0, 0);
           if (labelData.date) {
-            doc.text(`Date: ${labelData.date}`, x + 5, labelY + 3);
+            const dateWidth = doc.getTextWidth(labelData.date);
+            const dateX = x + (labelWidth - dateWidth) / 2;
+            doc.text(labelData.date, dateX, labelY);
             labelY += 3;
           }
           if (labelData.researcher) {
-            doc.text(`Researcher: ${labelData.researcher}`, x + 5, labelY + 3);
+            const researcherWidth = doc.getTextWidth(labelData.researcher);
+            const researcherX = x + (labelWidth - researcherWidth) / 2;
+            doc.text(labelData.researcher, researcherX, labelY);
           }
         }
       }
@@ -553,21 +607,22 @@ const LabelPrinter = () => {
                   <CardContent>
                     <div className="border-2 border-dashed border-gray-300 p-8 rounded-lg text-center">
                       <div className="bg-white border border-gray-200 rounded p-4 inline-block min-w-[200px] max-w-[300px]">
-                        <div className="text-sm font-bold">{labelData.title || "Sample Title"}</div>
-                        <div className="text-xs text-gray-600">{labelData.subtitle || "Subtitle"}</div>
-                        <div className="my-2">
-                          <div className="bg-gray-900 h-8 w-full flex items-center justify-center rounded">
-                            <Barcode className="h-4 w-4 text-white" />
-                            <span className="text-white text-xs ml-1">
-                              {labelData.barcode_data || "BARCODE"}
+                        <div className="text-sm font-bold text-center">{labelData.title || "Sample Title"}</div>
+                        {labelData.subtitle && (
+                          <div className="text-xs text-gray-600 text-center mt-1">{labelData.subtitle}</div>
+                        )}
+                        <div className="my-3">
+                          <div className="bg-gray-900 h-8 w-full flex items-center justify-center rounded text-white text-xs font-mono">
+                            <span className="tracking-wider">
+                              {labelData.barcode_data ? `||| ${labelData.barcode_data.toUpperCase()} |||` : "||| BARCODE |||"}
                             </span>
                           </div>
                         </div>
-                        <div className="text-xs space-y-1">
-                          <div>{labelData.date || "Date"}</div>
-                          <div>{labelData.researcher || "Researcher"}</div>
+                        <div className="text-xs space-y-1 text-center">
+                          {labelData.date && <div>{labelData.date}</div>}
+                          {labelData.researcher && <div>{labelData.researcher}</div>}
                           {labelData.notes && (
-                            <div className="text-gray-500 mt-1 text-wrap break-words">
+                            <div className="text-gray-500 mt-2 text-wrap break-words text-[10px]">
                               {labelData.notes}
                             </div>
                           )}

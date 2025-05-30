@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -44,8 +43,8 @@ export const useIdeaReports = () => {
             canvas.height = img.height;
             ctx?.drawImage(img, 0, 0);
             
-            const logoWidth = 25;
-            const logoHeight = 25;
+            const logoWidth = 15; // Reduced from 25
+            const logoHeight = 15; // Reduced from 25
             const pageWidth = pdf.internal.pageSize.width;
             const logoX = pageWidth - logoWidth - 15;
             
@@ -69,17 +68,17 @@ export const useIdeaReports = () => {
   };
 
   // Helper function to add header with laboratory branding
-  const addLabHeader = async (pdf: jsPDF) => {
+  const addLabHeader = async (pdf: jsPDF, titleText: string = 'KAPELCZAK LABORATORY') => {
     let yPosition = 15;
     
     // Add logo
     await addKapelczakLogo(pdf, yPosition);
     
-    // Laboratory name
+    // Laboratory name or idea title
     pdf.setFontSize(16);
     pdf.setFont(undefined, 'bold');
     pdf.setTextColor(0, 0, 0);
-    pdf.text('KAPELCZAK LABORATORY', 20, yPosition + 10);
+    pdf.text(titleText, 20, yPosition + 10);
     
     // Add line under header
     yPosition += 20;
@@ -122,13 +121,13 @@ export const useIdeaReports = () => {
       const pageWidth = pdf.internal.pageSize.width;
       const margin = 20;
       const lineHeight = 6;
-      let yPosition = await addLabHeader(pdf);
+      let yPosition = await addLabHeader(pdf, idea.title); // Use idea title instead of default
 
       // Helper function to check if we need a new page
       const checkPageBreak = async (requiredSpace: number) => {
         if (yPosition + requiredSpace > pageHeight - margin) {
           pdf.addPage();
-          yPosition = await addLabHeader(pdf);
+          yPosition = await addLabHeader(pdf, idea.title); // Use idea title for subsequent pages too
         }
       };
 
