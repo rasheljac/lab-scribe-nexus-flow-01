@@ -28,15 +28,19 @@ export const useUserPreferences = () => {
         .from('user_preferences')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error) {
+        console.error('Error fetching preferences:', error);
+        throw error;
+      }
       
       if (data) {
-        // Convert the data to match our interface
         const convertedData: UserPreferences = {
           ...data,
-          preferences: (data.preferences as Record<string, any>) || {}
+          preferences: (typeof data.preferences === 'object' && data.preferences !== null) 
+            ? data.preferences as Record<string, any> 
+            : {}
         };
         setPreferences(convertedData);
       } else {
@@ -53,43 +57,75 @@ export const useUserPreferences = () => {
           .select()
           .single();
           
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error('Error creating default preferences:', insertError);
+          throw insertError;
+        }
         
         if (newData) {
           const convertedNewData: UserPreferences = {
             ...newData,
-            preferences: (newData.preferences as Record<string, any>) || {}
+            preferences: (typeof newData.preferences === 'object' && newData.preferences !== null) 
+              ? newData.preferences as Record<string, any> 
+              : {}
           };
           setPreferences(convertedNewData);
         }
       }
     } catch (error) {
-      console.error('Error fetching user preferences:', error);
+      console.error('Error in fetchPreferences:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const updatePreferences = async (updates: Partial<Pick<UserPreferences, 'hidden_pages' | 'preferences'>>) => {
-    if (!user) return;
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
 
     try {
-      const { data, error } = await supabase
+      // First, check if preferences exist
+      const { data: existingData } = await supabase
         .from('user_preferences')
-        .upsert([{ 
-          user_id: user.id, 
-          ...updates 
-        }])
-        .select()
-        .single();
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-      if (error) throw error;
+      let result;
       
-      if (data) {
-        // Convert the data to match our interface
+      if (existingData) {
+        // Update existing record
+        const { data, error } = await supabase
+          .from('user_preferences')
+          .update(updates)
+          .eq('user_id', user.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        result = data;
+      } else {
+        // Insert new record
+        const { data, error } = await supabase
+          .from('user_preferences')
+          .insert([{ 
+            user_id: user.id, 
+            ...updates 
+          }])
+          .select()
+          .single();
+
+        if (error) throw error;
+        result = data;
+      }
+      
+      if (result) {
         const convertedData: UserPreferences = {
-          ...data,
-          preferences: (data.preferences as Record<string, any>) || {}
+          ...result,
+          preferences: (typeof result.preferences === 'object' && result.preferences !== null) 
+            ? result.preferences as Record<string, any> 
+            : {}
         };
         setPreferences(convertedData);
         return convertedData;

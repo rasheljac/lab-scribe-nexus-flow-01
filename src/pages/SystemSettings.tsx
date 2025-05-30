@@ -14,7 +14,7 @@ import { useUserPreferences } from "@/hooks/useUserPreferences";
 import { useToast } from "@/hooks/use-toast";
 
 const SystemSettings = () => {
-  const { preferences, updatePreferences, loading: preferencesLoading } = useUserPreferences();
+  const { preferences, updatePreferences, loading: preferencesLoading, refetch } = useUserPreferences();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -37,6 +37,11 @@ const SystemSettings = () => {
     { key: "admin-settings", label: "System Settings", icon: Settings },
   ];
 
+  const adminItems = [
+    { icon: Users, label: "User Management", path: "/admin/users", badge: null, key: "admin-users" },
+    { icon: Settings, label: "System Settings", path: "/admin/settings", badge: null, key: "admin-settings" },
+  ];
+
   const [systemConfig, setSystemConfig] = useState({
     siteName: "Kapelczak ELN",
     description: "Electronic Laboratory Notebook",
@@ -47,18 +52,29 @@ const SystemSettings = () => {
     backupFrequency: "daily",
   });
 
+  // Load system config from preferences on mount
+  useEffect(() => {
+    if (preferences?.preferences?.systemConfig) {
+      setSystemConfig(preferences.preferences.systemConfig);
+    }
+  }, [preferences]);
+
   const hiddenPages = preferences?.hidden_pages || [];
 
   const handlePageVisibilityToggle = async (pageKey: string) => {
-    if (preferencesLoading || loading) return;
+    if (preferencesLoading || loading || pageKey === "admin-settings") return;
     
-    const newHiddenPages = hiddenPages.includes(pageKey)
-      ? hiddenPages.filter(key => key !== pageKey)
-      : [...hiddenPages, pageKey];
-
     setLoading(true);
     try {
+      const newHiddenPages = hiddenPages.includes(pageKey)
+        ? hiddenPages.filter(key => key !== pageKey)
+        : [...hiddenPages, pageKey];
+
       await updatePreferences({ hidden_pages: newHiddenPages });
+      
+      // Force a refetch to ensure we have the latest data
+      await refetch();
+      
       toast({
         title: "Success",
         description: "Page visibility updated successfully",
@@ -67,7 +83,7 @@ const SystemSettings = () => {
       console.error('Error updating page visibility:', error);
       toast({
         title: "Error",
-        description: "Failed to update page visibility",
+        description: "Failed to update page visibility. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -76,23 +92,27 @@ const SystemSettings = () => {
   };
 
   const handleSystemConfigSave = async () => {
+    if (preferencesLoading) return;
+    
     setLoading(true);
     try {
-      // Save system config to user preferences
+      const currentPrefs = preferences?.preferences || {};
       await updatePreferences({ 
         preferences: { 
-          ...preferences?.preferences,
+          ...currentPrefs,
           systemConfig 
         } 
       });
+      
       toast({
         title: "Success",
         description: "System configuration saved successfully",
       });
     } catch (error) {
+      console.error('Error saving system configuration:', error);
       toast({
         title: "Error",
-        description: "Failed to save system configuration",
+        description: "Failed to save system configuration. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -123,13 +143,6 @@ const SystemSettings = () => {
       });
     }
   };
-
-  // Load system config from preferences on mount
-  useEffect(() => {
-    if (preferences?.preferences?.systemConfig) {
-      setSystemConfig(preferences.preferences.systemConfig);
-    }
-  }, [preferences]);
 
   if (preferencesLoading) {
     return (
@@ -186,16 +199,20 @@ const SystemSettings = () => {
                       {allPages.map((page) => {
                         const isHidden = hiddenPages.includes(page.key);
                         const IconComponent = page.icon;
+                        const isSystemSettings = page.key === "admin-settings";
                         return (
                           <div key={page.key} className="flex items-center justify-between p-3 border rounded-lg">
                             <div className="flex items-center gap-3">
                               <IconComponent className="h-4 w-4 text-gray-600" />
                               <span className="text-sm font-medium">{page.label}</span>
+                              {isSystemSettings && (
+                                <Badge variant="outline" className="text-xs">Required</Badge>
+                              )}
                             </div>
                             <Switch
                               checked={!isHidden}
                               onCheckedChange={() => handlePageVisibilityToggle(page.key)}
-                              disabled={loading || page.key === "admin-settings"} // Prevent hiding system settings
+                              disabled={loading || isSystemSettings}
                             />
                           </div>
                         );
