@@ -30,32 +30,63 @@ export const useIdeaReports = () => {
     }));
   };
 
-  // Helper function to add logo to PDF
-  const addLogoToPDF = (pdf: jsPDF, yPosition: number) => {
+  // Helper function to add Kapelczak logo to PDF
+  const addKapelczakLogo = async (pdf: jsPDF, yPosition: number) => {
     try {
-      // Create a simple logo placeholder - in a real implementation, you'd load an actual image
-      const logoSize = 20;
-      const pageWidth = pdf.internal.pageSize.width;
-      const logoX = pageWidth - logoSize - 20; // 20mm from right edge
-      
-      // Draw a simple rectangular logo placeholder
-      pdf.setFillColor(59, 130, 246); // Blue color
-      pdf.rect(logoX, yPosition - 15, logoSize, 15, 'F');
-      
-      // Add logo text
-      pdf.setFontSize(10);
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFont(undefined, 'bold');
-      pdf.text('LOGO', logoX + 2, yPosition - 7);
-      
-      // Reset text color
-      pdf.setTextColor(0, 0, 0);
-      
-      return yPosition;
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx?.drawImage(img, 0, 0);
+            
+            const logoWidth = 25;
+            const logoHeight = 25;
+            const pageWidth = pdf.internal.pageSize.width;
+            const logoX = pageWidth - logoWidth - 15;
+            
+            pdf.addImage(canvas.toDataURL(), 'PNG', logoX, yPosition, logoWidth, logoHeight);
+            resolve(yPosition);
+          } catch (error) {
+            console.error('Error adding logo:', error);
+            resolve(yPosition);
+          }
+        };
+        img.onerror = () => {
+          console.error('Error loading logo image');
+          resolve(yPosition);
+        };
+        img.src = '/lovable-uploads/9ccbca6f-f337-4e9a-a4cf-3e27dc2b492c.png';
+      });
     } catch (error) {
-      console.error('Error adding logo:', error);
+      console.error('Error in addKapelczakLogo:', error);
       return yPosition;
     }
+  };
+
+  // Helper function to add header with laboratory branding
+  const addLabHeader = async (pdf: jsPDF) => {
+    let yPosition = 15;
+    
+    // Add logo
+    await addKapelczakLogo(pdf, yPosition);
+    
+    // Laboratory name
+    pdf.setFontSize(16);
+    pdf.setFont(undefined, 'bold');
+    pdf.setTextColor(0, 0, 0);
+    pdf.text('KAPELCZAK LABORATORY', 20, yPosition + 10);
+    
+    // Add line under header
+    yPosition += 20;
+    pdf.setLineWidth(0.5);
+    pdf.line(20, yPosition, pdf.internal.pageSize.width - 20, yPosition);
+    
+    return yPosition + 10;
   };
 
   const generateIdeaReport = useMutation({
@@ -87,26 +118,22 @@ export const useIdeaReports = () => {
 
       // Generate PDF
       const pdf = new jsPDF();
-      let yPosition = 20;
       const pageHeight = pdf.internal.pageSize.height;
+      const pageWidth = pdf.internal.pageSize.width;
       const margin = 20;
       const lineHeight = 6;
-
-      // Add logo to first page
-      addLogoToPDF(pdf, yPosition);
+      let yPosition = await addLabHeader(pdf);
 
       // Helper function to check if we need a new page
-      const checkPageBreak = (requiredSpace: number) => {
+      const checkPageBreak = async (requiredSpace: number) => {
         if (yPosition + requiredSpace > pageHeight - margin) {
           pdf.addPage();
-          yPosition = margin;
-          // Add logo to new page
-          addLogoToPDF(pdf, yPosition);
+          yPosition = await addLabHeader(pdf);
         }
       };
 
       // Helper function to add text with word wrapping
-      const addWrappedText = (text: string, fontSize: number = 10, isBold: boolean = false) => {
+      const addWrappedText = async (text: string, fontSize: number = 10, isBold: boolean = false) => {
         pdf.setFontSize(fontSize);
         if (isBold) {
           pdf.setFont(undefined, 'bold');
@@ -114,151 +141,147 @@ export const useIdeaReports = () => {
           pdf.setFont(undefined, 'normal');
         }
         
-        const lines = pdf.splitTextToSize(text, 170);
-        checkPageBreak(lines.length * lineHeight + 5);
+        const lines = pdf.splitTextToSize(text, pageWidth - 2 * margin);
+        await checkPageBreak(lines.length * lineHeight + 5);
         pdf.text(lines, margin, yPosition);
         yPosition += lines.length * lineHeight + 5;
       };
 
-      // Header
-      pdf.setFontSize(24);
-      pdf.setFont(undefined, 'bold');
-      pdf.setTextColor(59, 130, 246); // Blue color to match branding
-      pdf.text('Experiment Idea Report', margin, yPosition);
-      pdf.setTextColor(0, 0, 0); // Reset to black
-      yPosition += 20;
-
-      // Title
+      // Report title
       pdf.setFontSize(18);
       pdf.setFont(undefined, 'bold');
-      pdf.text(idea.title, margin, yPosition);
-      yPosition += 15;
-
-      // Basic Information Section
-      pdf.setFontSize(14);
-      pdf.setFont(undefined, 'bold');
-      pdf.setTextColor(59, 130, 246);
-      pdf.text('Basic Information', margin, yPosition);
       pdf.setTextColor(0, 0, 0);
-      yPosition += 10;
+      pdf.text(`Experiment Idea Report: ${idea.title}`, margin, yPosition);
+      yPosition += 20;
 
+      // Generation info
       pdf.setFontSize(10);
       pdf.setFont(undefined, 'normal');
-      pdf.text(`Category: ${idea.category}`, margin, yPosition);
+      pdf.text(`Generated on: ${new Date().toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit' 
+      })}, ${new Date().toLocaleTimeString('en-US', { 
+        hour12: false, 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      })}`, margin, yPosition);
       yPosition += 8;
+      pdf.text(`Generated by: ${user.email?.split('@')[0] || 'Unknown'}@kapelczak.com`, margin, yPosition);
+      yPosition += 20;
+
+      // Experiment Idea section
+      pdf.setFontSize(14);
+      pdf.setFont(undefined, 'bold');
+      pdf.text(`Experiment Idea: ${idea.title}`, margin, yPosition);
+      yPosition += 15;
+
+      // Basic information
+      pdf.setFontSize(11);
+      pdf.setFont(undefined, 'normal');
       pdf.text(`Status: ${idea.status}`, margin, yPosition);
+      yPosition += 8;
+      pdf.text(`Category: ${idea.category}`, margin, yPosition);
       yPosition += 8;
       pdf.text(`Priority: ${idea.priority}`, margin, yPosition);
       yPosition += 8;
-      pdf.text(`Created: ${new Date(idea.created_at).toLocaleDateString()}`, margin, yPosition);
-      yPosition += 15;
+      pdf.text(`Start Date: ${new Date(idea.created_at).toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit' 
+      })}`, margin, yPosition);
+      yPosition += 8;
+      if (idea.estimated_duration) {
+        pdf.text(`Duration: ${idea.estimated_duration}`, margin, yPosition);
+        yPosition += 8;
+      }
+      yPosition += 10;
 
-      // Description
+      // Description section
       if (idea.description) {
-        checkPageBreak(30);
-        pdf.setFontSize(14);
+        await checkPageBreak(30);
+        pdf.setFontSize(12);
         pdf.setFont(undefined, 'bold');
-        pdf.setTextColor(59, 130, 246);
-        pdf.text('Description', margin, yPosition);
-        pdf.setTextColor(0, 0, 0);
+        pdf.text('Description:', margin, yPosition);
         yPosition += 10;
         
         const plainDescription = stripHtml(idea.description);
-        addWrappedText(plainDescription);
+        await addWrappedText(plainDescription, 10);
         yPosition += 5;
       }
 
-      // Hypothesis
+      // Hypothesis section
       if (idea.hypothesis) {
-        checkPageBreak(30);
-        pdf.setFontSize(14);
+        await checkPageBreak(30);
+        pdf.setFontSize(12);
         pdf.setFont(undefined, 'bold');
-        pdf.setTextColor(59, 130, 246);
-        pdf.text('Hypothesis', margin, yPosition);
-        pdf.setTextColor(0, 0, 0);
+        pdf.text('Hypothesis:', margin, yPosition);
         yPosition += 10;
         
         const plainHypothesis = stripHtml(idea.hypothesis);
-        addWrappedText(plainHypothesis);
+        await addWrappedText(plainHypothesis, 10);
         yPosition += 5;
       }
 
-      // Methodology
+      // Methodology section
       if (idea.methodology) {
-        checkPageBreak(30);
-        pdf.setFontSize(14);
+        await checkPageBreak(30);
+        pdf.setFontSize(12);
         pdf.setFont(undefined, 'bold');
-        pdf.setTextColor(59, 130, 246);
-        pdf.text('Methodology', margin, yPosition);
-        pdf.setTextColor(0, 0, 0);
+        pdf.text('Methodology:', margin, yPosition);
         yPosition += 10;
         
         const plainMethodology = stripHtml(idea.methodology);
-        addWrappedText(plainMethodology);
+        await addWrappedText(plainMethodology, 10);
         yPosition += 5;
       }
 
-      // Required Materials
+      // Required Materials section
       if (idea.required_materials) {
-        checkPageBreak(30);
-        pdf.setFontSize(14);
+        await checkPageBreak(30);
+        pdf.setFontSize(12);
         pdf.setFont(undefined, 'bold');
-        pdf.setTextColor(59, 130, 246);
-        pdf.text('Required Materials', margin, yPosition);
-        pdf.setTextColor(0, 0, 0);
+        pdf.text('Required Materials:', margin, yPosition);
         yPosition += 10;
         
         const plainMaterials = stripHtml(idea.required_materials);
-        addWrappedText(plainMaterials);
+        await addWrappedText(plainMaterials, 10);
         yPosition += 5;
       }
 
-      // Expected Outcomes
+      // Expected Outcomes section
       if (idea.expected_outcomes) {
-        checkPageBreak(30);
-        pdf.setFontSize(14);
+        await checkPageBreak(30);
+        pdf.setFontSize(12);
         pdf.setFont(undefined, 'bold');
-        pdf.setTextColor(59, 130, 246);
-        pdf.text('Expected Outcomes', margin, yPosition);
-        pdf.setTextColor(0, 0, 0);
+        pdf.text('Expected Outcomes:', margin, yPosition);
         yPosition += 10;
         
         const plainOutcomes = stripHtml(idea.expected_outcomes);
-        addWrappedText(plainOutcomes);
+        await addWrappedText(plainOutcomes, 10);
         yPosition += 5;
       }
 
-      // Planning Details
-      if (idea.estimated_duration || idea.budget_estimate) {
-        checkPageBreak(30);
-        pdf.setFontSize(14);
+      // Budget section
+      if (idea.budget_estimate) {
+        await checkPageBreak(20);
+        pdf.setFontSize(12);
         pdf.setFont(undefined, 'bold');
-        pdf.setTextColor(59, 130, 246);
-        pdf.text('Planning Details', margin, yPosition);
-        pdf.setTextColor(0, 0, 0);
+        pdf.text('Budget Estimate:', margin, yPosition);
         yPosition += 10;
         
         pdf.setFontSize(10);
         pdf.setFont(undefined, 'normal');
-        if (idea.estimated_duration) {
-          pdf.text(`Estimated Duration: ${idea.estimated_duration}`, margin, yPosition);
-          yPosition += 8;
-        }
-        if (idea.budget_estimate) {
-          pdf.text(`Budget Estimate: ${idea.budget_estimate}`, margin, yPosition);
-          yPosition += 8;
-        }
-        yPosition += 10;
+        pdf.text(idea.budget_estimate, margin, yPosition);
+        yPosition += 15;
       }
 
-      // Tags
+      // Tags section
       if (idea.tags && idea.tags.length > 0) {
-        checkPageBreak(20);
-        pdf.setFontSize(14);
+        await checkPageBreak(20);
+        pdf.setFontSize(12);
         pdf.setFont(undefined, 'bold');
-        pdf.setTextColor(59, 130, 246);
-        pdf.text('Tags', margin, yPosition);
-        pdf.setTextColor(0, 0, 0);
+        pdf.text('Tags:', margin, yPosition);
         yPosition += 10;
         
         pdf.setFontSize(10);
@@ -269,25 +292,23 @@ export const useIdeaReports = () => {
 
       // Notes section
       if (includeNotes && notes.length > 0) {
-        checkPageBreak(30);
-        pdf.setFontSize(16);
+        await checkPageBreak(30);
+        pdf.setFontSize(12);
         pdf.setFont(undefined, 'bold');
-        pdf.setTextColor(59, 130, 246);
-        pdf.text('Research Notes', margin, yPosition);
-        pdf.setTextColor(0, 0, 0);
+        pdf.text('Research Notes:', margin, yPosition);
         yPosition += 15;
 
-        notes.forEach((note, index) => {
-          checkPageBreak(40);
+        for (const note of notes) {
+          await checkPageBreak(40);
           
-          pdf.setFontSize(12);
+          pdf.setFontSize(11);
           pdf.setFont(undefined, 'bold');
-          pdf.text(`${index + 1}. ${note.title}`, margin, yPosition);
+          pdf.text(note.title, margin, yPosition);
           yPosition += 10;
           
-          pdf.setFontSize(8);
+          pdf.setFontSize(9);
           pdf.setFont(undefined, 'normal');
-          pdf.text(`Created: ${new Date(note.created_at).toLocaleDateString()}`, margin, yPosition);
+          pdf.text(`Created: ${new Date(note.created_at).toLocaleDateString('en-US')}`, margin, yPosition);
           yPosition += 8;
 
           if (note.content) {
@@ -295,7 +316,7 @@ export const useIdeaReports = () => {
             const images = extractImages(note.content);
             
             if (plainTextContent) {
-              addWrappedText(plainTextContent);
+              await addWrappedText(plainTextContent, 10);
             }
 
             if (images.length > 0) {
@@ -307,17 +328,24 @@ export const useIdeaReports = () => {
           }
           
           yPosition += 5;
-        });
+        }
       }
 
-      // Footer
+      // Footer with laboratory info and page numbers
       const pageCount = pdf.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         pdf.setPage(i);
         pdf.setFontSize(8);
         pdf.setFont(undefined, 'normal');
-        pdf.text(`Page ${i} of ${pageCount}`, pdf.internal.pageSize.width - 40, pdf.internal.pageSize.height - 10);
-        pdf.text(`Generated: ${new Date().toLocaleDateString()}`, margin, pdf.internal.pageSize.height - 10);
+        
+        // Footer line
+        const footerY = pageHeight - 20;
+        pdf.setLineWidth(0.3);
+        pdf.line(margin, footerY, pageWidth - margin, footerY);
+        
+        // Footer text
+        pdf.text('© Kapelczak Laboratory - Confidential', margin, footerY + 8);
+        pdf.text(`Page ${i} of ${pageCount}`, pageWidth - 40, footerY + 8);
       }
 
       try {
@@ -332,7 +360,7 @@ export const useIdeaReports = () => {
             status: 'published',
             author: user.email?.split('@')[0] || 'Unknown',
             format: 'PDF',
-            size: '~' + Math.round(pdf.internal.pageSize.width * pdf.internal.pageSize.height / 1024) + 'KB'
+            size: '~' + Math.round(pageWidth * pageHeight / 1024) + 'KB'
           }])
           .select()
           .single();
@@ -361,34 +389,40 @@ export const useIdeaReports = () => {
       if (!user) throw new Error('User not authenticated');
 
       const pdf = new jsPDF();
-      let yPosition = 20;
       const pageHeight = pdf.internal.pageSize.height;
+      const pageWidth = pdf.internal.pageSize.width;
       const margin = 20;
-
-      // Add logo to first page
-      addLogoToPDF(pdf, yPosition);
+      let yPosition = await addLabHeader(pdf);
 
       // Helper function to check if we need a new page
-      const checkPageBreak = (requiredSpace: number) => {
+      const checkPageBreak = async (requiredSpace: number) => {
         if (yPosition + requiredSpace > pageHeight - margin) {
           pdf.addPage();
-          yPosition = margin;
-          // Add logo to new page
-          addLogoToPDF(pdf, yPosition);
+          yPosition = await addLabHeader(pdf);
         }
       };
 
-      // Title
-      pdf.setFontSize(24);
+      // Report title
+      pdf.setFontSize(18);
       pdf.setFont(undefined, 'bold');
-      pdf.setTextColor(59, 130, 246);
-      pdf.text('All Experiment Ideas Report', margin, yPosition);
       pdf.setTextColor(0, 0, 0);
+      pdf.text('All Experiment Ideas Report', margin, yPosition);
       yPosition += 20;
-      
-      pdf.setFontSize(12);
+
+      // Generation info
+      pdf.setFontSize(10);
       pdf.setFont(undefined, 'normal');
-      pdf.text(`Generated: ${new Date().toLocaleDateString()}`, margin, yPosition);
+      pdf.text(`Generated on: ${new Date().toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit' 
+      })}, ${new Date().toLocaleTimeString('en-US', { 
+        hour12: false, 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      })}`, margin, yPosition);
+      yPosition += 8;
+      pdf.text(`Generated by: ${user.email?.split('@')[0] || 'Unknown'}@kapelczak.com`, margin, yPosition);
       yPosition += 20;
 
       // Summary statistics
@@ -402,12 +436,10 @@ export const useIdeaReports = () => {
         return acc;
       }, {});
 
-      checkPageBreak(60);
-      pdf.setFontSize(16);
+      await checkPageBreak(60);
+      pdf.setFontSize(14);
       pdf.setFont(undefined, 'bold');
-      pdf.setTextColor(59, 130, 246);
       pdf.text('Summary Statistics', margin, yPosition);
-      pdf.setTextColor(0, 0, 0);
       yPosition += 15;
       
       pdf.setFontSize(10);
@@ -433,16 +465,14 @@ export const useIdeaReports = () => {
       yPosition += 20;
 
       // List all ideas
-      checkPageBreak(30);
-      pdf.setFontSize(16);
+      await checkPageBreak(30);
+      pdf.setFontSize(14);
       pdf.setFont(undefined, 'bold');
-      pdf.setTextColor(59, 130, 246);
       pdf.text('All Ideas', margin, yPosition);
-      pdf.setTextColor(0, 0, 0);
       yPosition += 15;
 
-      ideas.forEach((idea, index) => {
-        checkPageBreak(30);
+      for (const [index, idea] of ideas.entries()) {
+        await checkPageBreak(30);
 
         pdf.setFontSize(12);
         pdf.setFont(undefined, 'bold');
@@ -456,22 +486,29 @@ export const useIdeaReports = () => {
         
         if (idea.description) {
           const plainDescription = stripHtml(idea.description);
-          const descLines = pdf.splitTextToSize(plainDescription, 160);
+          const descLines = pdf.splitTextToSize(plainDescription, pageWidth - 2 * margin - 10);
           pdf.text(descLines.slice(0, 2), margin + 5, yPosition);
           yPosition += Math.min(descLines.length, 2) * 4;
         }
         
         yPosition += 8;
-      });
+      }
 
-      // Footer
+      // Footer with laboratory info and page numbers
       const pageCount = pdf.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         pdf.setPage(i);
         pdf.setFontSize(8);
         pdf.setFont(undefined, 'normal');
-        pdf.text(`Page ${i} of ${pageCount}`, pdf.internal.pageSize.width - 40, pdf.internal.pageSize.height - 10);
-        pdf.text(`Generated: ${new Date().toLocaleDateString()}`, margin, pdf.internal.pageSize.height - 10);
+        
+        // Footer line
+        const footerY = pageHeight - 20;
+        pdf.setLineWidth(0.3);
+        pdf.line(margin, footerY, pageWidth - margin, footerY);
+        
+        // Footer text
+        pdf.text('© Kapelczak Laboratory - Confidential', margin, footerY + 8);
+        pdf.text(`Page ${i} of ${pageCount}`, pageWidth - 40, footerY + 8);
       }
 
       try {
@@ -486,7 +523,7 @@ export const useIdeaReports = () => {
             status: 'published',
             author: user.email?.split('@')[0] || 'Unknown',
             format: 'PDF',
-            size: '~' + Math.round(pdf.internal.pageSize.width * pdf.internal.pageSize.height / 1024) + 'KB'
+            size: '~' + Math.round(pageWidth * pageHeight / 1024) + 'KB'
           }])
           .select()
           .single();
