@@ -32,7 +32,7 @@ const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { preferences } = useUserPreferences();
+  const { preferences, loading: preferencesLoading } = useUserPreferences();
   
   // Get actual counts
   const { experiments } = useExperiments();
@@ -65,10 +65,10 @@ const Sidebar = () => {
     { icon: Settings, label: "System Settings", path: "/admin/settings", badge: null, key: "admin-settings" },
   ];
 
-  // Filter out hidden pages
+  // Filter out hidden pages - only apply filtering if preferences are loaded
   const hiddenPages = preferences?.hidden_pages || [];
-  const menuItems = allMenuItems.filter(item => !hiddenPages.includes(item.key));
-  const visibleAdminItems = adminItems.filter(item => !hiddenPages.includes(item.key));
+  const menuItems = preferencesLoading ? allMenuItems : allMenuItems.filter(item => !hiddenPages.includes(item.key));
+  const visibleAdminItems = preferencesLoading ? adminItems : adminItems.filter(item => !hiddenPages.includes(item.key));
 
   return (
     <div className={cn(

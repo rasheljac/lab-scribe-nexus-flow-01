@@ -7,14 +7,14 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Shield, Database, Server, Users, FileText, Package, Printer, Calendar, Beaker, FolderOpen, CheckSquare, BarChart3, MessageSquare, Video, ShoppingCart } from "lucide-react";
+import { Settings, Shield, Database, Server, Users, FileText, Package, Printer, Calendar, Beaker, FolderOpen, CheckSquare, BarChart3, MessageSquare, Video, ShoppingCart, Loader2 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import { useUserPreferences } from "@/hooks/useUserPreferences";
 import { useToast } from "@/hooks/use-toast";
 
 const SystemSettings = () => {
-  const { preferences, updatePreferences } = useUserPreferences();
+  const { preferences, updatePreferences, loading: preferencesLoading } = useUserPreferences();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -50,6 +50,8 @@ const SystemSettings = () => {
   const hiddenPages = preferences?.hidden_pages || [];
 
   const handlePageVisibilityToggle = async (pageKey: string) => {
+    if (preferencesLoading || loading) return;
+    
     const newHiddenPages = hiddenPages.includes(pageKey)
       ? hiddenPages.filter(key => key !== pageKey)
       : [...hiddenPages, pageKey];
@@ -62,6 +64,7 @@ const SystemSettings = () => {
         description: "Page visibility updated successfully",
       });
     } catch (error) {
+      console.error('Error updating page visibility:', error);
       toast({
         title: "Error",
         description: "Failed to update page visibility",
@@ -72,11 +75,29 @@ const SystemSettings = () => {
     }
   };
 
-  const handleSystemConfigSave = () => {
-    toast({
-      title: "Success",
-      description: "System configuration saved successfully",
-    });
+  const handleSystemConfigSave = async () => {
+    setLoading(true);
+    try {
+      // Save system config to user preferences
+      await updatePreferences({ 
+        preferences: { 
+          ...preferences?.preferences,
+          systemConfig 
+        } 
+      });
+      toast({
+        title: "Success",
+        description: "System configuration saved successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save system configuration",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDatabaseMaintenance = () => {
@@ -87,12 +108,46 @@ const SystemSettings = () => {
   };
 
   const handleClearCache = () => {
-    localStorage.clear();
-    toast({
-      title: "Success",
-      description: "System cache cleared successfully",
-    });
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+      toast({
+        title: "Success",
+        description: "System cache cleared successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to clear cache",
+        variant: "destructive",
+      });
+    }
   };
+
+  // Load system config from preferences on mount
+  useEffect(() => {
+    if (preferences?.preferences?.systemConfig) {
+      setSystemConfig(preferences.preferences.systemConfig);
+    }
+  }, [preferences]);
+
+  if (preferencesLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex">
+        <Sidebar />
+        <div className="flex-1 flex flex-col">
+          <Header />
+          <main className="flex-1 p-6 overflow-auto">
+            <div className="max-w-6xl mx-auto space-y-6">
+              <div className="flex justify-center items-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -192,7 +247,8 @@ const SystemSettings = () => {
                       onCheckedChange={(checked) => setSystemConfig(prev => ({ ...prev, allowRegistration: checked }))}
                     />
                   </div>
-                  <Button onClick={handleSystemConfigSave} className="w-full">
+                  <Button onClick={handleSystemConfigSave} className="w-full" disabled={loading}>
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                     Save General Settings
                   </Button>
                 </CardContent>
@@ -238,7 +294,8 @@ const SystemSettings = () => {
                       <option value="monthly">Monthly</option>
                     </select>
                   </div>
-                  <Button onClick={handleSystemConfigSave} className="w-full">
+                  <Button onClick={handleSystemConfigSave} className="w-full" disabled={loading}>
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                     Save Security Settings
                   </Button>
                 </CardContent>

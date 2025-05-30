@@ -21,6 +21,7 @@ import Header from "@/components/Header";
 import { useUsers } from "@/hooks/useUsers";
 import { useToast } from "@/hooks/use-toast";
 import EditUserDialog from "@/components/EditUserDialog";
+import CreateUserDialog from "@/components/CreateUserDialog";
 
 const Users = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -82,6 +83,7 @@ const Users = () => {
                 <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
                 <p className="text-gray-600 mt-1">Manage user profile information</p>
               </div>
+              <CreateUserDialog />
             </div>
 
             {/* Stats Cards */}

@@ -18,7 +18,10 @@ export const useUserPreferences = () => {
   const { user } = useAuth();
 
   const fetchPreferences = async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     
     try {
       const { data, error } = await supabase
@@ -36,6 +39,29 @@ export const useUserPreferences = () => {
           preferences: (data.preferences as Record<string, any>) || {}
         };
         setPreferences(convertedData);
+      } else {
+        // Create default preferences if none exist
+        const defaultPrefs = {
+          user_id: user.id,
+          hidden_pages: [],
+          preferences: {}
+        };
+        
+        const { data: newData, error: insertError } = await supabase
+          .from('user_preferences')
+          .insert([defaultPrefs])
+          .select()
+          .single();
+          
+        if (insertError) throw insertError;
+        
+        if (newData) {
+          const convertedNewData: UserPreferences = {
+            ...newData,
+            preferences: (newData.preferences as Record<string, any>) || {}
+          };
+          setPreferences(convertedNewData);
+        }
       }
     } catch (error) {
       console.error('Error fetching user preferences:', error);
@@ -70,6 +96,7 @@ export const useUserPreferences = () => {
       }
     } catch (error) {
       console.error('Error updating user preferences:', error);
+      throw error;
     }
   };
 
