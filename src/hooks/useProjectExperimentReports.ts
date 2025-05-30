@@ -1,4 +1,3 @@
-
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -11,11 +10,13 @@ export const useProjectExperimentReports = () => {
     mutationFn: async ({ 
       projectId, 
       projectTitle,
+      reportTitle = "KAPELCZAK LABORATORY",
       includeNotes = true, 
       includeAttachments = true 
     }: {
       projectId: string;
       projectTitle: string;
+      reportTitle?: string;
       includeNotes?: boolean;
       includeAttachments?: boolean;
     }) => {
@@ -66,6 +67,7 @@ export const useProjectExperimentReports = () => {
 
       return generatePDF({
         title: `Project Report: ${projectTitle}`,
+        reportTitle,
         project,
         experiments: experiments || [],
         notes: allNotes,
@@ -79,11 +81,13 @@ export const useProjectExperimentReports = () => {
     mutationFn: async ({ 
       experimentId, 
       experimentTitle,
+      reportTitle = "KAPELCZAK LABORATORY",
       includeNotes = true, 
       includeAttachments = true 
     }: {
       experimentId: string;
       experimentTitle: string;
+      reportTitle?: string;
       includeNotes?: boolean;
       includeAttachments?: boolean;
     }) => {
@@ -125,6 +129,7 @@ export const useProjectExperimentReports = () => {
 
       return generatePDF({
         title: `Experiment Report: ${experimentTitle}`,
+        reportTitle,
         experiments: [experiment],
         notes,
         attachments,
@@ -143,9 +148,9 @@ export const useProjectExperimentReports = () => {
           const originalHeight = img.height;
           const aspectRatio = originalWidth / originalHeight;
           
-          // Set maximum dimensions while maintaining aspect ratio
-          const maxWidth = 50;
-          const maxHeight = 30;
+          // Set smaller maximum dimensions while maintaining aspect ratio
+          const maxWidth = 30; // Reduced from 50
+          const maxHeight = 20; // Reduced from 30
           
           let logoWidth, logoHeight;
           
@@ -175,7 +180,7 @@ export const useProjectExperimentReports = () => {
     });
   };
 
-  const generatePDF = async ({ title, project, experiments, notes, attachments, user }: any) => {
+  const generatePDF = async ({ title, reportTitle, project, experiments, notes, attachments, user }: any) => {
     const pdf = new jsPDF();
     const pageHeight = pdf.internal.pageSize.height;
     const pageWidth = pdf.internal.pageSize.width;
@@ -190,11 +195,11 @@ export const useProjectExperimentReports = () => {
     pdf.setFont('helvetica', 'normal');
     pdf.setCharSpace(0); // Reset character spacing
 
-    // Add header with consistent styling
+    // Add header with consistent styling using custom report title
     pdf.setFontSize(18);
     pdf.setFont('helvetica', 'bold');
     pdf.setCharSpace(0);
-    pdf.text('KAPELCZAK LABORATORY', margin, yPosition);
+    pdf.text(reportTitle || 'KAPELCZAK LABORATORY', margin, yPosition);
     yPosition += 10;
     
     // Add a line under the header

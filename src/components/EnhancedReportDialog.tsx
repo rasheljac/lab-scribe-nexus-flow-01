@@ -28,6 +28,7 @@ const EnhancedReportDialog = ({ open, onOpenChange }: EnhancedReportDialogProps)
   const [isOpen, setIsOpen] = useState(false);
   const [reportType, setReportType] = useState<"project" | "experiment">("project");
   const [selectedId, setSelectedId] = useState("");
+  const [reportTitle, setReportTitle] = useState("KAPELCZAK LABORATORY");
   const [includeNotes, setIncludeNotes] = useState(true);
   const [includeAttachments, setIncludeAttachments] = useState(true);
 
@@ -56,6 +57,7 @@ const EnhancedReportDialog = ({ open, onOpenChange }: EnhancedReportDialogProps)
         await generateProjectReport.mutateAsync({
           projectId: selectedId,
           projectTitle: project.title,
+          reportTitle,
           includeNotes,
           includeAttachments
         });
@@ -66,6 +68,7 @@ const EnhancedReportDialog = ({ open, onOpenChange }: EnhancedReportDialogProps)
         await generateExperimentReport.mutateAsync({
           experimentId: selectedId,
           experimentTitle: experiment.title,
+          reportTitle,
           includeNotes,
           includeAttachments
         });
@@ -122,6 +125,16 @@ const EnhancedReportDialog = ({ open, onOpenChange }: EnhancedReportDialogProps)
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="reportTitle">Report Title</Label>
+            <Input
+              id="reportTitle"
+              value={reportTitle}
+              onChange={(e) => setReportTitle(e.target.value)}
+              placeholder="Enter report title..."
+            />
+          </div>
+
           <div className="space-y-2">
             <Label>Report Type</Label>
             <Select value={reportType} onValueChange={(value: "project" | "experiment") => {
