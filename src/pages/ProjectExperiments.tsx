@@ -1,6 +1,5 @@
-
-import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +32,7 @@ import {
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import EditExperimentDialog from "@/components/EditExperimentDialog";
+import CreateExperimentDialog from "@/components/CreateExperimentDialog";
 import { useExperiments } from "@/hooks/useExperiments";
 import { useProjects } from "@/hooks/useProjects";
 import { useToast } from "@/hooks/use-toast";
@@ -40,7 +40,9 @@ import { useToast } from "@/hooks/use-toast";
 const ProjectExperiments = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || "");
+  const [createExperimentOpen, setCreateExperimentOpen] = useState(false);
   const { toast } = useToast();
   
   const { experiments, isLoading, error, deleteExperiment } = useExperiments();
@@ -48,6 +50,15 @@ const ProjectExperiments = () => {
 
   const project = projects.find(p => p.id === projectId);
   const projectExperiments = experiments.filter(exp => exp.project_id === projectId);
+
+  // Update search params when search term changes
+  useEffect(() => {
+    if (searchTerm) {
+      setSearchParams({ search: searchTerm });
+    } else {
+      setSearchParams({});
+    }
+  }, [searchTerm, setSearchParams]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -83,7 +94,7 @@ const ProjectExperiments = () => {
 
   const filteredExperiments = projectExperiments.filter(exp => {
     const matchesSearch = exp.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (exp.description && exp.description.toLowerCase().includes(searchTerm.toLowerCase()));
+                         (exp.description && stripHtmlTags(exp.description).toLowerCase().includes(searchTerm.toLowerCase()));
     return matchesSearch;
   });
 
@@ -106,6 +117,10 @@ const ProjectExperiments = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleCreateExperiment = () => {
+    setCreateExperimentOpen(true);
   };
 
   if (error) {
@@ -154,6 +169,10 @@ const ProjectExperiments = () => {
                   </p>
                 </div>
               </div>
+              <Button onClick={handleCreateExperiment} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Experiment
+              </Button>
             </div>
 
             {/* Search */}
@@ -269,18 +288,15 @@ const ProjectExperiments = () => {
                   <div className="col-span-full text-center py-12">
                     <Beaker className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-600">
-                      No experiments found in this project. 
-                      {searchTerm ? " Try adjusting your search." : ""}
+                      {searchTerm ? "No experiments found matching your search." : "No experiments found in this project."}
                     </p>
-                    {!searchTerm && (
-                      <Button 
-                        className="mt-4 gap-2" 
-                        onClick={() => navigate("/experiments")}
-                      >
-                        <Plus className="h-4 w-4" />
-                        Create New Experiment
-                      </Button>
-                    )}
+                    <Button 
+                      className="mt-4 gap-2" 
+                      onClick={handleCreateExperiment}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Create New Experiment
+                    </Button>
                   </div>
                 )}
               </div>
@@ -288,6 +304,12 @@ const ProjectExperiments = () => {
           </div>
         </main>
       </div>
+      
+      <CreateExperimentDialog 
+        open={createExperimentOpen} 
+        onOpenChange={setCreateExperimentOpen}
+        projectId={projectId}
+      />
     </div>
   );
 };

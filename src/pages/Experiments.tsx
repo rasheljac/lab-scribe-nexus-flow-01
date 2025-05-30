@@ -1,6 +1,5 @@
-
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -38,12 +37,22 @@ import { useToast } from "@/hooks/use-toast";
 
 const Experiments = () => {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || "");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
   const { toast } = useToast();
 
   const { experiments, isLoading, error, deleteExperiment } = useExperiments();
+
+  // Update search params when search term changes
+  useEffect(() => {
+    if (searchTerm) {
+      setSearchParams({ search: searchTerm });
+    } else {
+      setSearchParams({});
+    }
+  }, [searchTerm, setSearchParams]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -79,7 +88,7 @@ const Experiments = () => {
 
   const filteredExperiments = experiments.filter(exp => {
     const matchesSearch = exp.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (exp.description && exp.description.toLowerCase().includes(searchTerm.toLowerCase()));
+                         (exp.description && stripHtmlTags(exp.description).toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = filterStatus === "all" || exp.status === filterStatus;
     const matchesCategory = filterCategory === "all" || exp.category === filterCategory;
     return matchesSearch && matchesStatus && matchesCategory;
@@ -168,10 +177,14 @@ const Experiments = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="biology">Biology</SelectItem>
-                  <SelectItem value="chemistry">Chemistry</SelectItem>
-                  <SelectItem value="physics">Physics</SelectItem>
-                  <SelectItem value="materials">Materials</SelectItem>
+                  <SelectItem value="biochemistry">Biochemistry</SelectItem>
+                  <SelectItem value="molecular-biology">Molecular Biology</SelectItem>
+                  <SelectItem value="cell-biology">Cell Biology</SelectItem>
+                  <SelectItem value="genetics">Genetics</SelectItem>
+                  <SelectItem value="microbiology">Microbiology</SelectItem>
+                  <SelectItem value="immunology">Immunology</SelectItem>
+                  <SelectItem value="neuroscience">Neuroscience</SelectItem>
+                  <SelectItem value="pharmacology">Pharmacology</SelectItem>
                 </SelectContent>
               </Select>
             </div>

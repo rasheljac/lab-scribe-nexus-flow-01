@@ -1,6 +1,5 @@
-
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -27,12 +26,22 @@ import { useExperiments } from "@/hooks/useExperiments";
 import { useToast } from "@/hooks/use-toast";
 
 const Projects = () => {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || "");
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const { projects, isLoading, error, deleteProject } = useProjects();
   const { experiments } = useExperiments();
+
+  // Update search params when search term changes
+  useEffect(() => {
+    if (searchTerm) {
+      setSearchParams({ search: searchTerm });
+    } else {
+      setSearchParams({});
+    }
+  }, [searchTerm, setSearchParams]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -61,7 +70,7 @@ const Projects = () => {
 
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (project.description && project.description.toLowerCase().includes(searchTerm.toLowerCase()));
+                         (project.description && stripHtmlTags(project.description).toLowerCase().includes(searchTerm.toLowerCase()));
     return matchesSearch;
   });
 

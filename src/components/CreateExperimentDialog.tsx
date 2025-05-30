@@ -21,9 +21,10 @@ import { useAuth } from "@/hooks/useAuth";
 interface CreateExperimentDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  projectId?: string; // Add projectId prop to link experiments to projects
 }
 
-const CreateExperimentDialog = ({ open, onOpenChange }: CreateExperimentDialogProps) => {
+const CreateExperimentDialog = ({ open, onOpenChange, projectId }: CreateExperimentDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
@@ -58,7 +59,7 @@ const CreateExperimentDialog = ({ open, onOpenChange }: CreateExperimentDialogPr
         progress: 0,
         protocols: 0,
         samples: 0,
-        project_id: null, // Add the missing project_id field
+        project_id: projectId || null, // Use the provided projectId
       });
       toast({
         title: "Success",
@@ -104,6 +105,7 @@ const CreateExperimentDialog = ({ open, onOpenChange }: CreateExperimentDialogPr
           <DialogTitle>Create New Experiment</DialogTitle>
           <DialogDescription>
             Set up a new laboratory experiment with all the necessary details.
+            {projectId && " This experiment will be linked to the current project."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
