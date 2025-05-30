@@ -1,8 +1,8 @@
-
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import jsPDF from 'jspdf';
+import QRCode from 'qrcode';
 
 export const useProjectExperimentReports = () => {
   const { user } = useAuth();
@@ -233,8 +233,8 @@ export const useProjectExperimentReports = () => {
           const aspectRatio = originalWidth / originalHeight;
           
           // Set smaller maximum dimensions while maintaining aspect ratio
-          const maxWidth = 25; // Further reduced from 30
-          const maxHeight = 16; // Further reduced from 20
+          const maxWidth = 20; // Further reduced from 30
+          const maxHeight = 13; // Further reduced from 20
           
           let logoWidth, logoHeight;
           
@@ -262,6 +262,40 @@ export const useProjectExperimentReports = () => {
       };
       img.src = '/lovable-uploads/305ae0c2-f9ba-42cc-817b-eda518f05406.png';
     });
+  };
+
+  const addQRCodeToPDF = async (pdf: jsPDF, reportTitle: string, reportId: string) => {
+    try {
+      const qrData = `${window.location.origin}/reports/${reportId}`;
+      const qrCodeDataURL = await QRCode.toDataURL(qrData, {
+        width: 80,
+        margin: 1,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+
+      const pageHeight = pdf.internal.pageSize.height;
+      const pageWidth = pdf.internal.pageSize.width;
+      const qrSize = 20;
+      const margin = 20;
+
+      pdf.addImage(
+        qrCodeDataURL, 
+        'PNG', 
+        pageWidth - margin - qrSize, 
+        pageHeight - margin - qrSize, 
+        qrSize, 
+        qrSize
+      );
+
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Scan for digital copy', pageWidth - margin - qrSize, pageHeight - margin + 5);
+    } catch (error) {
+      console.warn('Could not add QR code to PDF:', error);
+    }
   };
 
   const generatePDF = async ({ title, reportTitle, project, experiments, notes, attachments, user }: any) => {
@@ -434,6 +468,10 @@ export const useProjectExperimentReports = () => {
 
       yPosition += 15;
     });
+
+    // Add QR code to the last page
+    const reportId = crypto.randomUUID();
+    await addQRCodeToPDF(pdf, title, reportId);
 
     // Add footer to all pages with consistent styling
     const totalPages = pdf.internal.pages.length - 1;

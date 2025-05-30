@@ -27,75 +27,73 @@ export const useUsers = () => {
       if (!user) throw new Error('User not authenticated');
       
       try {
-        // First, try to get user profiles which contain the actual user data
+        // Get user profiles which contain the actual user data
         const { data: profiles, error: profilesError } = await supabase
           .from('user_profiles')
           .select('*');
 
-        // Get all users who have created any data in the system
-        const { data: userActivities, error: activitiesError } = await supabase
-          .from('projects')
-          .select('user_id')
-          .not('user_id', 'is', null);
+        if (profilesError && profilesError.code !== 'PGRST116') {
+          console.warn('Could not fetch user profiles:', profilesError);
+        }
 
-        if (activitiesError) console.warn('Could not fetch user activities:', activitiesError);
+        // Get all unique user IDs from various tables
+        const tables = ['projects', 'experiments', 'tasks', 'reports', 'team_members'];
+        const userIds = new Set([user.id]); // Always include current user
 
-        // Combine profile data with activity data
-        const activeUserIds = new Set([
-          user.id, // Always include current user
-          ...(userActivities?.map(a => a.user_id) || [])
-        ]);
+        for (const table of tables) {
+          try {
+            const { data, error } = await supabase
+              .from(table)
+              .select('user_id')
+              .not('user_id', 'is', null);
 
-        // If we have profiles, use them as the source of truth
-        if (profiles && profiles.length > 0) {
-          const profileUsers = profiles.map(profile => ({
-            id: profile.user_id,
-            email: `user-${profile.user_id.slice(0, 8)}@lab.system`, // System generated identifier
-            created_at: profile.created_at,
-            email_confirmed_at: profile.created_at,
-            last_sign_in_at: profile.updated_at,
-            raw_user_meta_data: {
-              first_name: profile.first_name,
-              last_name: profile.last_name,
-              avatar_url: profile.avatar_url,
+            if (!error && data) {
+              data.forEach((item: any) => userIds.add(item.user_id));
             }
-          })) as User[];
+          } catch (err) {
+            console.warn(`Could not fetch user_ids from ${table}:`, err);
+          }
+        }
 
-          // Add current user if not in profiles
-          const currentUserInProfiles = profileUsers.find(p => p.id === user.id);
-          if (!currentUserInProfiles) {
-            profileUsers.unshift({
+        const allUsers: User[] = [];
+
+        // Create user entries for all discovered user IDs
+        for (const userId of userIds) {
+          const profile = profiles?.find(p => p.user_id === userId);
+          
+          if (userId === user.id) {
+            // Current user - use auth data
+            allUsers.push({
               id: user.id,
               email: user.email || 'current.user@lab.system',
               created_at: user.created_at || new Date().toISOString(),
               email_confirmed_at: user.email_confirmed_at || null,
               last_sign_in_at: user.last_sign_in_at || null,
-              raw_user_meta_data: user.user_metadata || {}
-            } as User);
-          }
-
-          return profileUsers;
-        }
-
-        // Fallback: Create user entries for all active user IDs
-        const fallbackUsers: User[] = [];
-        
-        // Always include current user first
-        fallbackUsers.push({
-          id: user.id,
-          email: user.email || 'current.user@lab.system',
-          created_at: user.created_at || new Date().toISOString(),
-          email_confirmed_at: user.email_confirmed_at || null,
-          last_sign_in_at: user.last_sign_in_at || null,
-          raw_user_meta_data: user.user_metadata || {}
-        });
-
-        // Add other active users
-        for (const userId of activeUserIds) {
-          if (userId !== user.id) {
-            fallbackUsers.push({
+              raw_user_meta_data: {
+                first_name: profile?.first_name || user.user_metadata?.first_name,
+                last_name: profile?.last_name || user.user_metadata?.last_name,
+                avatar_url: profile?.avatar_url || user.user_metadata?.avatar_url,
+              }
+            });
+          } else if (profile) {
+            // User with profile data
+            allUsers.push({
               id: userId,
-              email: `researcher-${userId.slice(0, 8)}@lab.system`,
+              email: `${profile.first_name?.toLowerCase() || 'user'}.${profile.last_name?.toLowerCase() || userId.slice(0, 4)}@lab.system`,
+              created_at: profile.created_at,
+              email_confirmed_at: profile.created_at,
+              last_sign_in_at: profile.updated_at,
+              raw_user_meta_data: {
+                first_name: profile.first_name,
+                last_name: profile.last_name,
+                avatar_url: profile.avatar_url,
+              }
+            });
+          } else {
+            // User without profile - create basic entry
+            allUsers.push({
+              id: userId,
+              email: `researcher.${userId.slice(0, 8)}@lab.system`,
               created_at: new Date().toISOString(),
               email_confirmed_at: new Date().toISOString(),
               last_sign_in_at: new Date().toISOString(),
@@ -107,10 +105,16 @@ export const useUsers = () => {
           }
         }
 
-        return fallbackUsers;
+        return allUsers.sort((a, b) => {
+          // Current user first, then by creation date
+          if (a.id === user.id) return -1;
+          if (b.id === user.id) return 1;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+
       } catch (error) {
         console.error('Error fetching users:', error);
-        // Return current user as absolute fallback
+        // Return current user as fallback
         return [{
           id: user.id,
           email: user.email || 'current.user@lab.system',
@@ -172,8 +176,6 @@ export const useUsers = () => {
 
   const deleteUser = useMutation({
     mutationFn: async (id: string) => {
-      // Note: Regular users cannot delete other users via client-side code
-      // This would require admin privileges and server-side functions
       throw new Error('User deletion requires admin privileges and server-side implementation');
     },
     onSuccess: () => {
