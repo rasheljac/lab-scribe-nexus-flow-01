@@ -95,6 +95,63 @@ export type Database = {
           },
         ]
       }
+      experiment_ideas: {
+        Row: {
+          budget_estimate: string | null
+          category: string
+          created_at: string
+          description: string | null
+          estimated_duration: string | null
+          expected_outcomes: string | null
+          hypothesis: string | null
+          id: string
+          methodology: string | null
+          priority: string
+          required_materials: string | null
+          status: string
+          tags: string[]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          budget_estimate?: string | null
+          category: string
+          created_at?: string
+          description?: string | null
+          estimated_duration?: string | null
+          expected_outcomes?: string | null
+          hypothesis?: string | null
+          id?: string
+          methodology?: string | null
+          priority?: string
+          required_materials?: string | null
+          status?: string
+          tags?: string[]
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          budget_estimate?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          estimated_duration?: string | null
+          expected_outcomes?: string | null
+          hypothesis?: string | null
+          id?: string
+          methodology?: string | null
+          priority?: string
+          required_materials?: string | null
+          status?: string
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       experiment_notes: {
         Row: {
           content: string | null

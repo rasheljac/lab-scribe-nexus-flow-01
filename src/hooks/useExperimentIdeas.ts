@@ -32,7 +32,7 @@ export const useExperimentIdeas = () => {
       if (!user) throw new Error('User not authenticated');
       
       const { data, error } = await supabase
-        .from('experiment_ideas')
+        .from('experiment_ideas' as any)
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
@@ -48,7 +48,7 @@ export const useExperimentIdeas = () => {
       if (!user) throw new Error('User not authenticated');
 
       const { data, error } = await supabase
-        .from('experiment_ideas')
+        .from('experiment_ideas' as any)
         .insert([{ ...idea, user_id: user.id }])
         .select()
         .single();
@@ -64,7 +64,7 @@ export const useExperimentIdeas = () => {
   const updateIdea = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<ExperimentIdea> & { id: string }) => {
       const { data, error } = await supabase
-        .from('experiment_ideas')
+        .from('experiment_ideas' as any)
         .update(updates)
         .eq('id', id)
         .eq('user_id', user?.id)
@@ -82,7 +82,7 @@ export const useExperimentIdeas = () => {
   const deleteIdea = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('experiment_ideas')
+        .from('experiment_ideas' as any)
         .delete()
         .eq('id', id)
         .eq('user_id', user?.id);
@@ -100,7 +100,7 @@ export const useExperimentIdeas = () => {
 
       // Get the idea data
       const { data: idea, error: ideaError } = await supabase
-        .from('experiment_ideas')
+        .from('experiment_ideas' as any)
         .select('*')
         .eq('id', ideaId)
         .eq('user_id', user.id)
@@ -130,7 +130,7 @@ export const useExperimentIdeas = () => {
 
       // Update idea status to archived
       await supabase
-        .from('experiment_ideas')
+        .from('experiment_ideas' as any)
         .update({ status: 'archived' })
         .eq('id', ideaId)
         .eq('user_id', user.id);
