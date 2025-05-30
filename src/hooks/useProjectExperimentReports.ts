@@ -138,9 +138,25 @@ export const useProjectExperimentReports = () => {
       const img = new Image();
       img.onload = () => {
         try {
-          // Add logo to top right corner - resize to fit nicely
-          const logoWidth = 40;
-          const logoHeight = 40;
+          // Calculate aspect ratio and size for proper logo display
+          const originalWidth = img.width;
+          const originalHeight = img.height;
+          const aspectRatio = originalWidth / originalHeight;
+          
+          // Set maximum dimensions while maintaining aspect ratio
+          const maxWidth = 50;
+          const maxHeight = 30;
+          
+          let logoWidth, logoHeight;
+          
+          if (aspectRatio > maxWidth / maxHeight) {
+            logoWidth = maxWidth;
+            logoHeight = maxWidth / aspectRatio;
+          } else {
+            logoHeight = maxHeight;
+            logoWidth = maxHeight * aspectRatio;
+          }
+          
           const margin = 20;
           const pageWidth = pdf.internal.pageSize.width;
           
@@ -170,12 +186,14 @@ export const useProjectExperimentReports = () => {
     // Add logo first
     await addLogoToPDF(pdf);
 
-    // Set consistent font
+    // Set consistent font and character spacing
     pdf.setFont('helvetica', 'normal');
+    pdf.setCharSpace(0); // Reset character spacing
 
     // Add header with consistent styling
     pdf.setFontSize(18);
     pdf.setFont('helvetica', 'bold');
+    pdf.setCharSpace(0);
     pdf.text('KAPELCZAK LABORATORY', margin, yPosition);
     yPosition += 10;
     
@@ -187,13 +205,18 @@ export const useProjectExperimentReports = () => {
     // Add title with consistent font
     pdf.setFontSize(16);
     pdf.setFont('helvetica', 'bold');
+    pdf.setCharSpace(0);
     const titleLines = pdf.splitTextToSize(title, contentWidth);
-    pdf.text(titleLines, margin, yPosition);
-    yPosition += titleLines.length * 8 + 10;
+    titleLines.forEach((line: string) => {
+      pdf.text(line, margin, yPosition);
+      yPosition += 8;
+    });
+    yPosition += 10;
 
     // Add generation info with consistent styling
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
+    pdf.setCharSpace(0);
     const exportTime = new Date().toLocaleString();
     pdf.text(`Generated on: ${exportTime}`, margin, yPosition);
     yPosition += 6;
@@ -210,16 +233,22 @@ export const useProjectExperimentReports = () => {
       return false;
     };
 
-    // Helper function to add wrapped text
+    // Helper function to add wrapped text with proper spacing
     const addWrappedText = (text: string, fontSize: number, fontStyle: string = 'normal', extraSpacing: number = 0) => {
       pdf.setFontSize(fontSize);
       pdf.setFont('helvetica', fontStyle);
-      const lines = pdf.splitTextToSize(text, contentWidth);
+      pdf.setCharSpace(0); // Ensure consistent character spacing
       
-      lines.forEach((line: string, index: number) => {
-        checkPageBreak(fontSize * 0.5 + 5);
-        pdf.text(line, margin, yPosition);
-        yPosition += fontSize * 0.5 + 3; // Consistent line spacing
+      // Clean the text and handle special characters
+      const cleanText = text.replace(/[^\x20-\x7E\u00A0-\u00FF]/g, ' ').trim();
+      
+      // Split text to fit within content width
+      const lines = pdf.splitTextToSize(cleanText, contentWidth - 5); // Small buffer for safety
+      
+      lines.forEach((line: string) => {
+        checkPageBreak(fontSize * 0.6 + 5);
+        pdf.text(line.trim(), margin, yPosition);
+        yPosition += fontSize * 0.6 + 2; // Consistent line height
       });
       yPosition += extraSpacing;
     };
@@ -283,8 +312,8 @@ export const useProjectExperimentReports = () => {
           if (note.content) {
             const cleanContent = note.content.replace(/<[^>]*>/g, '').trim();
             if (cleanContent) {
-              const contentPreview = cleanContent.substring(0, 500);
-              const displayContent = `  ${contentPreview}${cleanContent.length > 500 ? '...' : ''}`;
+              const contentPreview = cleanContent.substring(0, 800);
+              const displayContent = `  ${contentPreview}${cleanContent.length > 800 ? '...' : ''}`;
               addWrappedText(displayContent, 9, 'normal', 8);
             }
           }
@@ -315,6 +344,7 @@ export const useProjectExperimentReports = () => {
       pdf.setPage(i);
       pdf.setFontSize(8);
       pdf.setFont('helvetica', 'normal');
+      pdf.setCharSpace(0);
       pdf.text('© Kapelczak Laboratory - Confidential', margin, pageHeight - 10);
       pdf.text(`Page ${i} of ${totalPages}`, pageWidth - margin - 30, pageHeight - 10);
     }

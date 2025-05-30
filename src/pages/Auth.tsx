@@ -90,7 +90,7 @@ const Auth = () => {
           <img 
             src="/lovable-uploads/23fe0903-c1fa-4493-b830-482c645b0541.png" 
             alt="Kapelczak Logo" 
-            className="h-16 w-16 mx-auto mb-4"
+            className="h-16 w-auto mx-auto mb-4 object-contain"
           />
           <h1 className="text-2xl font-bold text-gray-900">Kapelczak ELN</h1>
           <p className="text-gray-600">Electronic Laboratory Notebook</p>
