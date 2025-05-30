@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,16 +22,15 @@ import Header from "@/components/Header";
 import CreateReportDialog from "@/components/CreateReportDialog";
 import EnhancedReportDialog from "@/components/EnhancedReportDialog";
 import { useReports } from "@/hooks/useReports";
-import { useProjectExperimentReports } from "@/hooks/useProjectExperimentReports";
 import { useToast } from "@/hooks/use-toast";
 
 const Reports = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [isDownloading, setIsDownloading] = useState<string | null>(null);
 
   const { reports, isLoading, error, updateReport, deleteReport } = useReports();
-  const { generateProjectReport } = useProjectExperimentReports();
   const { toast } = useToast();
 
   const getTypeColor = (type: string) => {
@@ -69,67 +69,103 @@ const Reports = () => {
     return matchesSearch && matchesType && matchesStatus;
   });
 
-  const handleViewReport = async (reportId: string, title: string) => {
+  const generateReportPreview = (report: any) => {
+    // Create a simple text-based "preview" since we don't have actual PDF content stored
+    const content = `
+Report Title: ${report.title}
+
+Description: ${report.description || 'No description available'}
+
+Type: ${report.type}
+Status: ${report.status}
+Author: ${report.author}
+Format: ${report.format}
+Created: ${new Date(report.created_at).toLocaleDateString()}
+Downloads: ${report.downloads}
+
+This is a preview of the report. The actual report would contain detailed experiment data, notes, and attachments based on the original generation parameters.
+    `.trim();
+
+    return content;
+  };
+
+  const handleViewReport = async (reportId: string, report: any) => {
     try {
-      // Increment downloads count
-      const report = reports.find(r => r.id === reportId);
-      if (report) {
-        await updateReport.mutateAsync({
-          id: reportId,
-          downloads: report.downloads + 1
-        });
-      }
+      setIsDownloading(reportId);
       
-      // Generate and show the comprehensive PDF report using new system
-      await generateProjectReport.mutateAsync({
-        projectId: '', // For legacy reports, generate general report
-        projectTitle: title,
-        includeNotes: true,
-        includeAttachments: true
+      // Increment downloads count
+      await updateReport.mutateAsync({
+        id: reportId,
+        downloads: report.downloads + 1
       });
 
+      // Generate a preview document for viewing
+      const reportContent = generateReportPreview(report);
+      
+      // Create a blob and download it as a text file for preview
+      const blob = new Blob([reportContent], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${report.title.replace(/\s+/g, '_')}_preview.txt`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
       toast({
-        title: "Report Generated",
-        description: "Report has been generated and downloaded for viewing",
+        title: "Report Preview Generated",
+        description: "A preview of the report has been downloaded. For full PDF reports, use the Enhanced Report Generator.",
       });
     } catch (error) {
+      console.error("Error viewing report:", error);
       toast({
         title: "Error",
-        description: "Failed to generate report for viewing",
+        description: "Failed to generate report preview. For full PDF reports, please use the Enhanced Report Generator.",
         variant: "destructive",
       });
+    } finally {
+      setIsDownloading(null);
     }
   };
 
-  const handleDownloadReport = async (reportId: string, title: string) => {
+  const handleDownloadReport = async (reportId: string, report: any) => {
     try {
+      setIsDownloading(reportId);
+      
       // Increment downloads count
-      const report = reports.find(r => r.id === reportId);
-      if (report) {
-        await updateReport.mutateAsync({
-          id: reportId,
-          downloads: report.downloads + 1
-        });
-      }
-
-      // Generate comprehensive PDF report using new system
-      await generateProjectReport.mutateAsync({
-        projectId: '', // For legacy reports, generate general report
-        projectTitle: title,
-        includeNotes: true,
-        includeAttachments: true
+      await updateReport.mutateAsync({
+        id: reportId,
+        downloads: report.downloads + 1
       });
 
+      // Generate a simple report document for download
+      const reportContent = generateReportPreview(report);
+      
+      // Create a blob and download it
+      const blob = new Blob([reportContent], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${report.title.replace(/\s+/g, '_')}_report.txt`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
       toast({
-        title: "Download Started",
-        description: "Comprehensive PDF report download has begun",
+        title: "Report Downloaded",
+        description: "Report has been downloaded. For comprehensive PDF reports with experiments and notes, use the Enhanced Report Generator.",
       });
     } catch (error) {
+      console.error("Error downloading report:", error);
       toast({
         title: "Error",
-        description: "Failed to download report",
+        description: "Failed to download report. For full PDF reports, please use the Enhanced Report Generator.",
         variant: "destructive",
       });
+    } finally {
+      setIsDownloading(null);
     }
   };
 
@@ -184,6 +220,19 @@ const Reports = () => {
               <div className="flex gap-2">
                 <EnhancedReportDialog />
                 <CreateReportDialog />
+              </div>
+            </div>
+
+            {/* Info Banner */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <FileText className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div>
+                  <h3 className="font-medium text-blue-900">Report Types</h3>
+                  <p className="text-sm text-blue-700 mt-1">
+                    Basic reports show metadata and summaries. For comprehensive PDF reports with full experiment data, notes, and attachments, use the "Generate Report" button above.
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -365,21 +414,21 @@ const Reports = () => {
                           variant="outline" 
                           size="sm" 
                           className="flex-1"
-                          onClick={() => handleViewReport(report.id, report.title)}
-                          disabled={generateProjectReport.isPending}
+                          onClick={() => handleViewReport(report.id, report)}
+                          disabled={isDownloading === report.id}
                         >
                           <Eye className="h-4 w-4 mr-1" />
-                          {generateProjectReport.isPending ? "Generating..." : "View"}
+                          {isDownloading === report.id ? "Generating..." : "View"}
                         </Button>
                         <Button 
                           variant="outline" 
                           size="sm" 
                           className="flex-1"
-                          onClick={() => handleDownloadReport(report.id, report.title)}
-                          disabled={generateProjectReport.isPending}
+                          onClick={() => handleDownloadReport(report.id, report)}
+                          disabled={isDownloading === report.id}
                         >
                           <Download className="h-4 w-4 mr-1" />
-                          {generateProjectReport.isPending ? "Downloading..." : "Download"}
+                          {isDownloading === report.id ? "Downloading..." : "Download"}
                         </Button>
                       </div>
                     </CardContent>
