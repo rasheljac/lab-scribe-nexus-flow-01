@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Experiments from "./pages/Experiments";
 import ExperimentNotes from "./pages/ExperimentNotes";
+import ExperimentIdeas from "./pages/ExperimentIdeas";
 import Calendar from "./pages/Calendar";
 import Tasks from "./pages/Tasks";
 import Projects from "./pages/Projects";
@@ -51,6 +52,11 @@ const App = () => (
             <Route path="/experiments/:experimentId/notes" element={
               <ProtectedRoute>
                 <ExperimentNotes />
+              </ProtectedRoute>
+            } />
+            <Route path="/experiment-ideas" element={
+              <ProtectedRoute>
+                <ExperimentIdeas />
               </ProtectedRoute>
             } />
             <Route path="/calendar" element={
@@ -128,7 +134,6 @@ const App = () => (
                 <SystemSettings />
               </ProtectedRoute>
             } />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
