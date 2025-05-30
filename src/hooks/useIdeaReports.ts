@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useExperimentIdeas } from "@/hooks/useExperimentIdeas";
-import { useIdeaNotes } from "@/hooks/useIdeaNotes";
 import jsPDF from "jspdf";
 
 export const useIdeaReports = () => {
@@ -22,7 +21,7 @@ export const useIdeaReports = () => {
       let notes: any[] = [];
       if (includeNotes) {
         const { data: notesData, error: notesError } = await supabase
-          .from('idea_notes')
+          .from('idea_notes' as any)
           .select('*')
           .eq('idea_id', ideaId)
           .order('created_at', { ascending: false });

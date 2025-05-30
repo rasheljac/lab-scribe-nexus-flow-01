@@ -23,7 +23,7 @@ export const useIdeaNotes = (ideaId: string) => {
       if (!user) throw new Error('User not authenticated');
       
       const { data, error } = await supabase
-        .from('idea_notes')
+        .from('idea_notes' as any)
         .select('*')
         .eq('idea_id', ideaId)
         .order('created_at', { ascending: false });
@@ -39,7 +39,7 @@ export const useIdeaNotes = (ideaId: string) => {
       if (!user) throw new Error('User not authenticated');
 
       const { data, error } = await supabase
-        .from('idea_notes')
+        .from('idea_notes' as any)
         .insert([{ ...note, user_id: user.id }])
         .select()
         .single();
@@ -55,7 +55,7 @@ export const useIdeaNotes = (ideaId: string) => {
   const updateNote = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<IdeaNote> & { id: string }) => {
       const { data, error } = await supabase
-        .from('idea_notes')
+        .from('idea_notes' as any)
         .update(updates)
         .eq('id', id)
         .select()
@@ -72,7 +72,7 @@ export const useIdeaNotes = (ideaId: string) => {
   const deleteNote = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('idea_notes')
+        .from('idea_notes' as any)
         .delete()
         .eq('id', id);
 

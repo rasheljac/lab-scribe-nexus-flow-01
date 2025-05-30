@@ -106,7 +106,7 @@ const IdeaReportDialog = ({ ideaId, ideaTitle, variant = "single" }: IdeaReportD
               <Checkbox
                 id="include-notes"
                 checked={includeNotes}
-                onCheckedChange={setIncludeNotes}
+                onCheckedChange={(checked) => setIncludeNotes(checked === true)}
               />
               <label
                 htmlFor="include-notes"
