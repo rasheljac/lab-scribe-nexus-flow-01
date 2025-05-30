@@ -125,45 +125,158 @@ const LabelPrinter = () => {
         format: 'a4'
       });
 
+      // Define label dimensions (2x1 inch = ~51x25mm)
+      const labelWidth = 80;
+      const labelHeight = 50;
+      const startX = 20;
+      const startY = 30;
+
+      // Draw label border
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.rect(startX, startY, labelWidth, labelHeight);
+
       // Add title
-      doc.setFontSize(16);
-      doc.text(labelData.title, 20, 30);
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      const titleLines = doc.splitTextToSize(labelData.title, labelWidth - 10);
+      doc.text(titleLines, startX + 5, startY + 8);
 
       // Add subtitle if present
+      let currentY = startY + 8 + (titleLines.length * 4);
       if (labelData.subtitle) {
-        doc.setFontSize(12);
-        doc.text(labelData.subtitle, 20, 45);
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(100, 100, 100);
+        const subtitleLines = doc.splitTextToSize(labelData.subtitle, labelWidth - 10);
+        doc.text(subtitleLines, startX + 5, currentY + 3);
+        currentY += subtitleLines.length * 3 + 2;
+        doc.setTextColor(0, 0, 0);
       }
 
-      // Add date
-      if (labelData.date) {
-        doc.setFontSize(10);
-        doc.text(`Date: ${labelData.date}`, 20, 60);
-      }
-
-      // Add researcher
-      if (labelData.researcher) {
-        doc.text(`Researcher: ${labelData.researcher}`, 20, 70);
-      }
-
-      // Add barcode placeholder
+      // Add barcode area
       if (labelData.barcode_data) {
-        doc.text(`Barcode: ${labelData.barcode_data}`, 20, 80);
+        currentY += 3;
+        const barcodeHeight = 8;
+        const barcodeWidth = labelWidth - 10;
+        
+        // Draw barcode background
+        doc.setFillColor(0, 0, 0);
+        doc.rect(startX + 5, currentY, barcodeWidth, barcodeHeight, 'F');
+        
+        // Add barcode text
+        doc.setFontSize(6);
+        doc.setTextColor(255, 255, 255);
+        doc.setFont(undefined, 'normal');
+        doc.text(labelData.barcode_data, startX + 7, currentY + 5);
+        doc.setTextColor(0, 0, 0);
+        
+        currentY += barcodeHeight + 2;
       }
 
-      // Add notes
-      if (labelData.notes) {
-        doc.text(`Notes: ${labelData.notes}`, 20, 90);
+      // Add date and researcher info
+      doc.setFontSize(7);
+      doc.setFont(undefined, 'normal');
+      
+      if (labelData.date) {
+        doc.text(`Date: ${labelData.date}`, startX + 5, currentY + 3);
+        currentY += 3;
+      }
+      
+      if (labelData.researcher) {
+        doc.text(`Researcher: ${labelData.researcher}`, startX + 5, currentY + 3);
+        currentY += 3;
+      }
+
+      // Add notes if present and there's space
+      if (labelData.notes && currentY < startY + labelHeight - 8) {
+        doc.setFontSize(6);
+        doc.setTextColor(80, 80, 80);
+        const notesLines = doc.splitTextToSize(labelData.notes, labelWidth - 10);
+        const availableSpace = Math.floor((startY + labelHeight - 5 - currentY) / 2);
+        const linesToShow = Math.min(notesLines.length, availableSpace);
+        
+        for (let i = 0; i < linesToShow; i++) {
+          if (currentY + 2 < startY + labelHeight - 3) {
+            doc.text(notesLines[i], startX + 5, currentY + 2);
+            currentY += 2;
+          }
+        }
+        doc.setTextColor(0, 0, 0);
+      }
+
+      // Add multiple copies if quantity > 1
+      if (labelData.quantity > 1) {
+        const labelsPerRow = 2;
+        const labelsPerPage = 10;
+        
+        for (let i = 1; i < Math.min(labelData.quantity, labelsPerPage); i++) {
+          const row = Math.floor(i / labelsPerRow);
+          const col = i % labelsPerRow;
+          const x = startX + col * (labelWidth + 10);
+          const y = startY + row * (labelHeight + 10);
+          
+          // Check if we need a new page
+          if (y + labelHeight > 280) {
+            doc.addPage();
+            break;
+          }
+          
+          // Draw the same label at new position
+          doc.setDrawColor(0, 0, 0);
+          doc.setLineWidth(0.5);
+          doc.rect(x, y, labelWidth, labelHeight);
+          
+          // Repeat all label content at new position
+          doc.setFontSize(12);
+          doc.setFont(undefined, 'bold');
+          doc.setTextColor(0, 0, 0);
+          doc.text(titleLines, x + 5, y + 8);
+          
+          // Continue with other elements...
+          let labelY = y + 8 + (titleLines.length * 4);
+          
+          if (labelData.subtitle) {
+            doc.setFontSize(9);
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(100, 100, 100);
+            const subtitleLines = doc.splitTextToSize(labelData.subtitle, labelWidth - 10);
+            doc.text(subtitleLines, x + 5, labelY + 3);
+            labelY += subtitleLines.length * 3 + 2;
+            doc.setTextColor(0, 0, 0);
+          }
+          
+          if (labelData.barcode_data) {
+            labelY += 3;
+            doc.setFillColor(0, 0, 0);
+            doc.rect(x + 5, labelY, labelWidth - 10, 8, 'F');
+            doc.setFontSize(6);
+            doc.setTextColor(255, 255, 255);
+            doc.text(labelData.barcode_data, x + 7, labelY + 5);
+            doc.setTextColor(0, 0, 0);
+            labelY += 10;
+          }
+          
+          doc.setFontSize(7);
+          if (labelData.date) {
+            doc.text(`Date: ${labelData.date}`, x + 5, labelY + 3);
+            labelY += 3;
+          }
+          if (labelData.researcher) {
+            doc.text(`Researcher: ${labelData.researcher}`, x + 5, labelY + 3);
+          }
+        }
       }
 
       // Save the PDF
-      doc.save(`label-${labelData.title}.pdf`);
+      doc.save(`label-${labelData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
 
       toast({
         title: "Success",
         description: "PDF downloaded successfully",
       });
     } catch (error) {
+      console.error('Error generating PDF:', error);
       toast({
         title: "Error",
         description: "Failed to generate PDF",

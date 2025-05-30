@@ -30,6 +30,34 @@ export const useIdeaReports = () => {
     }));
   };
 
+  // Helper function to add logo to PDF
+  const addLogoToPDF = (pdf: jsPDF, yPosition: number) => {
+    try {
+      // Create a simple logo placeholder - in a real implementation, you'd load an actual image
+      const logoSize = 20;
+      const pageWidth = pdf.internal.pageSize.width;
+      const logoX = pageWidth - logoSize - 20; // 20mm from right edge
+      
+      // Draw a simple rectangular logo placeholder
+      pdf.setFillColor(59, 130, 246); // Blue color
+      pdf.rect(logoX, yPosition - 15, logoSize, 15, 'F');
+      
+      // Add logo text
+      pdf.setFontSize(10);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont(undefined, 'bold');
+      pdf.text('LOGO', logoX + 2, yPosition - 7);
+      
+      // Reset text color
+      pdf.setTextColor(0, 0, 0);
+      
+      return yPosition;
+    } catch (error) {
+      console.error('Error adding logo:', error);
+      return yPosition;
+    }
+  };
+
   const generateIdeaReport = useMutation({
     mutationFn: async ({ ideaId, includeNotes = false }: { ideaId: string; includeNotes?: boolean }) => {
       if (!user) throw new Error('User not authenticated');
@@ -49,13 +77,11 @@ export const useIdeaReports = () => {
 
           if (notesError) {
             console.error('Error fetching notes:', notesError);
-            // Continue without notes if there's an error
           } else {
             notes = notesData || [];
           }
         } catch (error) {
           console.error('Error fetching notes:', error);
-          // Continue without notes if there's an error
         }
       }
 
@@ -66,11 +92,16 @@ export const useIdeaReports = () => {
       const margin = 20;
       const lineHeight = 6;
 
+      // Add logo to first page
+      addLogoToPDF(pdf, yPosition);
+
       // Helper function to check if we need a new page
       const checkPageBreak = (requiredSpace: number) => {
         if (yPosition + requiredSpace > pageHeight - margin) {
           pdf.addPage();
           yPosition = margin;
+          // Add logo to new page
+          addLogoToPDF(pdf, yPosition);
         }
       };
 
@@ -90,13 +121,15 @@ export const useIdeaReports = () => {
       };
 
       // Header
-      pdf.setFontSize(20);
+      pdf.setFontSize(24);
       pdf.setFont(undefined, 'bold');
+      pdf.setTextColor(59, 130, 246); // Blue color to match branding
       pdf.text('Experiment Idea Report', margin, yPosition);
-      yPosition += 15;
+      pdf.setTextColor(0, 0, 0); // Reset to black
+      yPosition += 20;
 
       // Title
-      pdf.setFontSize(16);
+      pdf.setFontSize(18);
       pdf.setFont(undefined, 'bold');
       pdf.text(idea.title, margin, yPosition);
       yPosition += 15;
@@ -104,7 +137,9 @@ export const useIdeaReports = () => {
       // Basic Information Section
       pdf.setFontSize(14);
       pdf.setFont(undefined, 'bold');
+      pdf.setTextColor(59, 130, 246);
       pdf.text('Basic Information', margin, yPosition);
+      pdf.setTextColor(0, 0, 0);
       yPosition += 10;
 
       pdf.setFontSize(10);
@@ -123,7 +158,9 @@ export const useIdeaReports = () => {
         checkPageBreak(30);
         pdf.setFontSize(14);
         pdf.setFont(undefined, 'bold');
+        pdf.setTextColor(59, 130, 246);
         pdf.text('Description', margin, yPosition);
+        pdf.setTextColor(0, 0, 0);
         yPosition += 10;
         
         const plainDescription = stripHtml(idea.description);
@@ -136,7 +173,9 @@ export const useIdeaReports = () => {
         checkPageBreak(30);
         pdf.setFontSize(14);
         pdf.setFont(undefined, 'bold');
+        pdf.setTextColor(59, 130, 246);
         pdf.text('Hypothesis', margin, yPosition);
+        pdf.setTextColor(0, 0, 0);
         yPosition += 10;
         
         const plainHypothesis = stripHtml(idea.hypothesis);
@@ -149,7 +188,9 @@ export const useIdeaReports = () => {
         checkPageBreak(30);
         pdf.setFontSize(14);
         pdf.setFont(undefined, 'bold');
+        pdf.setTextColor(59, 130, 246);
         pdf.text('Methodology', margin, yPosition);
+        pdf.setTextColor(0, 0, 0);
         yPosition += 10;
         
         const plainMethodology = stripHtml(idea.methodology);
@@ -162,7 +203,9 @@ export const useIdeaReports = () => {
         checkPageBreak(30);
         pdf.setFontSize(14);
         pdf.setFont(undefined, 'bold');
+        pdf.setTextColor(59, 130, 246);
         pdf.text('Required Materials', margin, yPosition);
+        pdf.setTextColor(0, 0, 0);
         yPosition += 10;
         
         const plainMaterials = stripHtml(idea.required_materials);
@@ -175,7 +218,9 @@ export const useIdeaReports = () => {
         checkPageBreak(30);
         pdf.setFontSize(14);
         pdf.setFont(undefined, 'bold');
+        pdf.setTextColor(59, 130, 246);
         pdf.text('Expected Outcomes', margin, yPosition);
+        pdf.setTextColor(0, 0, 0);
         yPosition += 10;
         
         const plainOutcomes = stripHtml(idea.expected_outcomes);
@@ -188,7 +233,9 @@ export const useIdeaReports = () => {
         checkPageBreak(30);
         pdf.setFontSize(14);
         pdf.setFont(undefined, 'bold');
+        pdf.setTextColor(59, 130, 246);
         pdf.text('Planning Details', margin, yPosition);
+        pdf.setTextColor(0, 0, 0);
         yPosition += 10;
         
         pdf.setFontSize(10);
@@ -209,7 +256,9 @@ export const useIdeaReports = () => {
         checkPageBreak(20);
         pdf.setFontSize(14);
         pdf.setFont(undefined, 'bold');
+        pdf.setTextColor(59, 130, 246);
         pdf.text('Tags', margin, yPosition);
+        pdf.setTextColor(0, 0, 0);
         yPosition += 10;
         
         pdf.setFontSize(10);
@@ -223,7 +272,9 @@ export const useIdeaReports = () => {
         checkPageBreak(30);
         pdf.setFontSize(16);
         pdf.setFont(undefined, 'bold');
+        pdf.setTextColor(59, 130, 246);
         pdf.text('Research Notes', margin, yPosition);
+        pdf.setTextColor(0, 0, 0);
         yPosition += 15;
 
         notes.forEach((note, index) => {
@@ -288,7 +339,6 @@ export const useIdeaReports = () => {
 
         if (reportError) {
           console.error('Error saving report to database:', reportError);
-          // Continue with PDF download even if database save fails
         }
 
         // Download the PDF
@@ -297,7 +347,6 @@ export const useIdeaReports = () => {
         return reportData;
       } catch (error) {
         console.error('Error in report generation:', error);
-        // Still try to download the PDF
         pdf.save(`experiment-idea-${idea.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
         throw error;
       }
@@ -316,19 +365,26 @@ export const useIdeaReports = () => {
       const pageHeight = pdf.internal.pageSize.height;
       const margin = 20;
 
+      // Add logo to first page
+      addLogoToPDF(pdf, yPosition);
+
       // Helper function to check if we need a new page
       const checkPageBreak = (requiredSpace: number) => {
         if (yPosition + requiredSpace > pageHeight - margin) {
           pdf.addPage();
           yPosition = margin;
+          // Add logo to new page
+          addLogoToPDF(pdf, yPosition);
         }
       };
 
       // Title
-      pdf.setFontSize(20);
+      pdf.setFontSize(24);
       pdf.setFont(undefined, 'bold');
+      pdf.setTextColor(59, 130, 246);
       pdf.text('All Experiment Ideas Report', margin, yPosition);
-      yPosition += 15;
+      pdf.setTextColor(0, 0, 0);
+      yPosition += 20;
       
       pdf.setFontSize(12);
       pdf.setFont(undefined, 'normal');
@@ -347,9 +403,11 @@ export const useIdeaReports = () => {
       }, {});
 
       checkPageBreak(60);
-      pdf.setFontSize(14);
+      pdf.setFontSize(16);
       pdf.setFont(undefined, 'bold');
+      pdf.setTextColor(59, 130, 246);
       pdf.text('Summary Statistics', margin, yPosition);
+      pdf.setTextColor(0, 0, 0);
       yPosition += 15;
       
       pdf.setFontSize(10);
@@ -376,9 +434,11 @@ export const useIdeaReports = () => {
 
       // List all ideas
       checkPageBreak(30);
-      pdf.setFontSize(14);
+      pdf.setFontSize(16);
       pdf.setFont(undefined, 'bold');
+      pdf.setTextColor(59, 130, 246);
       pdf.text('All Ideas', margin, yPosition);
+      pdf.setTextColor(0, 0, 0);
       yPosition += 15;
 
       ideas.forEach((idea, index) => {
