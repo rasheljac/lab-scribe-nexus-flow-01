@@ -40,108 +40,165 @@ export const useIdeaReports = () => {
       // Get notes if requested
       let notes: any[] = [];
       if (includeNotes) {
-        const { data: notesData, error: notesError } = await supabase
-          .from('idea_notes' as any)
-          .select('*')
-          .eq('idea_id', ideaId)
-          .order('created_at', { ascending: false });
+        try {
+          const { data: notesData, error: notesError } = await supabase
+            .from('idea_notes')
+            .select('*')
+            .eq('idea_id', ideaId)
+            .order('created_at', { ascending: false });
 
-        if (notesError) throw notesError;
-        notes = notesData || [];
+          if (notesError) {
+            console.error('Error fetching notes:', notesError);
+            // Continue without notes if there's an error
+          } else {
+            notes = notesData || [];
+          }
+        } catch (error) {
+          console.error('Error fetching notes:', error);
+          // Continue without notes if there's an error
+        }
       }
 
       // Generate PDF
       const pdf = new jsPDF();
       let yPosition = 20;
+      const pageHeight = pdf.internal.pageSize.height;
+      const margin = 20;
+      const lineHeight = 6;
+
+      // Helper function to check if we need a new page
+      const checkPageBreak = (requiredSpace: number) => {
+        if (yPosition + requiredSpace > pageHeight - margin) {
+          pdf.addPage();
+          yPosition = margin;
+        }
+      };
+
+      // Helper function to add text with word wrapping
+      const addWrappedText = (text: string, fontSize: number = 10, isBold: boolean = false) => {
+        pdf.setFontSize(fontSize);
+        if (isBold) {
+          pdf.setFont(undefined, 'bold');
+        } else {
+          pdf.setFont(undefined, 'normal');
+        }
+        
+        const lines = pdf.splitTextToSize(text, 170);
+        checkPageBreak(lines.length * lineHeight + 5);
+        pdf.text(lines, margin, yPosition);
+        yPosition += lines.length * lineHeight + 5;
+      };
+
+      // Header
+      pdf.setFontSize(20);
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Experiment Idea Report', margin, yPosition);
+      yPosition += 15;
 
       // Title
-      pdf.setFontSize(20);
-      pdf.text(`Experiment Idea Report: ${idea.title}`, 20, yPosition);
-      yPosition += 20;
+      pdf.setFontSize(16);
+      pdf.setFont(undefined, 'bold');
+      pdf.text(idea.title, margin, yPosition);
+      yPosition += 15;
 
-      // Basic Info
-      pdf.setFontSize(12);
-      pdf.text(`Category: ${idea.category}`, 20, yPosition);
+      // Basic Information Section
+      pdf.setFontSize(14);
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Basic Information', margin, yPosition);
       yPosition += 10;
-      pdf.text(`Status: ${idea.status}`, 20, yPosition);
-      yPosition += 10;
-      pdf.text(`Priority: ${idea.priority}`, 20, yPosition);
-      yPosition += 10;
-      pdf.text(`Created: ${new Date(idea.created_at).toLocaleDateString()}`, 20, yPosition);
-      yPosition += 20;
+
+      pdf.setFontSize(10);
+      pdf.setFont(undefined, 'normal');
+      pdf.text(`Category: ${idea.category}`, margin, yPosition);
+      yPosition += 8;
+      pdf.text(`Status: ${idea.status}`, margin, yPosition);
+      yPosition += 8;
+      pdf.text(`Priority: ${idea.priority}`, margin, yPosition);
+      yPosition += 8;
+      pdf.text(`Created: ${new Date(idea.created_at).toLocaleDateString()}`, margin, yPosition);
+      yPosition += 15;
 
       // Description
       if (idea.description) {
+        checkPageBreak(30);
         pdf.setFontSize(14);
-        pdf.text('Description:', 20, yPosition);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('Description', margin, yPosition);
         yPosition += 10;
-        pdf.setFontSize(10);
+        
         const plainDescription = stripHtml(idea.description);
-        const descriptionLines = pdf.splitTextToSize(plainDescription, 170);
-        pdf.text(descriptionLines, 20, yPosition);
-        yPosition += descriptionLines.length * 5 + 10;
+        addWrappedText(plainDescription);
+        yPosition += 5;
       }
 
       // Hypothesis
       if (idea.hypothesis) {
+        checkPageBreak(30);
         pdf.setFontSize(14);
-        pdf.text('Hypothesis:', 20, yPosition);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('Hypothesis', margin, yPosition);
         yPosition += 10;
-        pdf.setFontSize(10);
+        
         const plainHypothesis = stripHtml(idea.hypothesis);
-        const hypothesisLines = pdf.splitTextToSize(plainHypothesis, 170);
-        pdf.text(hypothesisLines, 20, yPosition);
-        yPosition += hypothesisLines.length * 5 + 10;
+        addWrappedText(plainHypothesis);
+        yPosition += 5;
       }
 
       // Methodology
       if (idea.methodology) {
+        checkPageBreak(30);
         pdf.setFontSize(14);
-        pdf.text('Methodology:', 20, yPosition);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('Methodology', margin, yPosition);
         yPosition += 10;
-        pdf.setFontSize(10);
+        
         const plainMethodology = stripHtml(idea.methodology);
-        const methodologyLines = pdf.splitTextToSize(plainMethodology, 170);
-        pdf.text(methodologyLines, 20, yPosition);
-        yPosition += methodologyLines.length * 5 + 10;
+        addWrappedText(plainMethodology);
+        yPosition += 5;
       }
 
       // Required Materials
       if (idea.required_materials) {
+        checkPageBreak(30);
         pdf.setFontSize(14);
-        pdf.text('Required Materials:', 20, yPosition);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('Required Materials', margin, yPosition);
         yPosition += 10;
-        pdf.setFontSize(10);
+        
         const plainMaterials = stripHtml(idea.required_materials);
-        const materialsLines = pdf.splitTextToSize(plainMaterials, 170);
-        pdf.text(materialsLines, 20, yPosition);
-        yPosition += materialsLines.length * 5 + 10;
+        addWrappedText(plainMaterials);
+        yPosition += 5;
       }
 
       // Expected Outcomes
       if (idea.expected_outcomes) {
+        checkPageBreak(30);
         pdf.setFontSize(14);
-        pdf.text('Expected Outcomes:', 20, yPosition);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('Expected Outcomes', margin, yPosition);
         yPosition += 10;
-        pdf.setFontSize(10);
+        
         const plainOutcomes = stripHtml(idea.expected_outcomes);
-        const outcomesLines = pdf.splitTextToSize(plainOutcomes, 170);
-        pdf.text(outcomesLines, 20, yPosition);
-        yPosition += outcomesLines.length * 5 + 10;
+        addWrappedText(plainOutcomes);
+        yPosition += 5;
       }
 
-      // Duration and Budget
+      // Planning Details
       if (idea.estimated_duration || idea.budget_estimate) {
+        checkPageBreak(30);
         pdf.setFontSize(14);
-        pdf.text('Planning Details:', 20, yPosition);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('Planning Details', margin, yPosition);
         yPosition += 10;
+        
         pdf.setFontSize(10);
+        pdf.setFont(undefined, 'normal');
         if (idea.estimated_duration) {
-          pdf.text(`Estimated Duration: ${idea.estimated_duration}`, 20, yPosition);
+          pdf.text(`Estimated Duration: ${idea.estimated_duration}`, margin, yPosition);
           yPosition += 8;
         }
         if (idea.budget_estimate) {
-          pdf.text(`Budget Estimate: ${idea.budget_estimate}`, 20, yPosition);
+          pdf.text(`Budget Estimate: ${idea.budget_estimate}`, margin, yPosition);
           yPosition += 8;
         }
         yPosition += 10;
@@ -149,100 +206,101 @@ export const useIdeaReports = () => {
 
       // Tags
       if (idea.tags && idea.tags.length > 0) {
+        checkPageBreak(20);
         pdf.setFontSize(14);
-        pdf.text('Tags:', 20, yPosition);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('Tags', margin, yPosition);
         yPosition += 10;
+        
         pdf.setFontSize(10);
-        pdf.text(idea.tags.join(', '), 20, yPosition);
-        yPosition += 20;
+        pdf.setFont(undefined, 'normal');
+        pdf.text(idea.tags.join(', '), margin, yPosition);
+        yPosition += 15;
       }
 
-      // Notes section with improved handling
+      // Notes section
       if (includeNotes && notes.length > 0) {
-        // Add new page for notes if needed
-        if (yPosition > 250) {
-          pdf.addPage();
-          yPosition = 20;
-        }
-
+        checkPageBreak(30);
         pdf.setFontSize(16);
-        pdf.text('Research Notes:', 20, yPosition);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('Research Notes', margin, yPosition);
         yPosition += 15;
 
-        for (let index = 0; index < notes.length; index++) {
-          const note = notes[index];
+        notes.forEach((note, index) => {
+          checkPageBreak(40);
           
-          // Check if we need a new page
-          if (yPosition > 250) {
-            pdf.addPage();
-            yPosition = 20;
-          }
-
           pdf.setFontSize(12);
-          pdf.text(`${index + 1}. ${note.title}`, 20, yPosition);
+          pdf.setFont(undefined, 'bold');
+          pdf.text(`${index + 1}. ${note.title}`, margin, yPosition);
           yPosition += 10;
           
           pdf.setFontSize(8);
-          pdf.text(`Created: ${new Date(note.created_at).toLocaleDateString()}`, 20, yPosition);
+          pdf.setFont(undefined, 'normal');
+          pdf.text(`Created: ${new Date(note.created_at).toLocaleDateString()}`, margin, yPosition);
           yPosition += 8;
 
           if (note.content) {
-            pdf.setFontSize(10);
-            
-            // Extract plain text and images from rich text content
             const plainTextContent = stripHtml(note.content);
             const images = extractImages(note.content);
             
-            // Add plain text content
             if (plainTextContent) {
-              const contentLines = pdf.splitTextToSize(plainTextContent, 170);
-              pdf.text(contentLines, 20, yPosition);
-              yPosition += contentLines.length * 4 + 10;
+              addWrappedText(plainTextContent);
             }
 
-            // Add note about images if they exist
             if (images.length > 0) {
               pdf.setFontSize(8);
-              pdf.text(`[Note: This note contains ${images.length} image(s) - images are not displayed in PDF]`, 20, yPosition);
+              pdf.setFont(undefined, 'italic');
+              pdf.text(`[Note: This note contains ${images.length} image(s)]`, margin, yPosition);
               yPosition += 8;
-              
-              // List image alt texts if available
-              images.forEach((img, imgIndex) => {
-                if (img.alt && img.alt !== 'Image') {
-                  pdf.text(`  Image ${imgIndex + 1}: ${img.alt}`, 25, yPosition);
-                  yPosition += 6;
-                }
-              });
-              yPosition += 10;
             }
           }
           
           yPosition += 5;
-        }
+        });
       }
 
-      // Save the report to database
-      const { data: reportData, error: reportError } = await supabase
-        .from('reports')
-        .insert([{
-          user_id: user.id,
-          title: `Experiment Idea Report: ${idea.title}`,
-          description: `Generated report for experiment idea "${idea.title}"`,
-          type: 'idea',
-          status: 'published',
-          author: user.email?.split('@')[0] || 'Unknown',
-          format: 'PDF',
-          size: '~' + Math.round(pdf.internal.pageSize.width * pdf.internal.pageSize.height / 1024) + 'KB'
-        }])
-        .select()
-        .single();
+      // Footer
+      const pageCount = pdf.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(8);
+        pdf.setFont(undefined, 'normal');
+        pdf.text(`Page ${i} of ${pageCount}`, pdf.internal.pageSize.width - 40, pdf.internal.pageSize.height - 10);
+        pdf.text(`Generated: ${new Date().toLocaleDateString()}`, margin, pdf.internal.pageSize.height - 10);
+      }
 
-      if (reportError) throw reportError;
+      try {
+        // Save the report to database
+        const { data: reportData, error: reportError } = await supabase
+          .from('reports')
+          .insert([{
+            user_id: user.id,
+            title: `Experiment Idea Report: ${idea.title}`,
+            description: `Generated report for experiment idea "${idea.title}"`,
+            type: 'idea',
+            status: 'published',
+            author: user.email?.split('@')[0] || 'Unknown',
+            format: 'PDF',
+            size: '~' + Math.round(pdf.internal.pageSize.width * pdf.internal.pageSize.height / 1024) + 'KB'
+          }])
+          .select()
+          .single();
 
-      // Download the PDF
-      pdf.save(`experiment-idea-${idea.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
+        if (reportError) {
+          console.error('Error saving report to database:', reportError);
+          // Continue with PDF download even if database save fails
+        }
 
-      return reportData;
+        // Download the PDF
+        pdf.save(`experiment-idea-${idea.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
+
+        return reportData;
+      } catch (error) {
+        console.error('Error in report generation:', error);
+        // Still try to download the PDF
+        pdf.save(`experiment-idea-${idea.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reports'] });
@@ -255,17 +313,29 @@ export const useIdeaReports = () => {
 
       const pdf = new jsPDF();
       let yPosition = 20;
+      const pageHeight = pdf.internal.pageSize.height;
+      const margin = 20;
+
+      // Helper function to check if we need a new page
+      const checkPageBreak = (requiredSpace: number) => {
+        if (yPosition + requiredSpace > pageHeight - margin) {
+          pdf.addPage();
+          yPosition = margin;
+        }
+      };
 
       // Title
       pdf.setFontSize(20);
-      pdf.text('All Experiment Ideas Report', 20, yPosition);
-      yPosition += 10;
+      pdf.setFont(undefined, 'bold');
+      pdf.text('All Experiment Ideas Report', margin, yPosition);
+      yPosition += 15;
       
       pdf.setFontSize(12);
-      pdf.text(`Generated: ${new Date().toLocaleDateString()}`, 20, yPosition);
+      pdf.setFont(undefined, 'normal');
+      pdf.text(`Generated: ${new Date().toLocaleDateString()}`, margin, yPosition);
       yPosition += 20;
 
-      // Summary stats
+      // Summary statistics
       const statusCounts = ideas.reduce((acc: any, idea) => {
         acc[idea.status] = (acc[idea.status] || 0) + 1;
         return acc;
@@ -276,79 +346,102 @@ export const useIdeaReports = () => {
         return acc;
       }, {});
 
+      checkPageBreak(60);
       pdf.setFontSize(14);
-      pdf.text('Summary Statistics:', 20, yPosition);
-      yPosition += 10;
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Summary Statistics', margin, yPosition);
+      yPosition += 15;
       
       pdf.setFontSize(10);
-      pdf.text(`Total Ideas: ${ideas.length}`, 20, yPosition);
-      yPosition += 8;
+      pdf.setFont(undefined, 'normal');
+      pdf.text(`Total Ideas: ${ideas.length}`, margin, yPosition);
+      yPosition += 10;
       
+      pdf.text('Status Distribution:', margin, yPosition);
+      yPosition += 8;
       Object.entries(statusCounts).forEach(([status, count]) => {
-        pdf.text(`${status}: ${count}`, 30, yPosition);
+        pdf.text(`  ${status}: ${count}`, margin + 10, yPosition);
         yPosition += 6;
       });
       
-      yPosition += 10;
-      pdf.text('Priority Distribution:', 20, yPosition);
+      yPosition += 5;
+      pdf.text('Priority Distribution:', margin, yPosition);
       yPosition += 8;
-      
       Object.entries(priorityCounts).forEach(([priority, count]) => {
-        pdf.text(`${priority}: ${count}`, 30, yPosition);
+        pdf.text(`  ${priority}: ${count}`, margin + 10, yPosition);
         yPosition += 6;
       });
 
       yPosition += 20;
 
       // List all ideas
+      checkPageBreak(30);
       pdf.setFontSize(14);
-      pdf.text('All Ideas:', 20, yPosition);
+      pdf.setFont(undefined, 'bold');
+      pdf.text('All Ideas', margin, yPosition);
       yPosition += 15;
 
       ideas.forEach((idea, index) => {
-        if (yPosition > 270) {
-          pdf.addPage();
-          yPosition = 20;
-        }
+        checkPageBreak(30);
 
         pdf.setFontSize(12);
-        pdf.text(`${index + 1}. ${idea.title}`, 20, yPosition);
+        pdf.setFont(undefined, 'bold');
+        pdf.text(`${index + 1}. ${idea.title}`, margin, yPosition);
         yPosition += 8;
         
         pdf.setFontSize(9);
-        pdf.text(`Status: ${idea.status} | Priority: ${idea.priority} | Category: ${idea.category}`, 25, yPosition);
+        pdf.setFont(undefined, 'normal');
+        pdf.text(`Status: ${idea.status} | Priority: ${idea.priority} | Category: ${idea.category}`, margin + 5, yPosition);
         yPosition += 6;
         
         if (idea.description) {
           const plainDescription = stripHtml(idea.description);
           const descLines = pdf.splitTextToSize(plainDescription, 160);
-          pdf.text(descLines.slice(0, 2), 25, yPosition); // Limit to 2 lines
+          pdf.text(descLines.slice(0, 2), margin + 5, yPosition);
           yPosition += Math.min(descLines.length, 2) * 4;
         }
         
-        yPosition += 10;
+        yPosition += 8;
       });
 
-      // Save to database
-      const { data: reportData, error: reportError } = await supabase
-        .from('reports')
-        .insert([{
-          user_id: user.id,
-          title: 'All Experiment Ideas Report',
-          description: `Generated comprehensive report for all ${ideas.length} experiment ideas`,
-          type: 'idea',
-          status: 'published',
-          author: user.email?.split('@')[0] || 'Unknown',
-          format: 'PDF',
-          size: '~' + Math.round(pdf.internal.pageSize.width * pdf.internal.pageSize.height / 1024) + 'KB'
-        }])
-        .select()
-        .single();
+      // Footer
+      const pageCount = pdf.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(8);
+        pdf.setFont(undefined, 'normal');
+        pdf.text(`Page ${i} of ${pageCount}`, pdf.internal.pageSize.width - 40, pdf.internal.pageSize.height - 10);
+        pdf.text(`Generated: ${new Date().toLocaleDateString()}`, margin, pdf.internal.pageSize.height - 10);
+      }
 
-      if (reportError) throw reportError;
+      try {
+        // Save to database
+        const { data: reportData, error: reportError } = await supabase
+          .from('reports')
+          .insert([{
+            user_id: user.id,
+            title: 'All Experiment Ideas Report',
+            description: `Generated comprehensive report for all ${ideas.length} experiment ideas`,
+            type: 'idea',
+            status: 'published',
+            author: user.email?.split('@')[0] || 'Unknown',
+            format: 'PDF',
+            size: '~' + Math.round(pdf.internal.pageSize.width * pdf.internal.pageSize.height / 1024) + 'KB'
+          }])
+          .select()
+          .single();
 
-      pdf.save('all-experiment-ideas-report.pdf');
-      return reportData;
+        if (reportError) {
+          console.error('Error saving report to database:', reportError);
+        }
+
+        pdf.save('all-experiment-ideas-report.pdf');
+        return reportData;
+      } catch (error) {
+        console.error('Error in all ideas report generation:', error);
+        pdf.save('all-experiment-ideas-report.pdf');
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reports'] });
