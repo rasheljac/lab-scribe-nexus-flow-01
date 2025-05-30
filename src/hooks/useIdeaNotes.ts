@@ -29,7 +29,7 @@ export const useIdeaNotes = (ideaId: string) => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as IdeaNote[];
+      return (data || []) as IdeaNote[];
     },
     enabled: !!user && !!ideaId,
   });
@@ -45,7 +45,7 @@ export const useIdeaNotes = (ideaId: string) => {
         .single();
 
       if (error) throw error;
-      return data;
+      return data as IdeaNote;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ideaNotes', ideaId] });
@@ -62,7 +62,7 @@ export const useIdeaNotes = (ideaId: string) => {
         .single();
 
       if (error) throw error;
-      return data;
+      return data as IdeaNote;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ideaNotes', ideaId] });
