@@ -1,3 +1,4 @@
+
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -65,7 +66,7 @@ export const useProjectExperimentReports = () => {
         allAttachments = attachments || [];
       }
 
-      return generatePDF({
+      const pdfResult = await generatePDF({
         title: `Project Report: ${projectTitle}`,
         reportTitle,
         project,
@@ -74,6 +75,17 @@ export const useProjectExperimentReports = () => {
         attachments: allAttachments,
         user
       });
+
+      // Save the report to the database
+      await saveReportToDatabase({
+        title: `Project Report: ${projectTitle}`,
+        description: `Comprehensive report for project: ${projectTitle}`,
+        type: 'experiment' as const,
+        author: user.email || 'Unknown',
+        user_id: user.id
+      });
+
+      return pdfResult;
     },
   });
 
@@ -127,7 +139,7 @@ export const useProjectExperimentReports = () => {
         attachments = attachmentsData || [];
       }
 
-      return generatePDF({
+      const pdfResult = await generatePDF({
         title: `Experiment Report: ${experimentTitle}`,
         reportTitle,
         experiments: [experiment],
@@ -135,8 +147,80 @@ export const useProjectExperimentReports = () => {
         attachments,
         user
       });
+
+      // Save the report to the database
+      await saveReportToDatabase({
+        title: `Experiment Report: ${experimentTitle}`,
+        description: `Comprehensive report for experiment: ${experimentTitle}`,
+        type: 'experiment' as const,
+        author: user.email || 'Unknown',
+        user_id: user.id
+      });
+
+      return pdfResult;
     },
   });
+
+  const saveReportToDatabase = async (reportData: {
+    title: string;
+    description: string;
+    type: 'experiment' | 'activity' | 'maintenance' | 'inventory';
+    author: string;
+    user_id: string;
+  }) => {
+    const { error } = await supabase
+      .from('reports')
+      .insert([{
+        ...reportData,
+        status: 'published',
+        format: 'PDF',
+        downloads: 1 // Start with 1 since it was just generated
+      }]);
+
+    if (error) {
+      console.error('Error saving report:', error);
+      throw error;
+    }
+  };
+
+  // Helper function to convert HTML to plain text while preserving formatting
+  const htmlToFormattedText = (html: string): string => {
+    if (!html) return '';
+    
+    // Remove HTML tags but preserve line breaks and basic formatting
+    let text = html
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>/gi, '\n\n')
+      .replace(/<p[^>]*>/gi, '')
+      .replace(/<\/div>/gi, '\n')
+      .replace(/<div[^>]*>/gi, '')
+      .replace(/<\/li>/gi, '\n')
+      .replace(/<li[^>]*>/gi, '• ')
+      .replace(/<\/ul>/gi, '\n')
+      .replace(/<ul[^>]*>/gi, '')
+      .replace(/<\/ol>/gi, '\n')
+      .replace(/<ol[^>]*>/gi, '')
+      .replace(/<strong[^>]*>|<\/strong>/gi, '')
+      .replace(/<b[^>]*>|<\/b>/gi, '')
+      .replace(/<em[^>]*>|<\/em>/gi, '')
+      .replace(/<i[^>]*>|<\/i>/gi, '')
+      .replace(/<u[^>]*>|<\/u>/gi, '')
+      .replace(/<[^>]*>/g, '') // Remove any remaining HTML tags
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'");
+    
+    // Clean up extra whitespace and normalize line breaks
+    text = text
+      .replace(/\n\s*\n\s*\n/g, '\n\n') // Remove triple+ line breaks
+      .replace(/[ \t]+/g, ' ') // Normalize spaces
+      .trim();
+    
+    return text;
+  };
 
   const addLogoToPDF = (pdf: jsPDF) => {
     return new Promise<void>((resolve) => {
@@ -149,8 +233,8 @@ export const useProjectExperimentReports = () => {
           const aspectRatio = originalWidth / originalHeight;
           
           // Set smaller maximum dimensions while maintaining aspect ratio
-          const maxWidth = 30; // Reduced from 50
-          const maxHeight = 20; // Reduced from 30
+          const maxWidth = 25; // Further reduced from 30
+          const maxHeight = 16; // Further reduced from 20
           
           let logoWidth, logoHeight;
           
@@ -247,8 +331,8 @@ export const useProjectExperimentReports = () => {
       // Clean the text and handle special characters
       const cleanText = text.replace(/[^\x20-\x7E\u00A0-\u00FF]/g, ' ').trim();
       
-      // Split text to fit within content width
-      const lines = pdf.splitTextToSize(cleanText, contentWidth - 5); // Small buffer for safety
+      // Split text to fit within content width with proper margin
+      const lines = pdf.splitTextToSize(cleanText, contentWidth - 10); // Extra margin for safety
       
       lines.forEach((line: string) => {
         checkPageBreak(fontSize * 0.6 + 5);
@@ -265,7 +349,7 @@ export const useProjectExperimentReports = () => {
       addWrappedText(`Project: ${project.title}`, 14, 'bold', 8);
 
       if (project.description) {
-        const cleanDescription = project.description.replace(/<[^>]*>/g, '').trim();
+        const cleanDescription = htmlToFormattedText(project.description);
         if (cleanDescription) {
           addWrappedText(`Description: ${cleanDescription}`, 10, 'normal', 5);
         }
@@ -291,7 +375,7 @@ export const useProjectExperimentReports = () => {
       addWrappedText(`Experiment: ${experiment.title}`, 14, 'bold', 8);
 
       if (experiment.description) {
-        const cleanDescription = experiment.description.replace(/<[^>]*>/g, '').trim();
+        const cleanDescription = htmlToFormattedText(experiment.description);
         if (cleanDescription) {
           addWrappedText(`Description: ${cleanDescription}`, 10, 'normal', 5);
         }
@@ -302,7 +386,7 @@ export const useProjectExperimentReports = () => {
       addWrappedText(`Start Date: ${experiment.start_date}`, 10, 'normal', 3);
       addWrappedText(`Progress: ${experiment.progress}%`, 10, 'normal', 10);
 
-      // Add notes for this experiment
+      // Add notes for this experiment with proper rich text rendering
       const experimentNotes = notes.filter((note: any) => note.experiment_id === experiment.id);
       if (experimentNotes.length > 0) {
         checkPageBreak(60);
@@ -315,11 +399,19 @@ export const useProjectExperimentReports = () => {
           addWrappedText(`• ${note.title}`, 10, 'bold', 5);
           
           if (note.content) {
-            const cleanContent = note.content.replace(/<[^>]*>/g, '').trim();
-            if (cleanContent) {
-              const contentPreview = cleanContent.substring(0, 800);
-              const displayContent = `  ${contentPreview}${cleanContent.length > 800 ? '...' : ''}`;
-              addWrappedText(displayContent, 9, 'normal', 8);
+            // Convert HTML content to formatted text that preserves structure
+            const formattedContent = htmlToFormattedText(note.content);
+            if (formattedContent) {
+              // Split content into manageable chunks while preserving formatting
+              const contentLines = formattedContent.split('\n');
+              contentLines.forEach((line, index) => {
+                if (line.trim()) {
+                  const indentedLine = `  ${line.trim()}`;
+                  addWrappedText(indentedLine, 9, 'normal', index === contentLines.length - 1 ? 8 : 2);
+                } else if (index < contentLines.length - 1) {
+                  yPosition += 4; // Add space for empty lines
+                }
+              });
             }
           }
         });
