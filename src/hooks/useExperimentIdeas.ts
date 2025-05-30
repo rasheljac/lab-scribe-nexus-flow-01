@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import type { Tables } from "@/integrations/supabase/types";
 
 export interface ExperimentIdea {
   id: string;
@@ -22,6 +23,9 @@ export interface ExperimentIdea {
   updated_at: string;
 }
 
+type ExperimentIdeaRow = Tables<'experiment_ideas'>;
+type ExperimentIdeaInsert = Omit<ExperimentIdeaRow, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
+
 export const useExperimentIdeas = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -32,7 +36,7 @@ export const useExperimentIdeas = () => {
       if (!user) throw new Error('User not authenticated');
       
       const { data, error } = await supabase
-        .from('experiment_ideas' as any)
+        .from('experiment_ideas')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
@@ -44,11 +48,11 @@ export const useExperimentIdeas = () => {
   });
 
   const createIdea = useMutation({
-    mutationFn: async (idea: Omit<ExperimentIdea, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (idea: ExperimentIdeaInsert) => {
       if (!user) throw new Error('User not authenticated');
 
       const { data, error } = await supabase
-        .from('experiment_ideas' as any)
+        .from('experiment_ideas')
         .insert([{ ...idea, user_id: user.id }])
         .select()
         .single();
@@ -64,7 +68,7 @@ export const useExperimentIdeas = () => {
   const updateIdea = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<ExperimentIdea> & { id: string }) => {
       const { data, error } = await supabase
-        .from('experiment_ideas' as any)
+        .from('experiment_ideas')
         .update(updates)
         .eq('id', id)
         .eq('user_id', user?.id)
@@ -82,7 +86,7 @@ export const useExperimentIdeas = () => {
   const deleteIdea = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('experiment_ideas' as any)
+        .from('experiment_ideas')
         .delete()
         .eq('id', id)
         .eq('user_id', user?.id);
@@ -100,7 +104,7 @@ export const useExperimentIdeas = () => {
 
       // Get the idea data
       const { data: idea, error: ideaError } = await supabase
-        .from('experiment_ideas' as any)
+        .from('experiment_ideas')
         .select('*')
         .eq('id', ideaId)
         .eq('user_id', user.id)
@@ -130,7 +134,7 @@ export const useExperimentIdeas = () => {
 
       // Update idea status to archived
       await supabase
-        .from('experiment_ideas' as any)
+        .from('experiment_ideas')
         .update({ status: 'archived' })
         .eq('id', ideaId)
         .eq('user_id', user.id);
