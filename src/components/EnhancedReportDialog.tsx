@@ -96,6 +96,14 @@ const EnhancedReportDialog = ({ open, onOpenChange }: EnhancedReportDialogProps)
 
   const isGenerating = generateProjectReport.isPending || generateExperimentReport.isPending;
 
+  const handleNotesChange = (checked: boolean | "indeterminate") => {
+    setIncludeNotes(checked === true);
+  };
+
+  const handleAttachmentsChange = (checked: boolean | "indeterminate") => {
+    setIncludeAttachments(checked === true);
+  };
+
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       {!onOpenChange && (
@@ -159,7 +167,7 @@ const EnhancedReportDialog = ({ open, onOpenChange }: EnhancedReportDialogProps)
               <Checkbox 
                 id="includeNotes" 
                 checked={includeNotes}
-                onCheckedChange={setIncludeNotes}
+                onCheckedChange={handleNotesChange}
               />
               <Label htmlFor="includeNotes" className="text-sm">Include Notes</Label>
             </div>
@@ -167,7 +175,7 @@ const EnhancedReportDialog = ({ open, onOpenChange }: EnhancedReportDialogProps)
               <Checkbox 
                 id="includeAttachments" 
                 checked={includeAttachments}
-                onCheckedChange={setIncludeAttachments}
+                onCheckedChange={handleAttachmentsChange}
               />
               <Label htmlFor="includeAttachments" className="text-sm">Include Attachments List</Label>
             </div>
