@@ -1,0 +1,343 @@
+
+import { useMutation } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import jsPDF from 'jspdf';
+
+export const useProjectExperimentReports = () => {
+  const { user } = useAuth();
+
+  const generateProjectReport = useMutation({
+    mutationFn: async ({ 
+      projectId, 
+      projectTitle,
+      includeNotes = true, 
+      includeAttachments = true 
+    }: {
+      projectId: string;
+      projectTitle: string;
+      includeNotes?: boolean;
+      includeAttachments?: boolean;
+    }) => {
+      if (!user) throw new Error('User not authenticated');
+
+      // Fetch project data
+      const { data: project, error: projectError } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('id', projectId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (projectError) throw projectError;
+
+      // Fetch experiments for this project
+      const { data: experiments, error: experimentsError } = await supabase
+        .from('experiments')
+        .select('*')
+        .eq('project_id', projectId)
+        .eq('user_id', user.id);
+
+      if (experimentsError) throw experimentsError;
+
+      // Fetch notes for all experiments in this project
+      let allNotes: any[] = [];
+      if (includeNotes && experiments.length > 0) {
+        const { data: notes, error: notesError } = await supabase
+          .from('experiment_notes')
+          .select('*')
+          .in('experiment_id', experiments.map(e => e.id));
+        
+        if (notesError) throw notesError;
+        allNotes = notes || [];
+      }
+
+      // Fetch attachments if requested
+      let allAttachments: any[] = [];
+      if (includeAttachments && experiments.length > 0) {
+        const { data: attachments, error: attachmentsError } = await supabase
+          .from('experiment_attachments')
+          .select('*')
+          .in('experiment_id', experiments.map(e => e.id));
+        
+        if (attachmentsError) throw attachmentsError;
+        allAttachments = attachments || [];
+      }
+
+      return generatePDF({
+        title: `Project Report: ${projectTitle}`,
+        project,
+        experiments: experiments || [],
+        notes: allNotes,
+        attachments: allAttachments,
+        user
+      });
+    },
+  });
+
+  const generateExperimentReport = useMutation({
+    mutationFn: async ({ 
+      experimentId, 
+      experimentTitle,
+      includeNotes = true, 
+      includeAttachments = true 
+    }: {
+      experimentId: string;
+      experimentTitle: string;
+      includeNotes?: boolean;
+      includeAttachments?: boolean;
+    }) => {
+      if (!user) throw new Error('User not authenticated');
+
+      // Fetch experiment data
+      const { data: experiment, error: experimentError } = await supabase
+        .from('experiments')
+        .select('*')
+        .eq('id', experimentId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (experimentError) throw experimentError;
+
+      // Fetch notes for this experiment
+      let notes: any[] = [];
+      if (includeNotes) {
+        const { data: notesData, error: notesError } = await supabase
+          .from('experiment_notes')
+          .select('*')
+          .eq('experiment_id', experimentId);
+        
+        if (notesError) throw notesError;
+        notes = notesData || [];
+      }
+
+      // Fetch attachments if requested
+      let attachments: any[] = [];
+      if (includeAttachments) {
+        const { data: attachmentsData, error: attachmentsError } = await supabase
+          .from('experiment_attachments')
+          .select('*')
+          .eq('experiment_id', experimentId);
+        
+        if (attachmentsError) throw attachmentsError;
+        attachments = attachmentsData || [];
+      }
+
+      return generatePDF({
+        title: `Experiment Report: ${experimentTitle}`,
+        experiments: [experiment],
+        notes,
+        attachments,
+        user
+      });
+    },
+  });
+
+  const generatePDF = ({ title, project, experiments, notes, attachments, user }: any) => {
+    const pdf = new jsPDF();
+    let yPosition = 30;
+    const pageHeight = pdf.internal.pageSize.height;
+    const pageWidth = pdf.internal.pageSize.width;
+    const margin = 20;
+
+    // Add logo and header
+    pdf.setFontSize(18);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('KAPELCZAK LABORATORY', margin, 20);
+    
+    // Add a line under the header
+    pdf.setLineWidth(0.5);
+    pdf.line(margin, 25, pageWidth - margin, 25);
+
+    // Add title
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(title, margin, yPosition);
+    yPosition += 15;
+
+    // Add generation info
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    const exportTime = new Date().toLocaleString();
+    pdf.text(`Generated on: ${exportTime}`, margin, yPosition);
+    yPosition += 6;
+    pdf.text(`Generated by: ${user.email}`, margin, yPosition);
+    yPosition += 20;
+
+    // Add project info if available
+    if (project) {
+      if (yPosition > pageHeight - 80) {
+        pdf.addPage();
+        yPosition = 30;
+      }
+
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`Project: ${project.title}`, margin, yPosition);
+      yPosition += 12;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      
+      if (project.description) {
+        const cleanDescription = project.description.replace(/<[^>]*>/g, '');
+        const descriptionLines = pdf.splitTextToSize(`Description: ${cleanDescription}`, pageWidth - 2 * margin);
+        pdf.text(descriptionLines, margin, yPosition);
+        yPosition += descriptionLines.length * 5 + 5;
+      }
+
+      pdf.text(`Status: ${project.status}`, margin, yPosition);
+      yPosition += 6;
+      pdf.text(`Progress: ${project.progress}%`, margin, yPosition);
+      yPosition += 6;
+      pdf.text(`Start Date: ${project.start_date}`, margin, yPosition);
+      yPosition += 6;
+      if (project.end_date) {
+        pdf.text(`End Date: ${project.end_date}`, margin, yPosition);
+        yPosition += 6;
+      }
+      if (project.budget) {
+        pdf.text(`Budget: ${project.budget}`, margin, yPosition);
+        yPosition += 6;
+      }
+      yPosition += 15;
+    }
+
+    // Add experiments data
+    experiments.forEach((experiment: any) => {
+      if (yPosition > pageHeight - 80) {
+        pdf.addPage();
+        yPosition = 30;
+      }
+
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`Experiment: ${experiment.title}`, margin, yPosition);
+      yPosition += 12;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      
+      if (experiment.description) {
+        const cleanDescription = experiment.description.replace(/<[^>]*>/g, '');
+        const descriptionLines = pdf.splitTextToSize(`Description: ${cleanDescription}`, pageWidth - 2 * margin);
+        pdf.text(descriptionLines, margin, yPosition);
+        yPosition += descriptionLines.length * 5 + 5;
+      }
+
+      pdf.text(`Status: ${experiment.status}`, margin, yPosition);
+      yPosition += 6;
+      pdf.text(`Researcher: ${experiment.researcher}`, margin, yPosition);
+      yPosition += 6;
+      pdf.text(`Start Date: ${experiment.start_date}`, margin, yPosition);
+      yPosition += 6;
+      pdf.text(`Progress: ${experiment.progress}%`, margin, yPosition);
+      yPosition += 15;
+
+      // Add notes for this experiment
+      const experimentNotes = notes.filter((note: any) => note.experiment_id === experiment.id);
+      if (experimentNotes.length > 0) {
+        if (yPosition > pageHeight - 100) {
+          pdf.addPage();
+          yPosition = 30;
+        }
+
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Notes:', margin, yPosition);
+        yPosition += 10;
+
+        experimentNotes.forEach((note: any) => {
+          if (yPosition > pageHeight - 60) {
+            pdf.addPage();
+            yPosition = 30;
+          }
+
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(`• ${note.title}`, margin + 5, yPosition);
+          yPosition += 8;
+          
+          if (note.content) {
+            const cleanContent = note.content.replace(/<[^>]*>/g, '').trim();
+            if (cleanContent) {
+              const contentPreview = cleanContent.substring(0, 300);
+              const contentLines = pdf.splitTextToSize(`  ${contentPreview}${cleanContent.length > 300 ? '...' : ''}`, pageWidth - 2 * margin - 15);
+              
+              pdf.setFont('helvetica', 'normal');
+              contentLines.forEach((line: string) => {
+                if (yPosition > pageHeight - 30) {
+                  pdf.addPage();
+                  yPosition = 30;
+                }
+                pdf.text(line, margin + 10, yPosition);
+                yPosition += 5;
+              });
+              yPosition += 5;
+            }
+          }
+        });
+        yPosition += 10;
+      }
+
+      // Add attachments for this experiment
+      const experimentAttachments = attachments.filter((att: any) => att.experiment_id === experiment.id);
+      if (experimentAttachments.length > 0) {
+        if (yPosition > pageHeight - 80) {
+          pdf.addPage();
+          yPosition = 30;
+        }
+
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Attachments:', margin, yPosition);
+        yPosition += 10;
+
+        experimentAttachments.forEach((attachment: any) => {
+          if (yPosition > pageHeight - 30) {
+            pdf.addPage();
+            yPosition = 30;
+          }
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(`• ${attachment.filename} (${attachment.file_type})`, margin + 5, yPosition);
+          yPosition += 6;
+        });
+        yPosition += 10;
+      }
+
+      yPosition += 15;
+    });
+
+    // Add footer to all pages
+    const totalPages = pdf.internal.pages.length - 1;
+    for (let i = 1; i <= totalPages; i++) {
+      pdf.setPage(i);
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('© Kapelczak Laboratory - Confidential', margin, pageHeight - 10);
+      pdf.text(`Page ${i} of ${totalPages}`, pageWidth - margin - 30, pageHeight - 10);
+    }
+
+    // Save the PDF
+    const pdfBlob = pdf.output('blob');
+    const url = window.URL.createObjectURL(pdfBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    const fileName = project 
+      ? `Project_${project.title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
+      : `Experiment_${experiments[0]?.title?.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+    return { success: true };
+  };
+
+  return {
+    generateProjectReport,
+    generateExperimentReport,
+  };
+};

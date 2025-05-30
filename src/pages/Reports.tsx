@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,8 +19,9 @@ import { Search, Download, FileText, Eye, Calendar, User, Loader2, Trash2 } from
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import CreateReportDialog from "@/components/CreateReportDialog";
+import EnhancedReportDialog from "@/components/EnhancedReportDialog";
 import { useReports } from "@/hooks/useReports";
-import { useEnhancedReports } from "@/hooks/useEnhancedReports";
+import { useProjectExperimentReports } from "@/hooks/useProjectExperimentReports";
 import { useToast } from "@/hooks/use-toast";
 
 const Reports = () => {
@@ -30,7 +30,7 @@ const Reports = () => {
   const [filterStatus, setFilterStatus] = useState("all");
 
   const { reports, isLoading, error, updateReport, deleteReport } = useReports();
-  const { generateComprehensiveReport } = useEnhancedReports();
+  const { generateProjectReport } = useProjectExperimentReports();
   const { toast } = useToast();
 
   const getTypeColor = (type: string) => {
@@ -80,9 +80,10 @@ const Reports = () => {
         });
       }
       
-      // Generate and show the comprehensive PDF report
-      await generateComprehensiveReport.mutateAsync({
-        title: title,
+      // Generate and show the comprehensive PDF report using new system
+      await generateProjectReport.mutateAsync({
+        projectId: '', // For legacy reports, generate general report
+        projectTitle: title,
         includeNotes: true,
         includeAttachments: true
       });
@@ -111,9 +112,10 @@ const Reports = () => {
         });
       }
 
-      // Generate comprehensive PDF report
-      await generateComprehensiveReport.mutateAsync({
-        title: title,
+      // Generate comprehensive PDF report using new system
+      await generateProjectReport.mutateAsync({
+        projectId: '', // For legacy reports, generate general report
+        projectTitle: title,
         includeNotes: true,
         includeAttachments: true
       });
@@ -179,7 +181,10 @@ const Reports = () => {
                 <h1 className="text-3xl font-bold text-gray-900">Reports</h1>
                 <p className="text-gray-600 mt-1">Generate and manage laboratory reports</p>
               </div>
-              <CreateReportDialog />
+              <div className="flex gap-2">
+                <EnhancedReportDialog />
+                <CreateReportDialog />
+              </div>
             </div>
 
             {/* Stats Cards */}
@@ -361,20 +366,20 @@ const Reports = () => {
                           size="sm" 
                           className="flex-1"
                           onClick={() => handleViewReport(report.id, report.title)}
-                          disabled={generateComprehensiveReport.isPending}
+                          disabled={generateProjectReport.isPending}
                         >
                           <Eye className="h-4 w-4 mr-1" />
-                          {generateComprehensiveReport.isPending ? "Generating..." : "View"}
+                          {generateProjectReport.isPending ? "Generating..." : "View"}
                         </Button>
                         <Button 
                           variant="outline" 
                           size="sm" 
                           className="flex-1"
                           onClick={() => handleDownloadReport(report.id, report.title)}
-                          disabled={generateComprehensiveReport.isPending}
+                          disabled={generateProjectReport.isPending}
                         >
                           <Download className="h-4 w-4 mr-1" />
-                          {generateComprehensiveReport.isPending ? "Downloading..." : "Download"}
+                          {generateProjectReport.isPending ? "Downloading..." : "Download"}
                         </Button>
                       </div>
                     </CardContent>

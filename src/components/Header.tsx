@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import CreateExperimentDialog from "@/components/CreateExperimentDialog";
 import CreateProjectDialog from "@/components/CreateProjectDialog";
 import CreateReportDialog from "@/components/CreateReportDialog";
+import EnhancedReportDialog from "@/components/EnhancedReportDialog";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
 import CreateEventDialog from "@/components/CreateEventDialog";
 
@@ -30,6 +31,7 @@ const Header = () => {
   const [createExperimentOpen, setCreateExperimentOpen] = useState(false);
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
   const [createReportOpen, setCreateReportOpen] = useState(false);
+  const [enhancedReportOpen, setEnhancedReportOpen] = useState(false);
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const [createEventOpen, setCreateEventOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -83,6 +85,10 @@ const Header = () => {
 
   const handleCreateReport = () => {
     setCreateReportOpen(true);
+  };
+
+  const handleGenerateEnhancedReport = () => {
+    setEnhancedReportOpen(true);
   };
 
   const handleCreateTask = () => {
@@ -203,6 +209,10 @@ const Header = () => {
                   <FileText className="mr-2 h-4 w-4" />
                   New Report
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleGenerateEnhancedReport}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Generate Enhanced Report
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleCreateTask}>
                   <CheckSquare className="mr-2 h-4 w-4" />
                   New Task
@@ -283,6 +293,10 @@ const Header = () => {
       <CreateReportDialog 
         open={createReportOpen} 
         onOpenChange={setCreateReportOpen} 
+      />
+      <EnhancedReportDialog 
+        open={enhancedReportOpen} 
+        onOpenChange={setEnhancedReportOpen} 
       />
       <CreateTaskDialog 
         open={createTaskOpen} 
