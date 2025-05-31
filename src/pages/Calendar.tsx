@@ -20,7 +20,7 @@ import Header from "@/components/Header";
 import CreateEventDialog from "@/components/CreateEventDialog";
 import EventDetailsDialog from "@/components/EventDetailsDialog";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, startOfWeek, endOfWeek, addDays } from "date-fns";
 
 const Calendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -51,9 +51,12 @@ const Calendar = () => {
     }
   };
 
+  // Use consistent date calculations for the main calendar grid
   const monthStart = startOfMonth(selectedDate);
   const monthEnd = endOfMonth(selectedDate);
-  const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 }); // Sunday
+  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
+  const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
   const navigateMonth = (direction: "prev" | "next") => {
     const newDate = new Date(selectedDate);
@@ -146,6 +149,8 @@ const Calendar = () => {
                       mode="single"
                       selected={selectedDate}
                       onSelect={(date) => date && setSelectedDate(date)}
+                      month={selectedDate}
+                      weekStartsOn={0}
                       className="rounded-md border"
                     />
                   </CardContent>
@@ -213,22 +218,25 @@ const Calendar = () => {
                           </div>
                         ))}
                         
-                        {/* Calendar days */}
-                        {monthDays.map((day) => {
+                        {/* Calendar days - using calendarDays instead of monthDays */}
+                        {calendarDays.map((day) => {
                           const dayEvents = getEventsForDate(day);
                           const isToday = isSameDay(day, new Date());
                           const isSelected = isSameDay(day, selectedDate);
+                          const isCurrentMonth = day.getMonth() === selectedDate.getMonth();
                           
                           return (
                             <div
                               key={day.toISOString()}
                               className={`min-h-[100px] p-2 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${
                                 isToday ? "bg-blue-50 border-blue-200" : "border-gray-200"
-                              } ${isSelected ? "ring-2 ring-blue-500" : ""}`}
+                              } ${isSelected ? "ring-2 ring-blue-500" : ""} ${
+                                !isCurrentMonth ? "opacity-50" : ""
+                              }`}
                               onClick={() => setSelectedDate(day)}
                             >
                               <div className={`text-sm font-medium mb-1 ${
-                                isToday ? "text-blue-600" : "text-gray-900"
+                                isToday ? "text-blue-600" : isCurrentMonth ? "text-gray-900" : "text-gray-400"
                               }`}>
                                 {format(day, "d")}
                               </div>
