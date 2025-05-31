@@ -149,7 +149,6 @@ const Calendar = () => {
                       mode="single"
                       selected={selectedDate}
                       onSelect={(date) => date && setSelectedDate(date)}
-                      month={selectedDate}
                       weekStartsOn={0}
                       className="rounded-md border"
                     />

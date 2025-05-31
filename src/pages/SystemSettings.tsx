@@ -6,18 +6,21 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Shield, Database, Server, Users, FileText, Package, Printer, Calendar, Beaker, FolderOpen, CheckSquare, BarChart3, MessageSquare, Video, ShoppingCart, Loader2, Mail, Send } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Settings, Shield, Database, Server, Users, FileText, Package, Printer, Calendar, Beaker, FolderOpen, CheckSquare, BarChart3, MessageSquare, Video, ShoppingCart, Loader2, Mail, Send, Eye } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import { useUserPreferences } from "@/hooks/useUserPreferences";
 import { useTaskReminders } from "@/hooks/useTaskReminders";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const SystemSettings = () => {
   const { preferences, updatePreferences, loading: preferencesLoading, refetch } = useUserPreferences();
   const { sendTaskReminders } = useTaskReminders();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const allPages = [
     { key: "dashboard", label: "Dashboard", icon: Settings },
@@ -242,6 +245,24 @@ const SystemSettings = () => {
   };
 
   const handleTestReminders = async () => {
+    if (!smtpConfig.enabled) {
+      toast({
+        title: "Error",
+        description: "Email reminders are disabled. Please enable them first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!smtpConfig.host || !smtpConfig.username || !smtpConfig.from_email) {
+      toast({
+        title: "Error",
+        description: "Please configure SMTP settings before testing reminders.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       await sendTaskReminders.mutateAsync();
@@ -253,12 +274,47 @@ const SystemSettings = () => {
       console.error('Error sending test reminders:', error);
       toast({
         title: "Error",
-        description: "Failed to send test reminders",
+        description: "Failed to send test reminders. Please check your SMTP configuration.",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
+  };
+
+  const getPreviewHtml = () => {
+    let previewHtml = emailTemplate;
+    const userName = "John Doe";
+    const currentYear = new Date().getFullYear();
+    const appUrl = "https://kapelczak-lab.lovable.app";
+
+    // Replace template variables with sample data
+    previewHtml = previewHtml
+      .replace(/\{\{user_name\}\}/g, userName)
+      .replace(/\{\{current_year\}\}/g, currentYear.toString())
+      .replace(/\{\{app_url\}\}/g, appUrl);
+
+    // Generate sample tasks HTML
+    const sampleTasksHtml = `
+      <div class="task-item">
+        <h3>Analyze Lab Results</h3>
+        <p><strong>Due Date:</strong> Tomorrow</p>
+        <p><strong>Priority:</strong> High</p>
+        <p><strong>Status:</strong> In Progress</p>
+        <p>Review the latest experimental data and prepare findings report.</p>
+      </div>
+      <div class="task-item">
+        <h3>Equipment Maintenance</h3>
+        <p><strong>Due Date:</strong> Next Week</p>
+        <p><strong>Priority:</strong> Medium</p>
+        <p><strong>Status:</strong> Pending</p>
+        <p>Scheduled maintenance for laboratory equipment.</p>
+      </div>
+    `;
+
+    previewHtml = previewHtml.replace(/\{\{#tasks\}\}.*?\{\{\/tasks\}\}/gs, sampleTasksHtml);
+
+    return previewHtml;
   };
 
   const handleDatabaseMaintenance = () => {
@@ -559,21 +615,58 @@ const SystemSettings = () => {
                     <div>
                       <Label htmlFor="emailTemplate">HTML Email Template</Label>
                       <p className="text-sm text-gray-600 mb-2">
-                        Available variables: {`{{user_name}}, {{tasks}}, {{title}}, {{due_date}}, {{priority}}, {{status}}, {{description}}, {{app_url}}, {{current_year}}`}
+                        Available variables: user_name, tasks, title, due_date, priority, status, description, app_url, current_year
                       </p>
-                      <Textarea
-                        id="emailTemplate"
-                        value={emailTemplate}
-                        onChange={(e) => setEmailTemplate(e.target.value)}
-                        rows={20}
-                        className="font-mono text-sm"
-                        placeholder="Enter your HTML email template here..."
-                      />
+                      <Tabs defaultValue="editor" className="w-full">
+                        <TabsList>
+                          <TabsTrigger value="editor">HTML Editor</TabsTrigger>
+                          <TabsTrigger value="preview">Preview</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="editor">
+                          <Textarea
+                            id="emailTemplate"
+                            value={emailTemplate}
+                            onChange={(e) => setEmailTemplate(e.target.value)}
+                            rows={20}
+                            className="font-mono text-sm"
+                            placeholder="Enter your HTML email template here..."
+                          />
+                        </TabsContent>
+                        <TabsContent value="preview">
+                          <div className="border rounded-lg p-4 bg-white">
+                            <div 
+                              dangerouslySetInnerHTML={{ __html: getPreviewHtml() }}
+                              className="max-w-none"
+                            />
+                          </div>
+                        </TabsContent>
+                      </Tabs>
                     </div>
-                    <Button onClick={handleEmailTemplateSave} disabled={loading}>
-                      {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                      Save Email Template
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button onClick={handleEmailTemplateSave} disabled={loading}>
+                        {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                        Save Email Template
+                      </Button>
+                      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline">
+                            <Eye className="h-4 w-4 mr-2" />
+                            Full Preview
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
+                          <DialogHeader>
+                            <DialogTitle>Email Template Preview</DialogTitle>
+                          </DialogHeader>
+                          <div className="mt-4">
+                            <div 
+                              dangerouslySetInnerHTML={{ __html: getPreviewHtml() }}
+                              className="max-w-none"
+                            />
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
