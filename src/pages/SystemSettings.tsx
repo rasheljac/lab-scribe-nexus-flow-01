@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,14 +6,16 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Shield, Database, Server, Users, FileText, Package, Printer, Calendar, Beaker, FolderOpen, CheckSquare, BarChart3, MessageSquare, Video, ShoppingCart, Loader2 } from "lucide-react";
+import { Settings, Shield, Database, Server, Users, FileText, Package, Printer, Calendar, Beaker, FolderOpen, CheckSquare, BarChart3, MessageSquare, Video, ShoppingCart, Loader2, Mail, Send } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import { useUserPreferences } from "@/hooks/useUserPreferences";
+import { useTaskReminders } from "@/hooks/useTaskReminders";
 import { useToast } from "@/hooks/use-toast";
 
 const SystemSettings = () => {
   const { preferences, updatePreferences, loading: preferencesLoading, refetch } = useUserPreferences();
+  const { sendTaskReminders } = useTaskReminders();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -52,10 +53,72 @@ const SystemSettings = () => {
     backupFrequency: "daily",
   });
 
+  const [smtpConfig, setSmtpConfig] = useState({
+    host: "",
+    port: "587",
+    username: "",
+    password: "",
+    from_email: "",
+    use_tls: true,
+    enabled: false,
+  });
+
+  const [emailTemplate, setEmailTemplate] = useState(`<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Task Reminder</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header { background-color: #3B82F6; color: white; padding: 20px; text-align: center; }
+        .content { padding: 30px; }
+        .task-item { background-color: #f8f9fa; border-left: 4px solid #dc3545; padding: 15px; margin: 15px 0; border-radius: 4px; }
+        .footer { background-color: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 12px; }
+        .btn { display: inline-block; background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Task Reminder</h1>
+            <p>Kapelczak Laboratory</p>
+        </div>
+        <div class="content">
+            <h2>Hello {{user_name}},</h2>
+            <p>You have upcoming tasks that require your attention:</p>
+            
+            {{#tasks}}
+            <div class="task-item">
+                <h3>{{title}}</h3>
+                <p><strong>Due Date:</strong> {{due_date}}</p>
+                <p><strong>Priority:</strong> {{priority}}</p>
+                <p><strong>Status:</strong> {{status}}</p>
+                {{#description}}<p>{{description}}</p>{{/description}}
+            </div>
+            {{/tasks}}
+            
+            <p>Please review and complete these tasks before their due dates.</p>
+            <a href="{{app_url}}/tasks" class="btn">View All Tasks</a>
+        </div>
+        <div class="footer">
+            <p>© {{current_year}} Kapelczak Laboratory. All rights reserved.</p>
+            <p>This is an automated reminder. Please do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>`);
+
   // Load system config from preferences on mount
   useEffect(() => {
     if (preferences?.preferences?.systemConfig) {
       setSystemConfig(preferences.preferences.systemConfig);
+    }
+    if (preferences?.preferences?.smtpConfig) {
+      setSmtpConfig(preferences.preferences.smtpConfig);
+    }
+    if (preferences?.preferences?.emailTemplate) {
+      setEmailTemplate(preferences.preferences.emailTemplate);
     }
   }, [preferences]);
 
@@ -113,6 +176,84 @@ const SystemSettings = () => {
       toast({
         title: "Error",
         description: "Failed to save system configuration. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSmtpConfigSave = async () => {
+    if (preferencesLoading) return;
+    
+    setLoading(true);
+    try {
+      const currentPrefs = preferences?.preferences || {};
+      await updatePreferences({ 
+        preferences: { 
+          ...currentPrefs,
+          smtpConfig 
+        } 
+      });
+      
+      toast({
+        title: "Success",
+        description: "SMTP configuration saved successfully",
+      });
+    } catch (error) {
+      console.error('Error saving SMTP configuration:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save SMTP configuration. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEmailTemplateSave = async () => {
+    if (preferencesLoading) return;
+    
+    setLoading(true);
+    try {
+      const currentPrefs = preferences?.preferences || {};
+      await updatePreferences({ 
+        preferences: { 
+          ...currentPrefs,
+          emailTemplate 
+        } 
+      });
+      
+      toast({
+        title: "Success",
+        description: "Email template saved successfully",
+      });
+    } catch (error) {
+      console.error('Error saving email template:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save email template. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTestReminders = async () => {
+    setLoading(true);
+    try {
+      await sendTaskReminders.mutateAsync();
+      toast({
+        title: "Success",
+        description: "Test reminders sent successfully",
+      });
+    } catch (error) {
+      console.error('Error sending test reminders:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send test reminders",
         variant: "destructive",
       });
     } finally {
@@ -315,6 +456,125 @@ const SystemSettings = () => {
                     {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                     Save Security Settings
                   </Button>
+                </CardContent>
+              </Card>
+
+              {/* SMTP Configuration */}
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Mail className="h-5 w-5" />
+                    SMTP Email Configuration
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="smtpHost">SMTP Host</Label>
+                      <Input
+                        id="smtpHost"
+                        value={smtpConfig.host}
+                        onChange={(e) => setSmtpConfig(prev => ({ ...prev, host: e.target.value }))}
+                        placeholder="smtp.gmail.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="smtpPort">SMTP Port</Label>
+                      <Input
+                        id="smtpPort"
+                        type="number"
+                        value={smtpConfig.port}
+                        onChange={(e) => setSmtpConfig(prev => ({ ...prev, port: e.target.value }))}
+                        placeholder="587"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="smtpUsername">Username</Label>
+                      <Input
+                        id="smtpUsername"
+                        value={smtpConfig.username}
+                        onChange={(e) => setSmtpConfig(prev => ({ ...prev, username: e.target.value }))}
+                        placeholder="your-email@example.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="smtpPassword">Password</Label>
+                      <Input
+                        id="smtpPassword"
+                        type="password"
+                        value={smtpConfig.password}
+                        onChange={(e) => setSmtpConfig(prev => ({ ...prev, password: e.target.value }))}
+                        placeholder="Your app password"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="fromEmail">From Email</Label>
+                      <Input
+                        id="fromEmail"
+                        value={smtpConfig.from_email}
+                        onChange={(e) => setSmtpConfig(prev => ({ ...prev, from_email: e.target.value }))}
+                        placeholder="noreply@kapelczak.com"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="useTls">Use TLS</Label>
+                      <Switch
+                        id="useTls"
+                        checked={smtpConfig.use_tls}
+                        onCheckedChange={(checked) => setSmtpConfig(prev => ({ ...prev, use_tls: checked }))}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="smtpEnabled">Enable Email Reminders</Label>
+                      <Switch
+                        id="smtpEnabled"
+                        checked={smtpConfig.enabled}
+                        onCheckedChange={(checked) => setSmtpConfig(prev => ({ ...prev, enabled: checked }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-4">
+                    <Button onClick={handleSmtpConfigSave} disabled={loading}>
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                      Save SMTP Settings
+                    </Button>
+                    <Button onClick={handleTestReminders} variant="outline" disabled={loading || !smtpConfig.enabled}>
+                      <Send className="h-4 w-4 mr-2" />
+                      Test Reminders
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Email Template Editor */}
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Email Template Editor
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="emailTemplate">HTML Email Template</Label>
+                      <p className="text-sm text-gray-600 mb-2">
+                        Available variables: {{user_name}}, {{tasks}}, {{title}}, {{due_date}}, {{priority}}, {{status}}, {{description}}, {{app_url}}, {{current_year}}
+                      </p>
+                      <Textarea
+                        id="emailTemplate"
+                        value={emailTemplate}
+                        onChange={(e) => setEmailTemplate(e.target.value)}
+                        rows={20}
+                        className="font-mono text-sm"
+                        placeholder="Enter your HTML email template here..."
+                      />
+                    </div>
+                    <Button onClick={handleEmailTemplateSave} disabled={loading}>
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                      Save Email Template
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 

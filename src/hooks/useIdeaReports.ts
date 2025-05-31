@@ -29,7 +29,7 @@ export const useIdeaReports = () => {
     }));
   };
 
-  // Helper function to add Kapelczak logo to PDF
+  // Helper function to add Kapelczak logo to PDF with proper aspect ratio
   const addKapelczakLogo = async (pdf: jsPDF, yPosition: number) => {
     try {
       return new Promise((resolve) => {
@@ -43,8 +43,15 @@ export const useIdeaReports = () => {
             canvas.height = img.height;
             ctx?.drawImage(img, 0, 0);
             
-            const logoWidth = 15; // Reduced from 25
-            const logoHeight = 15; // Reduced from 25
+            // Calculate proper dimensions maintaining aspect ratio
+            const originalWidth = img.width;
+            const originalHeight = img.height;
+            const aspectRatio = originalWidth / originalHeight;
+            
+            // Set desired width and calculate height to maintain aspect ratio
+            const logoWidth = 12;
+            const logoHeight = logoWidth / aspectRatio;
+            
             const pageWidth = pdf.internal.pageSize.width;
             const logoX = pageWidth - logoWidth - 15;
             
