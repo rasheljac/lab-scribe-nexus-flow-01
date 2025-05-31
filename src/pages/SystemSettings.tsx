@@ -559,7 +559,7 @@ const SystemSettings = () => {
                     <div>
                       <Label htmlFor="emailTemplate">HTML Email Template</Label>
                       <p className="text-sm text-gray-600 mb-2">
-                        Available variables: {{user_name}}, {{tasks}}, {{title}}, {{due_date}}, {{priority}}, {{status}}, {{description}}, {{app_url}}, {{current_year}}
+                        Available variables: {`{{user_name}}, {{tasks}}, {{title}}, {{due_date}}, {{priority}}, {{status}}, {{description}}, {{app_url}}, {{current_year}}`}
                       </p>
                       <Textarea
                         id="emailTemplate"
