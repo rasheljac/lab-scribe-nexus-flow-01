@@ -100,7 +100,11 @@ export const useTasks = () => {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      const currentPrefs = existingPrefs?.preferences || {};
+      // Safely handle the preferences object
+      const currentPrefs = existingPrefs?.preferences && typeof existingPrefs.preferences === 'object' 
+        ? existingPrefs.preferences as Record<string, any>
+        : {};
+      
       const updatedPrefs = {
         ...currentPrefs,
         dashboardTaskOrder: taskIds
@@ -136,7 +140,13 @@ export const useTasks = () => {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      return data?.preferences?.dashboardTaskOrder || [];
+      // Safely access the dashboardTaskOrder property
+      if (data?.preferences && typeof data.preferences === 'object') {
+        const prefs = data.preferences as Record<string, any>;
+        return Array.isArray(prefs.dashboardTaskOrder) ? prefs.dashboardTaskOrder : [];
+      }
+      
+      return [];
     } catch (error) {
       console.error('Error getting saved task order:', error);
       return [];
