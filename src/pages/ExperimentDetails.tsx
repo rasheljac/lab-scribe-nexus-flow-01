@@ -1,3 +1,4 @@
+
 import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,12 +15,14 @@ import {
   Trash2,
   Calendar,
   User,
-  Beaker
+  Beaker,
+  Search
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
+import FolderManager from "@/components/FolderManager";
 import { useExperiments } from "@/hooks/useExperiments";
 import { useExperimentNotes } from "@/hooks/useExperimentNotes";
 import { useExperimentAttachments } from "@/hooks/useExperimentAttachments";
@@ -35,8 +38,17 @@ const ExperimentDetails = () => {
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [newNote, setNewNote] = useState({ title: '', content: '' });
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const experiment = experiments.find(exp => exp.id === id);
+
+  const filteredNotes = notes.filter(note => {
+    const matchesSearch = note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (note.content && note.content.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesFolder = selectedFolderId === null || note.folder_id === selectedFolderId;
+    return matchesSearch && matchesFolder;
+  });
 
   if (!experiment) {
     return (
@@ -62,7 +74,7 @@ const ExperimentDetails = () => {
         experiment_id: experiment.id,
         title: newNote.title,
         content: newNote.content,
-        folder_id: null, // Add folder_id
+        folder_id: selectedFolderId,
       });
       setNewNote({ title: '', content: '' });
       setNoteDialogOpen(false);
@@ -117,10 +129,10 @@ const ExperimentDetails = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               {/* Experiment Overview */}
               <div className="lg:col-span-1">
-                <Card>
+                <Card className="mb-6">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Beaker className="h-5 w-5" />
@@ -170,17 +182,44 @@ const ExperimentDetails = () => {
                     )}
                   </CardContent>
                 </Card>
+
+                {/* Folder Management */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Organization</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <FolderManager 
+                      type="note" 
+                      onFolderSelect={setSelectedFolderId}
+                      selectedFolderId={selectedFolderId}
+                    />
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Notes and Attachments */}
-              <div className="lg:col-span-2 space-y-6">
+              <div className="lg:col-span-3 space-y-6">
+                {/* Search */}
+                <div className="flex items-center gap-4">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <Input
+                      placeholder="Search notes..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
                 {/* Notes Section */}
                 <Card>
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="flex items-center gap-2">
                         <FileText className="h-5 w-5" />
-                        Notes ({notes.length})
+                        Notes ({filteredNotes.length})
                       </CardTitle>
                       <Dialog open={noteDialogOpen} onOpenChange={setNoteDialogOpen}>
                         <DialogTrigger asChild>
@@ -228,7 +267,7 @@ const ExperimentDetails = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {notes.map((note) => (
+                      {filteredNotes.map((note) => (
                         <div key={note.id} className="border border-gray-200 rounded-lg p-4">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
@@ -248,9 +287,9 @@ const ExperimentDetails = () => {
                           </div>
                         </div>
                       ))}
-                      {notes.length === 0 && (
+                      {filteredNotes.length === 0 && (
                         <div className="text-center py-8 text-gray-500">
-                          No notes yet. Add your first note to get started.
+                          {searchTerm || selectedFolderId ? "No notes found matching your criteria." : "No notes yet. Add your first note to get started."}
                         </div>
                       )}
                     </div>
