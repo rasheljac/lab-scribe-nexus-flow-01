@@ -89,6 +89,60 @@ export const useTasks = () => {
     },
   });
 
+  // New function to save task order to user preferences
+  const saveTaskOrder = async (taskIds: string[]) => {
+    if (!user) return;
+    
+    try {
+      const { data: existingPrefs } = await supabase
+        .from('user_preferences')
+        .select('preferences')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      const currentPrefs = existingPrefs?.preferences || {};
+      const updatedPrefs = {
+        ...currentPrefs,
+        dashboardTaskOrder: taskIds
+      };
+
+      if (existingPrefs) {
+        await supabase
+          .from('user_preferences')
+          .update({ preferences: updatedPrefs })
+          .eq('user_id', user.id);
+      } else {
+        await supabase
+          .from('user_preferences')
+          .insert([{
+            user_id: user.id,
+            preferences: updatedPrefs,
+            hidden_pages: []
+          }]);
+      }
+    } catch (error) {
+      console.error('Error saving task order:', error);
+    }
+  };
+
+  // New function to get saved task order
+  const getSavedTaskOrder = async (): Promise<string[]> => {
+    if (!user) return [];
+    
+    try {
+      const { data } = await supabase
+        .from('user_preferences')
+        .select('preferences')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      return data?.preferences?.dashboardTaskOrder || [];
+    } catch (error) {
+      console.error('Error getting saved task order:', error);
+      return [];
+    }
+  };
+
   return {
     tasks: tasks || [],
     isLoading,
@@ -96,5 +150,7 @@ export const useTasks = () => {
     createTask,
     updateTask,
     deleteTask,
+    saveTaskOrder,
+    getSavedTaskOrder,
   };
 };

@@ -30,19 +30,45 @@ import { useToast } from "@/hooks/use-toast";
 import EditTaskDialog from "@/components/EditTaskDialog";
 
 const DashboardTaskList = () => {
-  const { tasks, isLoading, updateTask, deleteTask } = useTasks();
+  const { tasks, isLoading, updateTask, deleteTask, saveTaskOrder, getSavedTaskOrder } = useTasks();
   const { toast } = useToast();
   const [orderedTasks, setOrderedTasks] = useState<Task[]>([]);
 
-  // Get the latest 10 tasks and maintain their order
+  // Load and apply saved task order
   useEffect(() => {
-    if (tasks.length > 0) {
-      const latestTasks = [...tasks]
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 10);
-      setOrderedTasks(latestTasks);
-    }
-  }, [tasks]);
+    const loadTaskOrder = async () => {
+      if (tasks.length > 0) {
+        const savedOrder = await getSavedTaskOrder();
+        const latestTasks = [...tasks]
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 10);
+
+        if (savedOrder.length > 0) {
+          // Apply saved order, then add any new tasks not in the saved order
+          const orderedByPreference: Task[] = [];
+          const remainingTasks = [...latestTasks];
+
+          // First, add tasks in the saved order
+          savedOrder.forEach(taskId => {
+            const taskIndex = remainingTasks.findIndex(t => t.id === taskId);
+            if (taskIndex !== -1) {
+              orderedByPreference.push(remainingTasks[taskIndex]);
+              remainingTasks.splice(taskIndex, 1);
+            }
+          });
+
+          // Then add any remaining tasks (new ones not in saved order)
+          const finalOrder = [...orderedByPreference, ...remainingTasks];
+          setOrderedTasks(finalOrder);
+        } else {
+          // No saved order, use default (latest first)
+          setOrderedTasks(latestTasks);
+        }
+      }
+    };
+
+    loadTaskOrder();
+  }, [tasks, getSavedTaskOrder]);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -105,7 +131,7 @@ const DashboardTaskList = () => {
     }
   };
 
-  const handleDragEnd = (result: DropResult) => {
+  const handleDragEnd = async (result: DropResult) => {
     if (!result.destination) {
       return;
     }
@@ -116,9 +142,13 @@ const DashboardTaskList = () => {
 
     setOrderedTasks(items);
     
+    // Save the new order to user preferences
+    const taskIds = items.map(task => task.id);
+    await saveTaskOrder(taskIds);
+    
     toast({
       title: "Tasks Reordered",
-      description: "Task order has been updated",
+      description: "Task order has been saved and will be remembered",
     });
   };
 
