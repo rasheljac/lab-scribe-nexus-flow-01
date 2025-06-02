@@ -17,6 +17,7 @@ export interface Experiment {
   samples: number;
   category: string;
   project_id: string | null;
+  folder_id: string | null;
   created_at: string;
   updated_at: string;
 }

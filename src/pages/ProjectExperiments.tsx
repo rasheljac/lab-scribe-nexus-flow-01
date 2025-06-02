@@ -265,7 +265,7 @@ const ProjectExperiments = () => {
                             className="text-sm text-gray-600 mt-2 cursor-pointer"
                             onClick={() => handleExperimentClick(experiment.id)}
                           >
-                            {experiment.description ? stripHtmlTags(exp.description) : ""}
+                            {experiment.description ? stripHtmlTags(experiment.description) : ""}
                           </p>
                         </CardHeader>
                         <CardContent className="space-y-4">

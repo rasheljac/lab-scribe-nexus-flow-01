@@ -9,6 +9,7 @@ export interface ExperimentNote {
   user_id: string;
   title: string;
   content: string | null;
+  folder_id: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import { useToast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
@@ -22,6 +23,9 @@ interface FormData {
   location: string;
   attendees: string[];
   status: EventStatus;
+  reminder_enabled: boolean;
+  reminder_minutes_before: number;
+  reminder_sent: boolean;
 }
 
 interface CreateEventDialogProps {
@@ -41,6 +45,9 @@ const CreateEventDialog = ({ open: controlledOpen, onOpenChange, defaultEventTyp
     location: "",
     attendees: [],
     status: "scheduled",
+    reminder_enabled: false,
+    reminder_minutes_before: 15,
+    reminder_sent: false,
   });
 
   const { createEvent } = useCalendarEvents();
@@ -76,6 +83,9 @@ const CreateEventDialog = ({ open: controlledOpen, onOpenChange, defaultEventTyp
         location: "",
         attendees: [],
         status: "scheduled",
+        reminder_enabled: false,
+        reminder_minutes_before: 15,
+        reminder_sent: false,
       });
     } catch (error) {
       console.error("Error creating event:", error);
@@ -164,6 +174,42 @@ const CreateEventDialog = ({ open: controlledOpen, onOpenChange, defaultEventTyp
             value={formData.location}
             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
           />
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="reminder_enabled"
+              checked={formData.reminder_enabled}
+              onCheckedChange={(checked) => 
+                setFormData({ ...formData, reminder_enabled: checked as boolean })
+              }
+            />
+            <Label htmlFor="reminder_enabled">Enable reminder</Label>
+          </div>
+          
+          {formData.reminder_enabled && (
+            <div>
+              <Label htmlFor="reminder_minutes">Remind me (minutes before)</Label>
+              <Select
+                value={formData.reminder_minutes_before.toString()}
+                onValueChange={(value) => 
+                  setFormData({ ...formData, reminder_minutes_before: parseInt(value) })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5 minutes</SelectItem>
+                  <SelectItem value="15">15 minutes</SelectItem>
+                  <SelectItem value="30">30 minutes</SelectItem>
+                  <SelectItem value="60">1 hour</SelectItem>
+                  <SelectItem value="1440">1 day</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-2">
