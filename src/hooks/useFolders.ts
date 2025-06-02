@@ -20,7 +20,10 @@ export const useFolders = (type: 'experiment' | 'note') => {
   const { data: folders, isLoading, error } = useQuery({
     queryKey: ['folders', type],
     queryFn: async () => {
-      if (!user) throw new Error('User not authenticated');
+      if (!user) {
+        console.log('No user authenticated');
+        throw new Error('User not authenticated');
+      }
       
       console.log(`Fetching folders for user: ${user.id} and type: ${type}`);
       
@@ -44,9 +47,12 @@ export const useFolders = (type: 'experiment' | 'note') => {
 
   const createFolder = useMutation({
     mutationFn: async (folder: Omit<Folder, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
-      if (!user) throw new Error('User not authenticated');
+      if (!user) {
+        console.log('No user authenticated for folder creation');
+        throw new Error('User not authenticated');
+      }
 
-      console.log("Creating folder:", folder);
+      console.log("Creating folder with data:", folder);
 
       const { data, error } = await supabase
         .from('folders')
@@ -59,11 +65,15 @@ export const useFolders = (type: 'experiment' | 'note') => {
         throw error;
       }
       
-      console.log("Created folder:", data);
+      console.log("Created folder successfully:", data);
       return data;
     },
     onSuccess: () => {
+      console.log("Invalidating folders query after creation");
       queryClient.invalidateQueries({ queryKey: ['folders', type] });
+    },
+    onError: (error) => {
+      console.error("Create folder mutation error:", error);
     },
   });
 
@@ -116,6 +126,14 @@ export const useFolders = (type: 'experiment' | 'note') => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['folders', type] });
     },
+  });
+
+  console.log("useFolders hook state:", { 
+    isLoading, 
+    error, 
+    foldersCount: folders?.length, 
+    user: user?.id,
+    createPending: createFolder.isPending 
   });
 
   return {

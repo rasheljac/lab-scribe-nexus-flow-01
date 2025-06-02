@@ -48,8 +48,13 @@ const FolderManager = ({ type, onFolderSelect, selectedFolderId }: FolderManager
   const { folders, createFolder, updateFolder, deleteFolder, isLoading } = useFolders(type);
   const { toast } = useToast();
 
+  console.log("FolderManager render:", { isCreateOpen, folders, isLoading });
+
   const handleCreateFolder = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    console.log("Creating folder:", folderName.trim());
     
     if (!folderName.trim()) {
       toast({
@@ -61,18 +66,23 @@ const FolderManager = ({ type, onFolderSelect, selectedFolderId }: FolderManager
     }
 
     try {
+      console.log("Calling createFolder mutation");
       await createFolder.mutateAsync({
         name: folderName.trim(),
         type,
         parent_id: parentFolderId || null,
       });
+      
+      console.log("Folder created successfully");
       toast({
         title: "Success",
         description: "Folder created successfully",
       });
-      setIsCreateOpen(false);
+      
+      // Reset form and close dialog
       setFolderName("");
       setParentFolderId("");
+      setIsCreateOpen(false);
     } catch (error) {
       console.error("Error creating folder:", error);
       toast({
@@ -146,6 +156,7 @@ const FolderManager = ({ type, onFolderSelect, selectedFolderId }: FolderManager
   };
 
   const handleDialogOpenChange = (open: boolean) => {
+    console.log("Dialog open change:", open);
     setIsCreateOpen(open);
     if (!open) {
       setFolderName("");
@@ -173,12 +184,21 @@ const FolderManager = ({ type, onFolderSelect, selectedFolderId }: FolderManager
         <h3 className="text-lg font-medium">Folders</h3>
         <Dialog open={isCreateOpen} onOpenChange={handleDialogOpenChange}>
           <DialogTrigger asChild>
-            <Button size="sm" className="gap-2">
+            <Button 
+              size="sm" 
+              className="gap-2"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log("New Folder button clicked");
+                setIsCreateOpen(true);
+              }}
+            >
               <FolderPlus className="h-4 w-4" />
               New Folder
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[425px]" onClick={(e) => e.stopPropagation()}>
             <DialogHeader>
               <DialogTitle>Create New Folder</DialogTitle>
               <DialogDescription>
@@ -216,7 +236,11 @@ const FolderManager = ({ type, onFolderSelect, selectedFolderId }: FolderManager
               </div>
 
               <div className="flex gap-2 pt-4">
-                <Button type="submit" disabled={createFolder.isPending} className="flex-1">
+                <Button 
+                  type="submit" 
+                  disabled={createFolder.isPending} 
+                  className="flex-1"
+                >
                   {createFolder.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
@@ -225,7 +249,10 @@ const FolderManager = ({ type, onFolderSelect, selectedFolderId }: FolderManager
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => handleDialogOpenChange(false)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleDialogOpenChange(false);
+                  }}
                 >
                   Cancel
                 </Button>
