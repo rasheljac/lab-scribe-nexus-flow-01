@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,9 +21,10 @@ interface CreateExperimentDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   projectId?: string; // Add projectId prop to link experiments to projects
+  folderId?: string | null; // Add folderId prop
 }
 
-const CreateExperimentDialog = ({ open, onOpenChange, projectId }: CreateExperimentDialogProps) => {
+const CreateExperimentDialog = ({ open, onOpenChange, projectId, folderId = null }: CreateExperimentDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
@@ -60,6 +60,7 @@ const CreateExperimentDialog = ({ open, onOpenChange, projectId }: CreateExperim
         protocols: 0,
         samples: 0,
         project_id: projectId || null, // Use the provided projectId
+        folder_id: folderId, // Include folder_id
       });
       toast({
         title: "Success",

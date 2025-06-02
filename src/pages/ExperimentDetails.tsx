@@ -1,4 +1,3 @@
-
 import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,6 +62,7 @@ const ExperimentDetails = () => {
         experiment_id: experiment.id,
         title: newNote.title,
         content: newNote.content,
+        folder_id: null, // Add folder_id
       });
       setNewNote({ title: '', content: '' });
       setNoteDialogOpen(false);
