@@ -1,10 +1,9 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -16,54 +15,74 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Label } from "@/components/ui/label";
 import { 
+  Search, 
   ArrowLeft, 
-  Plus, 
-  Trash2, 
-  Loader2,
-  StickyNote,
-  Calendar
+  FileText, 
+  Calendar, 
+  Plus,
+  Trash2,
+  Loader2
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import EditNoteDialog from "@/components/EditNoteDialog";
-import RichTextEditor from "@/components/RichTextEditor";
-import { useExperiments } from "@/hooks/useExperiments";
+import FolderManager from "@/components/FolderManager";
+import RichTextDisplay from "@/components/RichTextDisplay";
 import { useExperimentNotes } from "@/hooks/useExperimentNotes";
+import { useExperiments } from "@/hooks/useExperiments";
 import { useToast } from "@/hooks/use-toast";
 
 const ExperimentNotes = () => {
   const { experimentId } = useParams<{ experimentId: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [newNoteData, setNewNoteData] = useState({
+    title: "",
+    content: "",
+  });
   
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [newNote, setNewNote] = useState({ title: "", content: "" });
-
+  const { toast } = useToast();
+  const { notes, isLoading, error, createNote, deleteNote } = useExperimentNotes(experimentId || "");
   const { experiments } = useExperiments();
-  const { notes, isLoading, createNote, deleteNote } = useExperimentNotes(experimentId || "");
+  
+  const experiment = experiments.find(exp => exp.id === experimentId);
 
-  const experiment = experiments.find(e => e.id === experimentId);
+  const filteredNotes = notes.filter(note => {
+    const matchesSearch = note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (note.content && note.content.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesFolder = selectedFolderId === null || note.folder_id === selectedFolderId;
+    return matchesSearch && matchesFolder;
+  });
 
   const handleCreateNote = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!experimentId) return;
+    
+    if (!newNoteData.title.trim()) {
+      toast({
+        title: "Error",
+        description: "Note title is required",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       await createNote.mutateAsync({
-        experiment_id: experimentId,
-        title: newNote.title,
-        content: newNote.content,
+        experiment_id: experimentId!,
+        title: newNoteData.title,
+        content: newNoteData.content,
+        folder_id: selectedFolderId,
       });
-      setNewNote({ title: "", content: "" });
-      setIsCreateDialogOpen(false);
       toast({
         title: "Success",
-        description: "Note created successfully!",
+        description: "Note created successfully",
       });
+      setIsCreateOpen(false);
+      setNewNoteData({ title: "", content: "" });
     } catch (error) {
-      console.error("Error creating note:", error);
       toast({
         title: "Error",
         description: "Failed to create note",
@@ -72,15 +91,14 @@ const ExperimentNotes = () => {
     }
   };
 
-  const handleDeleteNote = async (noteId: string) => {
+  const handleDeleteNote = async (noteId: string, noteTitle: string) => {
     try {
       await deleteNote.mutateAsync(noteId);
       toast({
         title: "Success",
-        description: "Note deleted successfully!",
+        description: `Note "${noteTitle}" deleted successfully`,
       });
     } catch (error) {
-      console.error("Error deleting note:", error);
       toast({
         title: "Error",
         description: "Failed to delete note",
@@ -88,6 +106,24 @@ const ExperimentNotes = () => {
       });
     }
   };
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex">
+        <Sidebar />
+        <div className="flex-1 flex flex-col">
+          <Header />
+          <main className="flex-1 p-6 overflow-auto">
+            <div className="max-w-7xl mx-auto">
+              <div className="text-center py-12">
+                <p className="text-red-600">Error loading notes: {error.message}</p>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -113,131 +149,170 @@ const ExperimentNotes = () => {
                     {experiment?.title || "Experiment"} - Notes
                   </h1>
                   <p className="text-gray-600 mt-1">
-                    Manage notes and observations for this experiment
+                    {notes.length} notes for this experiment
                   </p>
                 </div>
               </div>
-              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Add Note
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Create New Note</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleCreateNote} className="space-y-4">
-                    <div>
-                      <Label htmlFor="title">Title</Label>
-                      <Input
-                        id="title"
-                        value={newNote.title}
-                        onChange={(e) => setNewNote({ ...newNote, title: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="content">Content</Label>
-                      <RichTextEditor
-                        value={newNote.content}
-                        onChange={(value) => setNewNote({ ...newNote, content: value })}
-                        placeholder="Enter your note content..."
-                        className="mt-2"
-                      />
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button type="submit" disabled={createNote.isPending}>
-                        {createNote.isPending ? "Creating..." : "Create Note"}
-                      </Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
+              <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Note
+              </Button>
             </div>
 
-            {/* Notes List */}
-            {isLoading ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin" />
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              {/* Folder Management Sidebar */}
+              <div className="lg:col-span-1">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Organization</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <FolderManager 
+                      type="note" 
+                      onFolderSelect={setSelectedFolderId}
+                      selectedFolderId={selectedFolderId}
+                    />
+                  </CardContent>
+                </Card>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {notes.map((note) => (
-                  <Card key={note.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2">
-                          <StickyNote className="h-5 w-5 text-blue-600" />
-                          <CardTitle className="text-lg">{note.title}</CardTitle>
-                        </div>
-                        <div className="flex gap-2">
-                          <EditNoteDialog note={note} experimentId={experimentId || ""} />
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Note</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete "{note.title}"? This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDeleteNote(note.id)}
-                                  className="bg-red-600 hover:bg-red-700"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
+
+              {/* Main Content */}
+              <div className="lg:col-span-3 space-y-6">
+                {/* Search */}
+                <div className="flex items-center gap-4">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <Input
+                      placeholder="Search notes..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                {/* Notes Grid */}
+                {isLoading ? (
+                  <div className="flex justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-6">
+                    {filteredNotes.map((note) => (
+                      <Card key={note.id} className="hover:shadow-md transition-shadow">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <CardTitle className="text-lg">{note.title}</CardTitle>
+                              <div className="flex items-center gap-4 text-sm text-gray-500 mt-2">
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-4 w-4" />
+                                  <span>{new Date(note.created_at).toLocaleDateString()}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex gap-1 items-center">
+                              <EditNoteDialog note={note} experimentId={experimentId!} />
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Note</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete "{note.title}"? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDeleteNote(note.id, note.title)}
+                                      className="bg-red-600 hover:bg-red-700"
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        {note.content && (
+                          <CardContent>
+                            <RichTextDisplay content={note.content} />
+                          </CardContent>
+                        )}
+                      </Card>
+                    ))}
+                    {filteredNotes.length === 0 && !isLoading && (
+                      <div className="text-center py-12">
+                        <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-600">
+                          {searchTerm || selectedFolderId ? "No notes found matching your criteria." : "No notes found for this experiment."}
+                        </p>
+                        <Button 
+                          className="mt-4 gap-2" 
+                          onClick={() => setIsCreateOpen(true)}
+                        >
+                          <Plus className="h-4 w-4" />
+                          Create First Note
+                        </Button>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <Calendar className="h-3 w-3" />
-                        <span>{new Date(note.created_at).toLocaleDateString()}</span>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div 
-                        className="text-gray-700 prose prose-sm max-w-none"
-                        dangerouslySetInnerHTML={{ __html: note.content || '' }}
-                      />
-                    </CardContent>
-                  </Card>
-                ))}
-                {notes.length === 0 && !isLoading && (
-                  <div className="col-span-full text-center py-12">
-                    <StickyNote className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">No notes found for this experiment.</p>
-                    <Button 
-                      className="mt-4 gap-2" 
-                      onClick={() => setIsCreateDialogOpen(true)}
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add First Note
-                    </Button>
+                    )}
                   </div>
                 )}
               </div>
-            )}
+            </div>
           </div>
         </main>
       </div>
+
+      {/* Create Note Dialog */}
+      {isCreateOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+            <h2 className="text-xl font-bold mb-4">Create New Note</h2>
+            <form onSubmit={handleCreateNote} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Title *</label>
+                <Input
+                  value={newNoteData.title}
+                  onChange={(e) => setNewNoteData(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Enter note title..."
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Content</label>
+                <textarea
+                  value={newNoteData.content}
+                  onChange={(e) => setNewNoteData(prev => ({ ...prev, content: e.target.value }))}
+                  placeholder="Enter note content..."
+                  className="w-full h-32 px-3 py-2 border border-gray-300 rounded-md resize-none"
+                />
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button type="submit" disabled={createNote.isPending} className="flex-1">
+                  {createNote.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Create Note
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsCreateOpen(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

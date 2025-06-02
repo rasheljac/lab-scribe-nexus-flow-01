@@ -18,6 +18,9 @@ export type Database = {
           event_type: string
           id: string
           location: string | null
+          reminder_enabled: boolean | null
+          reminder_minutes_before: number | null
+          reminder_sent: boolean | null
           start_time: string
           status: string
           title: string
@@ -32,6 +35,9 @@ export type Database = {
           event_type?: string
           id?: string
           location?: string | null
+          reminder_enabled?: boolean | null
+          reminder_minutes_before?: number | null
+          reminder_sent?: boolean | null
           start_time: string
           status?: string
           title: string
@@ -46,6 +52,9 @@ export type Database = {
           event_type?: string
           id?: string
           location?: string | null
+          reminder_enabled?: boolean | null
+          reminder_minutes_before?: number | null
+          reminder_sent?: boolean | null
           start_time?: string
           status?: string
           title?: string
@@ -157,6 +166,7 @@ export type Database = {
           content: string | null
           created_at: string
           experiment_id: string
+          folder_id: string | null
           id: string
           title: string
           updated_at: string
@@ -166,6 +176,7 @@ export type Database = {
           content?: string | null
           created_at?: string
           experiment_id: string
+          folder_id?: string | null
           id?: string
           title: string
           updated_at?: string
@@ -175,6 +186,7 @@ export type Database = {
           content?: string | null
           created_at?: string
           experiment_id?: string
+          folder_id?: string | null
           id?: string
           title?: string
           updated_at?: string
@@ -188,6 +200,13 @@ export type Database = {
             referencedRelation: "experiments"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "experiment_notes_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
         ]
       }
       experiments: {
@@ -196,6 +215,7 @@ export type Database = {
           created_at: string
           description: string | null
           end_date: string | null
+          folder_id: string | null
           id: string
           progress: number
           project_id: string | null
@@ -213,6 +233,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           end_date?: string | null
+          folder_id?: string | null
           id?: string
           progress?: number
           project_id?: string | null
@@ -230,6 +251,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           end_date?: string | null
+          folder_id?: string | null
           id?: string
           progress?: number
           project_id?: string | null
@@ -244,10 +266,55 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "experiments_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "experiments_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          parent_id: string | null
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          parent_id?: string | null
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          parent_id?: string | null
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folders_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
             referencedColumns: ["id"]
           },
         ]
@@ -643,7 +710,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_calendar_reminders: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

@@ -14,6 +14,9 @@ export interface CalendarEvent {
   location: string | null;
   attendees: string[] | null;
   status: 'scheduled' | 'cancelled' | 'completed';
+  reminder_enabled: boolean | null;
+  reminder_minutes_before: number | null;
+  reminder_sent: boolean | null;
   created_at: string;
   updated_at: string;
 }
