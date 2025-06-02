@@ -22,6 +22,8 @@ export const useFolders = (type: 'experiment' | 'note') => {
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
       
+      console.log(`Fetching folders for user: ${user.id} and type: ${type}`);
+      
       const { data, error } = await supabase
         .from('folders')
         .select('*')
@@ -29,7 +31,12 @@ export const useFolders = (type: 'experiment' | 'note') => {
         .eq('type', type)
         .order('name', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching folders:", error);
+        throw error;
+      }
+      
+      console.log("Fetched folders:", data);
       return data as Folder[];
     },
     enabled: !!user,
@@ -39,13 +46,20 @@ export const useFolders = (type: 'experiment' | 'note') => {
     mutationFn: async (folder: Omit<Folder, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
       if (!user) throw new Error('User not authenticated');
 
+      console.log("Creating folder:", folder);
+
       const { data, error } = await supabase
         .from('folders')
         .insert([{ ...folder, user_id: user.id }])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error creating folder:", error);
+        throw error;
+      }
+      
+      console.log("Created folder:", data);
       return data;
     },
     onSuccess: () => {
@@ -55,15 +69,24 @@ export const useFolders = (type: 'experiment' | 'note') => {
 
   const updateFolder = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Folder> & { id: string }) => {
+      if (!user) throw new Error('User not authenticated');
+
+      console.log("Updating folder:", id, updates);
+
       const { data, error } = await supabase
         .from('folders')
         .update(updates)
         .eq('id', id)
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error updating folder:", error);
+        throw error;
+      }
+      
+      console.log("Updated folder:", data);
       return data;
     },
     onSuccess: () => {
@@ -73,13 +96,22 @@ export const useFolders = (type: 'experiment' | 'note') => {
 
   const deleteFolder = useMutation({
     mutationFn: async (id: string) => {
+      if (!user) throw new Error('User not authenticated');
+
+      console.log("Deleting folder:", id);
+
       const { error } = await supabase
         .from('folders')
         .delete()
         .eq('id', id)
-        .eq('user_id', user?.id);
+        .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error deleting folder:", error);
+        throw error;
+      }
+      
+      console.log("Deleted folder successfully");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['folders', type] });

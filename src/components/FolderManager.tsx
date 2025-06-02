@@ -45,7 +45,7 @@ const FolderManager = ({ type, onFolderSelect, selectedFolderId }: FolderManager
   const [folderName, setFolderName] = useState("");
   const [parentFolderId, setParentFolderId] = useState<string>("");
   
-  const { folders, createFolder, updateFolder, deleteFolder } = useFolders(type);
+  const { folders, createFolder, updateFolder, deleteFolder, isLoading } = useFolders(type);
   const { toast } = useToast();
 
   const handleCreateFolder = async (e: React.FormEvent) => {
@@ -62,7 +62,7 @@ const FolderManager = ({ type, onFolderSelect, selectedFolderId }: FolderManager
 
     try {
       await createFolder.mutateAsync({
-        name: folderName,
+        name: folderName.trim(),
         type,
         parent_id: parentFolderId || null,
       });
@@ -74,6 +74,7 @@ const FolderManager = ({ type, onFolderSelect, selectedFolderId }: FolderManager
       setFolderName("");
       setParentFolderId("");
     } catch (error) {
+      console.error("Error creating folder:", error);
       toast({
         title: "Error",
         description: "Failed to create folder",
@@ -95,7 +96,7 @@ const FolderManager = ({ type, onFolderSelect, selectedFolderId }: FolderManager
     try {
       await updateFolder.mutateAsync({
         id: folderId,
-        name: folderName,
+        name: folderName.trim(),
       });
       toast({
         title: "Success",
@@ -104,6 +105,7 @@ const FolderManager = ({ type, onFolderSelect, selectedFolderId }: FolderManager
       setEditingFolder(null);
       setFolderName("");
     } catch (error) {
+      console.error("Error updating folder:", error);
       toast({
         title: "Error",
         description: "Failed to update folder",
@@ -119,7 +121,12 @@ const FolderManager = ({ type, onFolderSelect, selectedFolderId }: FolderManager
         title: "Success",
         description: "Folder deleted successfully",
       });
+      // If the deleted folder was selected, clear the selection
+      if (selectedFolderId === folderId && onFolderSelect) {
+        onFolderSelect(null);
+      }
     } catch (error) {
+      console.error("Error deleting folder:", error);
       toast({
         title: "Error",
         description: "Failed to delete folder",
@@ -138,18 +145,40 @@ const FolderManager = ({ type, onFolderSelect, selectedFolderId }: FolderManager
     setFolderName("");
   };
 
+  const handleDialogOpenChange = (open: boolean) => {
+    setIsCreateOpen(open);
+    if (!open) {
+      setFolderName("");
+      setParentFolderId("");
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-medium">Folders</h3>
+          <Button size="sm" disabled className="gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading...
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium">Folders</h3>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <Dialog open={isCreateOpen} onOpenChange={handleDialogOpenChange}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-2">
               <FolderPlus className="h-4 w-4" />
               New Folder
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Create New Folder</DialogTitle>
               <DialogDescription>
@@ -165,6 +194,7 @@ const FolderManager = ({ type, onFolderSelect, selectedFolderId }: FolderManager
                   onChange={(e) => setFolderName(e.target.value)}
                   placeholder="Enter folder name..."
                   required
+                  autoFocus
                 />
               </div>
               
@@ -195,7 +225,7 @@ const FolderManager = ({ type, onFolderSelect, selectedFolderId }: FolderManager
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setIsCreateOpen(false)}
+                  onClick={() => handleDialogOpenChange(false)}
                 >
                   Cancel
                 </Button>
@@ -227,13 +257,18 @@ const FolderManager = ({ type, onFolderSelect, selectedFolderId }: FolderManager
                   value={folderName}
                   onChange={(e) => setFolderName(e.target.value)}
                   className="flex-1"
+                  autoFocus
                 />
                 <Button
                   size="sm"
                   onClick={() => handleUpdateFolder(folder.id)}
                   disabled={updateFolder.isPending}
                 >
-                  <Save className="h-4 w-4" />
+                  {updateFolder.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
                 </Button>
                 <Button size="sm" variant="outline" onClick={cancelEdit}>
                   Cancel
