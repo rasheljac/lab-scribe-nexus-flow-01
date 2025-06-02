@@ -22,7 +22,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
-import FolderManager from "@/components/FolderManager";
 import { useExperiments } from "@/hooks/useExperiments";
 import { useExperimentNotes } from "@/hooks/useExperimentNotes";
 import { useExperimentAttachments } from "@/hooks/useExperimentAttachments";
@@ -38,7 +37,6 @@ const ExperimentDetails = () => {
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [newNote, setNewNote] = useState({ title: '', content: '' });
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
   const experiment = experiments.find(exp => exp.id === id);
@@ -46,8 +44,7 @@ const ExperimentDetails = () => {
   const filteredNotes = notes.filter(note => {
     const matchesSearch = note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (note.content && note.content.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesFolder = selectedFolderId === null || note.folder_id === selectedFolderId;
-    return matchesSearch && matchesFolder;
+    return matchesSearch;
   });
 
   if (!experiment) {
@@ -74,7 +71,7 @@ const ExperimentDetails = () => {
         experiment_id: experiment.id,
         title: newNote.title,
         content: newNote.content,
-        folder_id: selectedFolderId,
+        folder_id: null,
       });
       setNewNote({ title: '', content: '' });
       setNoteDialogOpen(false);
@@ -182,20 +179,6 @@ const ExperimentDetails = () => {
                     )}
                   </CardContent>
                 </Card>
-
-                {/* Folder Management */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Organization</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <FolderManager 
-                      type="note" 
-                      onFolderSelect={setSelectedFolderId}
-                      selectedFolderId={selectedFolderId}
-                    />
-                  </CardContent>
-                </Card>
               </div>
 
               {/* Notes and Attachments */}
@@ -289,7 +272,7 @@ const ExperimentDetails = () => {
                       ))}
                       {filteredNotes.length === 0 && (
                         <div className="text-center py-8 text-gray-500">
-                          {searchTerm || selectedFolderId ? "No notes found matching your criteria." : "No notes yet. Add your first note to get started."}
+                          {searchTerm ? "No notes found matching your criteria." : "No notes yet. Add your first note to get started."}
                         </div>
                       )}
                     </div>
