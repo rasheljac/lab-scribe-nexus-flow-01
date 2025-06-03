@@ -10,22 +10,33 @@ interface RichTextDisplayProps {
 const RichTextDisplay = ({ content, className = "", maxLength }: RichTextDisplayProps) => {
   if (!content) return null;
 
-  // Strip HTML tags for plain text display
-  const stripHtml = (html: string) => {
-    const tmp = document.createElement("div");
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || "";
-  };
-
-  const plainText = stripHtml(content);
-  const displayText = maxLength && plainText.length > maxLength 
-    ? plainText.substring(0, maxLength) + '...' 
-    : plainText;
+  // If maxLength is specified, we need to truncate the HTML content
+  let displayContent = content;
+  
+  if (maxLength) {
+    // Strip HTML tags for length calculation
+    const stripHtml = (html: string) => {
+      const tmp = document.createElement("div");
+      tmp.innerHTML = html;
+      return tmp.textContent || tmp.innerText || "";
+    };
+    
+    const plainText = stripHtml(content);
+    if (plainText.length > maxLength) {
+      // For truncated content, show plain text with ellipsis
+      return (
+        <div className={className}>
+          {plainText.substring(0, maxLength) + '...'}
+        </div>
+      );
+    }
+  }
 
   return (
-    <div className={className}>
-      {displayText}
-    </div>
+    <div 
+      className={`prose max-w-none ${className}`}
+      dangerouslySetInnerHTML={{ __html: displayContent }}
+    />
   );
 };
 

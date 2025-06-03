@@ -2,6 +2,9 @@
 import React, { useRef } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 interface RichTextEditorProps {
   value: string;
@@ -17,18 +20,70 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   className = ""
 }) => {
   const quillRef = useRef<ReactQuill>(null);
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  // Custom image handler for uploading to Supabase storage
+  const imageHandler = async () => {
+    const input = document.createElement('input');
+    input.setAttribute('type', 'file');
+    input.setAttribute('accept', 'image/*');
+    input.click();
+
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file || !user) return;
+
+      try {
+        // Create a unique filename
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}/rich-text/${Date.now()}.${fileExt}`;
+
+        // Upload to Supabase storage
+        const { error: uploadError } = await supabase.storage
+          .from('rich-text-images')
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        // Get the public URL
+        const { data } = supabase.storage
+          .from('rich-text-images')
+          .getPublicUrl(fileName);
+
+        // Insert the image into the editor
+        const quill = quillRef.current?.getEditor();
+        if (quill) {
+          const range = quill.getSelection();
+          quill.insertEmbed(range?.index || 0, 'image', data.publicUrl);
+        }
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        toast({
+          title: "Error",
+          description: "Failed to upload image",
+          variant: "destructive",
+        });
+      }
+    };
+  };
 
   const modules = {
-    toolbar: [
-      [{ 'header': [1, 2, 3, false] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'script': 'sub'}, { 'script': 'super' }],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      ['blockquote', 'code-block'],
-      ['link', 'image'],
-      [{ 'formula': true }],
-      ['clean']
-    ],
+    toolbar: {
+      container: [
+        [{ 'header': [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ 'script': 'sub'}, { 'script': 'super' }],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        ['blockquote', 'code-block'],
+        ['link', 'image'],
+        [{ 'formula': true }],
+        ['clean']
+      ],
+      handlers: {
+        image: imageHandler
+      }
+    },
   };
 
   const formats = [
