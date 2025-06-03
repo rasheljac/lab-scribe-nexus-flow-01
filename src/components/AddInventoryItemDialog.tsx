@@ -17,12 +17,12 @@ const AddInventoryItemDialog = ({ onAddItem }: AddInventoryItemDialogProps) => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
-    category: "",
+    category: "Consumables",
     supplier: "",
     current_stock: 0,
     min_stock: 0,
     max_stock: 0,
-    unit: "",
+    unit: "piece",
     location: "",
     expiry_date: "",
     cost: "",
@@ -52,12 +52,12 @@ const AddInventoryItemDialog = ({ onAddItem }: AddInventoryItemDialogProps) => {
 
       setFormData({
         name: "",
-        category: "",
+        category: "Consumables",
         supplier: "",
         current_stock: 0,
         min_stock: 0,
         max_stock: 0,
-        unit: "",
+        unit: "piece",
         location: "",
         expiry_date: "",
         cost: "",
@@ -104,7 +104,7 @@ const AddInventoryItemDialog = ({ onAddItem }: AddInventoryItemDialogProps) => {
               <Label htmlFor="category">Category *</Label>
               <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Consumables">Consumables</SelectItem>
@@ -130,7 +130,7 @@ const AddInventoryItemDialog = ({ onAddItem }: AddInventoryItemDialogProps) => {
               <Label htmlFor="unit">Unit</Label>
               <Select value={formData.unit} onValueChange={(value) => setFormData(prev => ({ ...prev, unit: value }))}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select unit" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="box">Box</SelectItem>
