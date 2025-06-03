@@ -23,16 +23,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Force update when value prop changes
-  useEffect(() => {
-    console.log("RichTextEditor value prop changed to:", value);
-    const quill = quillRef.current?.getEditor();
-    if (quill && value !== quill.root.innerHTML) {
-      console.log("Updating Quill content to:", value);
-      quill.root.innerHTML = value || '';
-    }
-  }, [value]);
-
   // Custom image handler for uploading to Supabase storage
   const imageHandler = async () => {
     const input = document.createElement('input');
