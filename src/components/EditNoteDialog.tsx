@@ -63,15 +63,13 @@ const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
 
   // Reset form data when dialog opens or note changes
   useEffect(() => {
-    if (isOpen) {
-      const initialContent = getInitialContent(note.content);
-      console.log("Dialog opened, resetting content:", initialContent);
-      setFormData({
-        title: note.title,
-        content: initialContent,
-      });
-    }
-  }, [isOpen, note.id, note.content, note.title]);
+    const initialContent = getInitialContent(note.content);
+    console.log("Note changed, updating form data:", { title: note.title, content: initialContent });
+    setFormData({
+      title: note.title,
+      content: initialContent,
+    });
+  }, [note.id, note.content, note.title]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,18 +104,6 @@ const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
     }
   };
 
-  const handleOpenChange = (open: boolean) => {
-    console.log("Dialog open change:", open);
-    setIsOpen(open);
-    if (!open) {
-      // Reset form when dialog closes
-      setFormData({
-        title: note.title,
-        content: getInitialContent(note.content),
-      });
-    }
-  };
-
   const handleContentChange = (value: string) => {
     console.log("Content change received:", value);
     setFormData(prev => ({ ...prev, content: value }));
@@ -127,7 +113,7 @@ const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
   console.log("Note content:", note.content);
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button size="sm" variant="outline">
           <Edit className="h-3 w-3" />
@@ -154,15 +140,13 @@ const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
           <div className="space-y-2">
             <Label htmlFor="content">Content</Label>
             <div className="border rounded-md">
-              {isOpen && (
-                <RichTextEditor
-                  key={`editor-${note.id}-${isOpen}`}
-                  value={formData.content}
-                  onChange={handleContentChange}
-                  placeholder="Enter your note content..."
-                  className="mt-2"
-                />
-              )}
+              <RichTextEditor
+                key={`editor-${note.id}`}
+                value={formData.content}
+                onChange={handleContentChange}
+                placeholder="Enter your note content..."
+                className="mt-2"
+              />
             </div>
           </div>
 

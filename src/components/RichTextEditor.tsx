@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,18 +22,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const quillRef = useRef<ReactQuill>(null);
   const { user } = useAuth();
   const { toast } = useToast();
-  const [editorValue, setEditorValue] = useState(value || "");
 
-  // Update editor value when prop changes
+  // Force update when value prop changes
   useEffect(() => {
-    console.log("RichTextEditor prop value changed:", value);
-    setEditorValue(value || "");
+    console.log("RichTextEditor value prop changed to:", value);
+    const quill = quillRef.current?.getEditor();
+    if (quill && value !== quill.root.innerHTML) {
+      console.log("Updating Quill content to:", value);
+      quill.root.innerHTML = value || '';
+    }
   }, [value]);
-
-  // Log value changes for debugging
-  useEffect(() => {
-    console.log("RichTextEditor internal value:", editorValue);
-  }, [editorValue]);
 
   // Custom image handler for uploading to Supabase storage
   const imageHandler = async () => {
@@ -86,8 +84,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   };
 
   const handleChange = (content: string) => {
-    console.log("ReactQuill onChange:", content);
-    setEditorValue(content);
+    console.log("ReactQuill onChange triggered:", content);
     onChange(content);
   };
 
@@ -119,14 +116,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     'formula'
   ];
 
-  console.log("Rendering RichTextEditor with value:", editorValue);
+  console.log("Rendering RichTextEditor with value:", value);
 
   return (
     <div className={className}>
       <ReactQuill
         ref={quillRef}
         theme="snow"
-        value={editorValue}
+        value={value || ""}
         onChange={handleChange}
         modules={modules}
         formats={formats}
