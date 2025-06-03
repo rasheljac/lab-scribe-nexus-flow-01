@@ -1,5 +1,5 @@
 
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,6 +22,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const quillRef = useRef<ReactQuill>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+
+  // Log value changes for debugging
+  useEffect(() => {
+    console.log("RichTextEditor value changed:", value);
+  }, [value]);
 
   // Custom image handler for uploading to Supabase storage
   const imageHandler = async () => {
@@ -57,6 +62,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
           const range = quill.getSelection();
           quill.insertEmbed(range?.index || 0, 'image', data.publicUrl);
         }
+
+        toast({
+          title: "Success",
+          description: "Image uploaded successfully",
+        });
       } catch (error) {
         console.error('Error uploading image:', error);
         toast({
@@ -101,7 +111,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       <ReactQuill
         ref={quillRef}
         theme="snow"
-        value={value}
+        value={value || ""}
         onChange={onChange}
         modules={modules}
         formats={formats}
