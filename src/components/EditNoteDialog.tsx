@@ -142,7 +142,7 @@ const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
             <div className="border rounded-md">
               {isOpen && (
                 <RichTextEditor
-                  key={`editor-${note.id}-${isOpen}`}
+                  key={`editor-${note.id}-${isOpen ? 'open' : 'closed'}`}
                   value={formData.content}
                   onChange={handleContentChange}
                   placeholder="Enter your note content..."

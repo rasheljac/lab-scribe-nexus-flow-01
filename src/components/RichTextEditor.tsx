@@ -22,18 +22,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const quillRef = useRef<ReactQuill>(null);
   const { user } = useAuth();
   const { toast } = useToast();
-  const [internalValue, setInternalValue] = useState(value || '');
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Initialize the editor content only once
   useEffect(() => {
-    if (!isInitialized && quillRef.current) {
+    if (!isInitialized && quillRef.current && value) {
       console.log("Initializing RichTextEditor with value:", value);
       const quill = quillRef.current.getEditor();
       if (quill) {
         // Set content without triggering change events
-        quill.clipboard.dangerouslyPasteHTML(value || '');
-        setInternalValue(value || '');
+        quill.clipboard.dangerouslyPasteHTML(value);
         setIsInitialized(true);
       }
     }
@@ -91,7 +89,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
   const handleChange = (content: string) => {
     console.log("ReactQuill onChange triggered:", content);
-    setInternalValue(content);
     onChange(content);
   };
 
@@ -123,7 +120,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     'formula'
   ];
 
-  console.log("Rendering RichTextEditor with internalValue:", internalValue);
+  console.log("Rendering RichTextEditor");
 
   return (
     <div className={className}>
