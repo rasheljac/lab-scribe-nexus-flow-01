@@ -62,15 +62,17 @@ const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
   const { updateNote } = useExperimentNotes(experimentId);
   const { toast } = useToast();
 
-  // Update form data when note changes
+  // Update form data when note changes but only when dialog opens
   useEffect(() => {
-    const initialContent = getInitialContent(note.content);
-    console.log("Updating form data with note content:", initialContent);
-    setFormData({
-      title: note.title,
-      content: initialContent,
-    });
-  }, [note.content, note.title]);
+    if (isOpen) {
+      const initialContent = getInitialContent(note.content);
+      console.log("Dialog opened, setting content:", initialContent);
+      setFormData({
+        title: note.title,
+        content: initialContent,
+      });
+    }
+  }, [isOpen, note.id]); // Only depend on isOpen and note.id, not content
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,7 +148,7 @@ const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
             <Label htmlFor="content">Content</Label>
             <div className="border rounded-md">
               <RichTextEditor
-                key={`editor-${note.id}-${formData.content.length}`}
+                key={`editor-${note.id}`}
                 value={formData.content}
                 onChange={handleContentChange}
                 placeholder="Enter your note content..."
