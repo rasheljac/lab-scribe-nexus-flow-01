@@ -53,26 +53,25 @@ const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
     return htmlContent;
   };
 
-  // Initialize with processed content immediately
-  const [formData, setFormData] = useState(() => ({
+  const [formData, setFormData] = useState({
     title: note.title,
     content: getInitialContent(note.content),
-  }));
+  });
 
   const { updateNote } = useExperimentNotes(experimentId);
   const { toast } = useToast();
 
-  // Update form data when note changes but only when dialog opens
+  // Reset form data when dialog opens or note changes
   useEffect(() => {
     if (isOpen) {
       const initialContent = getInitialContent(note.content);
-      console.log("Dialog opened, setting content:", initialContent);
+      console.log("Dialog opened, resetting content:", initialContent);
       setFormData({
         title: note.title,
         content: initialContent,
       });
     }
-  }, [isOpen, note.id]); // Only depend on isOpen and note.id, not content
+  }, [isOpen, note.id, note.content, note.title]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,14 +109,22 @@ const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
   const handleOpenChange = (open: boolean) => {
     console.log("Dialog open change:", open);
     setIsOpen(open);
+    if (!open) {
+      // Reset form when dialog closes
+      setFormData({
+        title: note.title,
+        content: getInitialContent(note.content),
+      });
+    }
   };
 
   const handleContentChange = (value: string) => {
-    console.log("Content change:", value);
+    console.log("Content change received:", value);
     setFormData(prev => ({ ...prev, content: value }));
   };
 
   console.log("Current formData content:", formData.content);
+  console.log("Note content:", note.content);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -147,13 +154,15 @@ const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
           <div className="space-y-2">
             <Label htmlFor="content">Content</Label>
             <div className="border rounded-md">
-              <RichTextEditor
-                key={`editor-${note.id}`}
-                value={formData.content}
-                onChange={handleContentChange}
-                placeholder="Enter your note content..."
-                className="mt-2"
-              />
+              {isOpen && (
+                <RichTextEditor
+                  key={`editor-${note.id}-${isOpen}`}
+                  value={formData.content}
+                  onChange={handleContentChange}
+                  placeholder="Enter your note content..."
+                  className="mt-2"
+                />
+              )}
             </div>
           </div>
 
