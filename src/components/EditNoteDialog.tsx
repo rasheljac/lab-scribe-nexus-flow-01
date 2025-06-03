@@ -53,25 +53,24 @@ const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
     return htmlContent;
   };
 
-  const [formData, setFormData] = useState({
+  // Initialize with processed content immediately
+  const [formData, setFormData] = useState(() => ({
     title: note.title,
     content: getInitialContent(note.content),
-  });
+  }));
 
   const { updateNote } = useExperimentNotes(experimentId);
   const { toast } = useToast();
 
-  // Reset form data when note changes or dialog opens
+  // Update form data when note changes
   useEffect(() => {
-    if (isOpen) {
-      const initialContent = getInitialContent(note.content);
-      console.log("Setting initial content in useEffect:", initialContent);
-      setFormData({
-        title: note.title,
-        content: initialContent,
-      });
-    }
-  }, [isOpen, note.content, note.title]);
+    const initialContent = getInitialContent(note.content);
+    console.log("Updating form data with note content:", initialContent);
+    setFormData({
+      title: note.title,
+      content: initialContent,
+    });
+  }, [note.content, note.title]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,6 +115,8 @@ const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
     setFormData(prev => ({ ...prev, content: value }));
   };
 
+  console.log("Current formData content:", formData.content);
+
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
@@ -145,6 +146,7 @@ const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
             <Label htmlFor="content">Content</Label>
             <div className="border rounded-md">
               <RichTextEditor
+                key={`editor-${note.id}-${formData.content.length}`}
                 value={formData.content}
                 onChange={handleContentChange}
                 placeholder="Enter your note content..."

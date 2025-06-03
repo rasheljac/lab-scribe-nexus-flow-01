@@ -26,6 +26,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   // Log value changes for debugging
   useEffect(() => {
     console.log("RichTextEditor value changed:", value);
+    console.log("RichTextEditor value length:", value?.length || 0);
   }, [value]);
 
   // Custom image handler for uploading to Supabase storage
@@ -106,12 +107,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     'formula'
   ];
 
+  // Ensure we have a valid value for ReactQuill
+  const editorValue = value || "";
+  console.log("Rendering RichTextEditor with value:", editorValue);
+
   return (
     <div className={className}>
       <ReactQuill
         ref={quillRef}
         theme="snow"
-        value={value || ""}
+        value={editorValue}
         onChange={onChange}
         modules={modules}
         formats={formats}
