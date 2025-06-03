@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,53 +23,13 @@ interface EditNoteDialogProps {
 
 const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  
-  // Convert plain text to HTML if needed
-  const getInitialContent = (content: string | null) => {
-    console.log("Processing content:", content);
-    
-    if (!content) {
-      console.log("No content, returning empty string");
-      return "";
-    }
-    
-    // Check if content is already HTML (contains HTML tags)
-    const hasHtmlTags = /<[^>]*>/g.test(content);
-    console.log("Has HTML tags:", hasHtmlTags);
-    
-    if (hasHtmlTags) {
-      console.log("Returning HTML content as-is");
-      return content;
-    }
-    
-    // Convert plain text to HTML by wrapping in paragraphs and handling line breaks
-    const htmlContent = content
-      .split('\n')
-      .filter(line => line.trim() !== '')
-      .map(line => `<p>${line}</p>`)
-      .join('');
-    
-    console.log("Converted to HTML:", htmlContent);
-    return htmlContent;
-  };
-
   const [formData, setFormData] = useState({
     title: note.title,
-    content: getInitialContent(note.content),
+    content: note.content || "",
   });
 
   const { updateNote } = useExperimentNotes(experimentId);
   const { toast } = useToast();
-
-  // Reset form data when dialog opens or note changes
-  useEffect(() => {
-    const initialContent = getInitialContent(note.content);
-    console.log("Note changed, updating form data:", { title: note.title, content: initialContent });
-    setFormData({
-      title: note.title,
-      content: initialContent,
-    });
-  }, [note.id, note.content, note.title, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,7 +44,6 @@ const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
     }
 
     try {
-      console.log("Submitting form data:", formData);
       await updateNote.mutateAsync({
         id: note.id,
         ...formData,
@@ -95,7 +54,6 @@ const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
       });
       setIsOpen(false);
     } catch (error) {
-      console.error("Error updating note:", error);
       toast({
         title: "Error",
         description: "Failed to update note",
@@ -103,14 +61,6 @@ const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
       });
     }
   };
-
-  const handleContentChange = (value: string) => {
-    console.log("Content change received:", value);
-    setFormData(prev => ({ ...prev, content: value }));
-  };
-
-  console.log("Current formData content:", formData.content);
-  console.log("Note content:", note.content);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -139,17 +89,12 @@ const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
 
           <div className="space-y-2">
             <Label htmlFor="content">Content</Label>
-            <div className="border rounded-md">
-              {isOpen && (
-                <RichTextEditor
-                  key={`editor-${note.id}-${isOpen ? 'open' : 'closed'}`}
-                  value={formData.content}
-                  onChange={handleContentChange}
-                  placeholder="Enter your note content..."
-                  className="mt-2"
-                />
-              )}
-            </div>
+            <RichTextEditor
+              value={formData.content}
+              onChange={(value) => setFormData(prev => ({ ...prev, content: value }))}
+              placeholder="Enter your note content..."
+              className="mt-2"
+            />
           </div>
 
           <div className="flex gap-2 pt-4">

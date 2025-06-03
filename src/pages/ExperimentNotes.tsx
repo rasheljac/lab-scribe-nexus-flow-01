@@ -4,7 +4,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -29,7 +28,6 @@ import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import EditNoteDialog from "@/components/EditNoteDialog";
 import RichTextDisplay from "@/components/RichTextDisplay";
-import RichTextEditor from "@/components/RichTextEditor";
 import { useExperimentNotes } from "@/hooks/useExperimentNotes";
 import { useExperiments } from "@/hooks/useExperiments";
 import { useToast } from "@/hooks/use-toast";
@@ -251,11 +249,11 @@ const ExperimentNotes = () => {
       {/* Create Note Dialog */}
       {isCreateOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
             <h2 className="text-xl font-bold mb-4">Create New Note</h2>
             <form onSubmit={handleCreateNote} className="space-y-4">
               <div>
-                <Label className="block text-sm font-medium mb-2">Title *</Label>
+                <label className="block text-sm font-medium mb-2">Title *</label>
                 <Input
                   value={newNoteData.title}
                   onChange={(e) => setNewNoteData(prev => ({ ...prev, title: e.target.value }))}
@@ -264,12 +262,12 @@ const ExperimentNotes = () => {
                 />
               </div>
               <div>
-                <Label className="block text-sm font-medium mb-2">Content</Label>
-                <RichTextEditor
+                <label className="block text-sm font-medium mb-2">Content</label>
+                <textarea
                   value={newNoteData.content}
-                  onChange={(value) => setNewNoteData(prev => ({ ...prev, content: value }))}
+                  onChange={(e) => setNewNoteData(prev => ({ ...prev, content: e.target.value }))}
                   placeholder="Enter note content..."
-                  className="mt-2"
+                  className="w-full h-32 px-3 py-2 border border-gray-300 rounded-md resize-none"
                 />
               </div>
               <div className="flex gap-2 pt-4">
