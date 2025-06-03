@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,6 +22,22 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const quillRef = useRef<ReactQuill>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+  const [internalValue, setInternalValue] = useState(value || '');
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize the editor content only once
+  useEffect(() => {
+    if (!isInitialized && quillRef.current) {
+      console.log("Initializing RichTextEditor with value:", value);
+      const quill = quillRef.current.getEditor();
+      if (quill) {
+        // Set content without triggering change events
+        quill.clipboard.dangerouslyPasteHTML(value || '');
+        setInternalValue(value || '');
+        setIsInitialized(true);
+      }
+    }
+  }, [value, isInitialized]);
 
   // Custom image handler for uploading to Supabase storage
   const imageHandler = async () => {
@@ -75,6 +91,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
   const handleChange = (content: string) => {
     console.log("ReactQuill onChange triggered:", content);
+    setInternalValue(content);
     onChange(content);
   };
 
@@ -106,14 +123,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     'formula'
   ];
 
-  console.log("Rendering RichTextEditor with value:", value);
+  console.log("Rendering RichTextEditor with internalValue:", internalValue);
 
   return (
     <div className={className}>
       <ReactQuill
         ref={quillRef}
         theme="snow"
-        value={value || ""}
+        defaultValue={value || ""}
         onChange={handleChange}
         modules={modules}
         formats={formats}

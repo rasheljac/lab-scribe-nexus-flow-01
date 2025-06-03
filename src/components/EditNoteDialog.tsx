@@ -69,7 +69,7 @@ const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
       title: note.title,
       content: initialContent,
     });
-  }, [note.id, note.content, note.title]);
+  }, [note.id, note.content, note.title, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,13 +140,15 @@ const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
           <div className="space-y-2">
             <Label htmlFor="content">Content</Label>
             <div className="border rounded-md">
-              <RichTextEditor
-                key={`editor-${note.id}`}
-                value={formData.content}
-                onChange={handleContentChange}
-                placeholder="Enter your note content..."
-                className="mt-2"
-              />
+              {isOpen && (
+                <RichTextEditor
+                  key={`editor-${note.id}-${isOpen}`}
+                  value={formData.content}
+                  onChange={handleContentChange}
+                  placeholder="Enter your note content..."
+                  className="mt-2"
+                />
+              )}
             </div>
           </div>
 
