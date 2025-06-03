@@ -27,7 +27,7 @@ import {
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import EditNoteDialog from "@/components/EditNoteDialog";
-import RichTextDisplay from "@/components/RichTextDisplay";
+import RichTextEditor from "@/components/RichTextEditor";
 import { useExperimentNotes } from "@/hooks/useExperimentNotes";
 import { useExperiments } from "@/hooks/useExperiments";
 import { useToast } from "@/hooks/use-toast";
@@ -175,26 +175,21 @@ const ExperimentNotes = () => {
                 <Loader2 className="h-8 w-8 animate-spin" />
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-6">
+              <div className="space-y-4">
                 {filteredNotes.map((note) => (
-                  <Card key={note.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-3">
+                  <Card key={note.id}>
+                    <CardHeader>
                       <div className="flex items-start justify-between">
-                        <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-5 w-5 text-blue-600" />
                           <CardTitle className="text-lg">{note.title}</CardTitle>
-                          <div className="flex items-center gap-4 text-sm text-gray-500 mt-2">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              <span>{new Date(note.created_at).toLocaleDateString()}</span>
-                            </div>
-                          </div>
                         </div>
-                        <div className="flex gap-1 items-center">
+                        <div className="flex gap-2">
                           <EditNoteDialog note={note} experimentId={experimentId!} />
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
-                                <Trash2 className="h-3 w-3" />
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
@@ -217,10 +212,20 @@ const ExperimentNotes = () => {
                           </AlertDialog>
                         </div>
                       </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Calendar className="h-4 w-4" />
+                        <span>Created {new Date(note.created_at).toLocaleDateString()}</span>
+                        {note.updated_at !== note.created_at && (
+                          <span>• Updated {new Date(note.updated_at).toLocaleDateString()}</span>
+                        )}
+                      </div>
                     </CardHeader>
                     {note.content && (
                       <CardContent>
-                        <RichTextDisplay content={note.content} />
+                        <div 
+                          className="prose max-w-none"
+                          dangerouslySetInnerHTML={{ __html: note.content }}
+                        />
                       </CardContent>
                     )}
                   </Card>
@@ -249,7 +254,7 @@ const ExperimentNotes = () => {
       {/* Create Note Dialog */}
       {isCreateOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">Create New Note</h2>
             <form onSubmit={handleCreateNote} className="space-y-4">
               <div>
@@ -263,11 +268,11 @@ const ExperimentNotes = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Content</label>
-                <textarea
+                <RichTextEditor
                   value={newNoteData.content}
-                  onChange={(e) => setNewNoteData(prev => ({ ...prev, content: e.target.value }))}
+                  onChange={(value) => setNewNoteData(prev => ({ ...prev, content: value }))}
                   placeholder="Enter note content..."
-                  className="w-full h-32 px-3 py-2 border border-gray-300 rounded-md resize-none"
+                  className="mt-2"
                 />
               </div>
               <div className="flex gap-2 pt-4">
