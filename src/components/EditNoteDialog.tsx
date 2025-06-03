@@ -23,9 +23,28 @@ interface EditNoteDialogProps {
 
 const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  
+  // Convert plain text to HTML if needed
+  const getInitialContent = (content: string | null) => {
+    if (!content) return "";
+    
+    // Check if content is already HTML (contains HTML tags)
+    const hasHtmlTags = /<[^>]*>/g.test(content);
+    if (hasHtmlTags) {
+      return content;
+    }
+    
+    // Convert plain text to HTML by wrapping in paragraphs and handling line breaks
+    return content
+      .split('\n')
+      .filter(line => line.trim() !== '')
+      .map(line => `<p>${line}</p>`)
+      .join('');
+  };
+
   const [formData, setFormData] = useState({
     title: note.title,
-    content: note.content || "",
+    content: getInitialContent(note.content),
   });
 
   const { updateNote } = useExperimentNotes(experimentId);
@@ -62,8 +81,19 @@ const EditNoteDialog = ({ note, experimentId }: EditNoteDialogProps) => {
     }
   };
 
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    // Reset form data when dialog opens
+    if (open) {
+      setFormData({
+        title: note.title,
+        content: getInitialContent(note.content),
+      });
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button size="sm" variant="outline">
           <Edit className="h-3 w-3" />
