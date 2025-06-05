@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -28,6 +27,7 @@ import Users from "./pages/Users";
 import Settings from "./pages/Settings";
 import SystemSettings from "./pages/SystemSettings";
 import NotFound from "./pages/NotFound";
+import Protocols from "./pages/Protocols";
 
 const queryClient = new QueryClient();
 
@@ -78,6 +78,11 @@ const App = () => (
             <Route path="/projects/:projectId/experiments" element={
               <ProtectedRoute>
                 <ProjectExperiments />
+              </ProtectedRoute>
+            } />
+            <Route path="/protocols" element={
+              <ProtectedRoute>
+                <Protocols />
               </ProtectedRoute>
             } />
             <Route path="/tasks" element={

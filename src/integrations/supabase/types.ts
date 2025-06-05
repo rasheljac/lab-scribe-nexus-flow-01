@@ -161,6 +161,48 @@ export type Database = {
         }
         Relationships: []
       }
+      experiment_note_protocols: {
+        Row: {
+          attached_at: string
+          id: string
+          note_id: string
+          notes: string | null
+          protocol_id: string
+          user_id: string
+        }
+        Insert: {
+          attached_at?: string
+          id?: string
+          note_id: string
+          notes?: string | null
+          protocol_id: string
+          user_id: string
+        }
+        Update: {
+          attached_at?: string
+          id?: string
+          note_id?: string
+          notes?: string | null
+          protocol_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_experiment_note_protocols_note"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "experiment_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_experiment_note_protocols_protocol"
+            columns: ["protocol_id"]
+            isOneToOne: false
+            referencedRelation: "protocols"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       experiment_notes: {
         Row: {
           content: string | null
@@ -205,6 +247,48 @@ export type Database = {
             columns: ["folder_id"]
             isOneToOne: false
             referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      experiment_protocols: {
+        Row: {
+          attached_at: string
+          experiment_id: string
+          id: string
+          notes: string | null
+          protocol_id: string
+          user_id: string
+        }
+        Insert: {
+          attached_at?: string
+          experiment_id: string
+          id?: string
+          notes?: string | null
+          protocol_id: string
+          user_id: string
+        }
+        Update: {
+          attached_at?: string
+          experiment_id?: string
+          id?: string
+          notes?: string | null
+          protocol_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_experiment_protocols_experiment"
+            columns: ["experiment_id"]
+            isOneToOne: false
+            referencedRelation: "experiments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_experiment_protocols_protocol"
+            columns: ["protocol_id"]
+            isOneToOne: false
+            referencedRelation: "protocols"
             referencedColumns: ["id"]
           },
         ]
@@ -504,6 +588,45 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      protocols: {
+        Row: {
+          category: string
+          content: string
+          created_at: string
+          description: string | null
+          id: string
+          is_template: boolean
+          title: string
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          category?: string
+          content: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_template?: boolean
+          title: string
+          updated_at?: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_template?: boolean
+          title?: string
+          updated_at?: string
+          user_id?: string
+          version?: number
         }
         Relationships: []
       }

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +21,8 @@ import {
   Calendar, 
   Plus,
   Trash2,
-  Loader2
+  Loader2,
+  X
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
@@ -31,6 +31,8 @@ import RichTextEditor from "@/components/RichTextEditor";
 import { useExperimentNotes } from "@/hooks/useExperimentNotes";
 import { useExperiments } from "@/hooks/useExperiments";
 import { useToast } from "@/hooks/use-toast";
+import ProtocolAttachmentDialog from "@/components/ProtocolAttachmentDialog";
+import { useExperimentProtocols, useProtocols } from "@/hooks/useProtocols";
 
 const ExperimentNotes = () => {
   const { experimentId } = useParams<{ experimentId: string }>();
@@ -45,6 +47,8 @@ const ExperimentNotes = () => {
   const { toast } = useToast();
   const { notes, isLoading, error, createNote, deleteNote } = useExperimentNotes(experimentId || "");
   const { experiments } = useExperiments();
+  const { experimentProtocols } = useExperimentProtocols(experimentId || "");
+  const { detachFromExperiment } = useProtocols();
   
   const experiment = experiments.find(exp => exp.id === experimentId);
 
@@ -104,6 +108,22 @@ const ExperimentNotes = () => {
     }
   };
 
+  const handleDetachProtocol = async (protocolAttachmentId: string, protocolTitle: string) => {
+    try {
+      await detachFromExperiment.mutateAsync(protocolAttachmentId);
+      toast({
+        title: "Success",
+        description: `Protocol "${protocolTitle}" detached successfully`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to detach protocol",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 flex">
@@ -150,11 +170,59 @@ const ExperimentNotes = () => {
                   </p>
                 </div>
               </div>
-              <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
-                <Plus className="h-4 w-4" />
-                Add Note
-              </Button>
+              <div className="flex gap-2">
+                <ProtocolAttachmentDialog 
+                  experimentId={experimentId} 
+                  attachedProtocols={experimentProtocols.map(ep => ep.protocol_id)}
+                />
+                <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add Note
+                </Button>
+              </div>
             </div>
+
+            {/* Attached Protocols Section */}
+            {experimentProtocols.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-blue-600" />
+                    Attached Protocols ({experimentProtocols.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {experimentProtocols.map((ep) => (
+                      <div key={ep.id} className="border rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-medium">{ep.protocol?.title}</h4>
+                            {ep.protocol?.description && (
+                              <p className="text-sm text-gray-600 mt-1">{ep.protocol.description}</p>
+                            )}
+                            {ep.notes && (
+                              <p className="text-sm text-gray-700 mt-2 italic">Note: {ep.notes}</p>
+                            )}
+                            <p className="text-xs text-gray-500 mt-2">
+                              Attached {new Date(ep.attached_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => handleDetachProtocol(ep.id, ep.protocol?.title || "Protocol")}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Search */}
             <div className="flex items-center gap-4">
