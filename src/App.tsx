@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -28,6 +29,7 @@ import Settings from "./pages/Settings";
 import SystemSettings from "./pages/SystemSettings";
 import NotFound from "./pages/NotFound";
 import Protocols from "./pages/Protocols";
+import ProtocolDetails from "./pages/ProtocolDetails";
 
 const queryClient = new QueryClient();
 
@@ -83,6 +85,11 @@ const App = () => (
             <Route path="/protocols" element={
               <ProtectedRoute>
                 <Protocols />
+              </ProtectedRoute>
+            } />
+            <Route path="/protocols/:protocolId" element={
+              <ProtectedRoute>
+                <ProtocolDetails />
               </ProtectedRoute>
             } />
             <Route path="/tasks" element={

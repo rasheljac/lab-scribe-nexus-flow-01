@@ -12,9 +12,11 @@ import { useToast } from "@/hooks/use-toast";
 
 interface EditProtocolDialogProps {
   protocol: Protocol;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-const EditProtocolDialog = ({ protocol }: EditProtocolDialogProps) => {
+const EditProtocolDialog = ({ protocol, open, onOpenChange }: EditProtocolDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [protocolData, setProtocolData] = useState({
     title: protocol.title,
@@ -26,6 +28,9 @@ const EditProtocolDialog = ({ protocol }: EditProtocolDialogProps) => {
 
   const { toast } = useToast();
   const { updateProtocol } = useProtocols();
+
+  const dialogOpen = open !== undefined ? open : isOpen;
+  const setDialogOpen = onOpenChange || setIsOpen;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +57,7 @@ const EditProtocolDialog = ({ protocol }: EditProtocolDialogProps) => {
         title: "Success",
         description: "Protocol updated successfully",
       });
-      setIsOpen(false);
+      setDialogOpen(false);
     } catch (error) {
       toast({
         title: "Error",
@@ -63,7 +68,7 @@ const EditProtocolDialog = ({ protocol }: EditProtocolDialogProps) => {
   };
 
   const handleOpenChange = (open: boolean) => {
-    setIsOpen(open);
+    setDialogOpen(open);
     if (open) {
       // Reset form data when opening
       setProtocolData({
@@ -78,11 +83,13 @@ const EditProtocolDialog = ({ protocol }: EditProtocolDialogProps) => {
 
   return (
     <>
-      <Button size="sm" variant="outline" onClick={() => setIsOpen(true)}>
-        <Edit className="h-4 w-4" />
-      </Button>
+      {open === undefined && (
+        <Button size="sm" variant="outline" onClick={() => setIsOpen(true)}>
+          <Edit className="h-4 w-4" />
+        </Button>
+      )}
 
-      {isOpen && (
+      {dialogOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">Edit Protocol</h2>

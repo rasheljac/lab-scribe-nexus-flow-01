@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +20,6 @@ import {
   Search, 
   Plus,
   Trash2,
-  FileText,
   Calendar,
   Loader2,
   BookOpen,
@@ -33,6 +33,7 @@ import { useProtocols } from "@/hooks/useProtocols";
 import { useToast } from "@/hooks/use-toast";
 
 const Protocols = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [createProtocolOpen, setCreateProtocolOpen] = useState(false);
@@ -69,6 +70,10 @@ const Protocols = () => {
     const tmp = document.createElement("div");
     tmp.innerHTML = html;
     return tmp.textContent || tmp.innerText || "";
+  };
+
+  const handleProtocolClick = (protocolId: string) => {
+    navigate(`/protocols/${protocolId}`);
   };
 
   if (error) {
@@ -149,7 +154,12 @@ const Protocols = () => {
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-2 flex-1">
                           <BookOpen className="h-5 w-5 text-blue-600" />
-                          <CardTitle className="text-lg">{protocol.title}</CardTitle>
+                          <CardTitle 
+                            className="text-lg cursor-pointer hover:text-blue-600 transition-colors"
+                            onClick={() => handleProtocolClick(protocol.id)}
+                          >
+                            {protocol.title}
+                          </CardTitle>
                         </div>
                         <div className="flex gap-1 items-center">
                           <Badge variant="outline" className="capitalize">
