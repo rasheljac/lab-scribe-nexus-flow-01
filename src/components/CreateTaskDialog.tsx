@@ -18,13 +18,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import RichTextEditor from "@/components/RichTextEditor";
 
-export interface CreateTaskDialogProps {
+interface CreateTaskDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  children?: React.ReactNode;
 }
 
-const CreateTaskDialog = ({ open, onOpenChange, children }: CreateTaskDialogProps) => {
+const CreateTaskDialog = ({ open, onOpenChange }: CreateTaskDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
@@ -98,14 +97,14 @@ const CreateTaskDialog = ({ open, onOpenChange, children }: CreateTaskDialogProp
 
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-      <DialogTrigger asChild data-dialog-trigger="create-task">
-        {children || (
+      {!onOpenChange && (
+        <DialogTrigger asChild>
           <Button className="gap-2">
             <Plus className="h-4 w-4" />
             Create Task
           </Button>
-        )}
-      </DialogTrigger>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Task</DialogTitle>
