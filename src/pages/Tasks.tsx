@@ -104,12 +104,18 @@ const Tasks = () => {
                 <div className="text-center py-12">
                   <CheckSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-600">No tasks found. Create your first task to get started.</p>
-                  <CreateTaskDialog>
-                    <Button className="mt-4 gap-1">
-                      <Plus className="h-4 w-4" />
-                      Create Task
-                    </Button>
-                  </CreateTaskDialog>
+                  <Button 
+                    className="mt-4 gap-1"
+                    onClick={() => {
+                      const dialogElement = document.querySelector('[data-dialog-trigger="create-task"]');
+                      if (dialogElement) {
+                        (dialogElement as HTMLButtonElement).click();
+                      }
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Create Task
+                  </Button>
                 </div>
               </Card>
             ) : (
