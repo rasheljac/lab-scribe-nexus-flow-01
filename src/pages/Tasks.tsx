@@ -56,7 +56,7 @@ const Tasks = () => {
                 <h1 className="text-3xl font-bold text-gray-900">Task Manager</h1>
                 <p className="text-gray-600 mt-1">Organize and track your laboratory tasks</p>
               </div>
-              {/* Create Task button removed from here */}
+              {/* No Create Task button here */}
             </div>
 
             {/* Filters */}
@@ -125,6 +125,10 @@ const Tasks = () => {
             )}
           </div>
         </main>
+      </div>
+      {/* Add hidden CreateTaskDialog with trigger */}
+      <div className="hidden">
+        <CreateTaskDialog />
       </div>
     </div>
   );
