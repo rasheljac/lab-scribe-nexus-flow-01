@@ -56,7 +56,7 @@ const Tasks = () => {
                 <h1 className="text-3xl font-bold text-gray-900">Task Manager</h1>
                 <p className="text-gray-600 mt-1">Organize and track your laboratory tasks</p>
               </div>
-              <CreateTaskDialog />
+              {/* Create Task button removed from here */}
             </div>
 
             {/* Filters */}
