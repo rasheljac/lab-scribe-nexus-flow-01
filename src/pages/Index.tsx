@@ -129,9 +129,37 @@ const Index = () => {
                 <DashboardTaskList />
               </div>
 
-              {/* Quick Actions */}
-              <div>
+              {/* Right Column - Quick Actions and Upcoming Schedule */}
+              <div className="space-y-6">
                 <QuickActions />
+                
+                {/* Upcoming Schedule */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <CalendarDays className="h-5 w-5" />
+                      Upcoming Schedule
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {upcomingEvents.map((event) => (
+                        <div key={event.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                          <div className={`w-2 h-2 rounded-full ${getEventColor(event.event_type)}`} />
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{event.title}</p>
+                            <p className="text-xs text-gray-600">{formatDateTime(event.start_time)}</p>
+                          </div>
+                        </div>
+                      ))}
+                      {upcomingEvents.length === 0 && (
+                        <div className="text-center py-4 text-gray-500 text-sm">
+                          No upcoming events
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
 
@@ -167,29 +195,32 @@ const Index = () => {
                 </CardContent>
               </Card>
 
+              {/* Recent Insights */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CalendarDays className="h-5 w-5" />
-                    Upcoming Schedule
-                  </CardTitle>
+                  <CardTitle>Key Insights</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {upcomingEvents.map((event) => (
-                      <div key={event.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                        <div className={`w-2 h-2 rounded-full ${getEventColor(event.event_type)}`} />
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">{event.title}</p>
-                          <p className="text-xs text-gray-600">{formatDateTime(event.start_time)}</p>
-                        </div>
-                      </div>
-                    ))}
-                    {upcomingEvents.length === 0 && (
-                      <div className="text-center py-4 text-gray-500 text-sm">
-                        No upcoming events
-                      </div>
-                    )}
+                    <div className="p-4 bg-blue-50 rounded-lg">
+                      <h4 className="font-semibold text-blue-900">Experiment Status</h4>
+                      <p className="text-sm text-blue-700 mt-1">
+                        You have {experiments.length} experiments with {completedExperiments} completed 
+                        ({experiments.length > 0 ? Math.round((completedExperiments / experiments.length) * 100) : 0}% completion rate).
+                      </p>
+                    </div>
+                    <div className="p-4 bg-green-50 rounded-lg">
+                      <h4 className="font-semibold text-green-900">Project Overview</h4>
+                      <p className="text-sm text-green-700 mt-1">
+                        {totalProjects} active projects with {pendingReports} pending reports.
+                      </p>
+                    </div>
+                    <div className="p-4 bg-yellow-50 rounded-lg">
+                      <h4 className="font-semibold text-yellow-900">Activity Summary</h4>
+                      <p className="text-sm text-yellow-700 mt-1">
+                        {activeExperiments} experiments currently in progress across your projects.
+                      </p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
