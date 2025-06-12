@@ -41,7 +41,7 @@ const DashboardTaskList = () => {
         const savedOrder = await getSavedTaskOrder();
         const latestTasks = [...tasks]
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-          .slice(0, 10);
+          .slice(0, 5);
 
         if (savedOrder.length > 0) {
           // Apply saved order, then add any new tasks not in the saved order
@@ -168,7 +168,7 @@ const DashboardTaskList = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Recent Tasks (Latest 10)</CardTitle>
+        <CardTitle>Recent Tasks (Latest 5)</CardTitle>
       </CardHeader>
       <CardContent>
         <DragDropContext onDragEnd={handleDragEnd}>
