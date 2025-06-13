@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 # Kapelczak ELN - Production Deployment Script
@@ -35,6 +34,27 @@ log_warning() {
 
 log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
+}
+
+cleanup_existing_containers() {
+    log_info "Cleaning up existing containers and networks..."
+    
+    # Stop and remove containers with the project name
+    docker-compose -p authentication_eln-dev down --remove-orphans 2>/dev/null || true
+    docker-compose down --remove-orphans 2>/dev/null || true
+    
+    # Remove any dangling containers
+    docker container prune -f 2>/dev/null || true
+    
+    # Free up the port if something is using it
+    local port_process=$(lsof -ti:8086 2>/dev/null || true)
+    if [ ! -z "$port_process" ]; then
+        log_warning "Port 8086 is in use. Attempting to free it..."
+        kill -9 $port_process 2>/dev/null || true
+        sleep 2
+    fi
+    
+    log_success "Cleanup completed."
 }
 
 check_dependencies() {
@@ -187,8 +207,8 @@ EOF
 build_and_deploy() {
     log_info "Building and deploying the application..."
     
-    # Stop existing containers
-    docker-compose down 2>/dev/null || true
+    # Clean up first to avoid conflicts
+    cleanup_existing_containers
     
     # Build and start containers
     if [ "$USE_SSL" = true ]; then
@@ -199,16 +219,21 @@ build_and_deploy() {
     
     # Wait for services to be ready
     log_info "Waiting for services to start..."
-    sleep 10
+    sleep 15
     
-    # Health check
-    if curl -f http://localhost:80/health &>/dev/null; then
-        log_success "Application is running and healthy!"
-    else
-        log_error "Application health check failed. Please check the logs."
-        docker-compose logs
-        exit 1
-    fi
+    # Health check with retries
+    for i in {1..5}; do
+        if curl -f http://localhost:8086/health &>/dev/null; then
+            log_success "Application is running and healthy!"
+            return 0
+        fi
+        log_info "Health check attempt $i/5 failed, retrying..."
+        sleep 5
+    done
+    
+    log_error "Application health check failed after 5 attempts. Please check the logs."
+    docker-compose logs --tail=50
+    exit 1
 }
 
 create_systemd_service() {
@@ -259,7 +284,7 @@ if ! docker-compose ps | grep -q "Up"; then
 fi
 
 # Check application health
-if ! curl -f http://localhost:80/health &>/dev/null; then
+if ! curl -f http://localhost:8086/health &>/dev/null; then
     log_message "ERROR: Application health check failed"
 else
     log_message "INFO: Application is healthy"
@@ -286,6 +311,7 @@ print_deployment_info() {
     echo "=== Deployment Information ==="
     echo "Application: Kapelczak Electronic Laboratory Notebook"
     echo "Status: Running"
+    echo "Port: 8086"
     
     if [ ! -z "$DOMAIN" ]; then
         if [ "$USE_SSL" = true ]; then
@@ -294,7 +320,7 @@ print_deployment_info() {
             echo "URL: http://$DOMAIN"
         fi
     else
-        echo "URL: http://localhost"
+        echo "URL: http://localhost:8086"
     fi
     
     echo ""
