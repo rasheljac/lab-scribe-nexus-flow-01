@@ -39,7 +39,7 @@ async function getS3ConfigFromUserPreferences(supabaseClient: any, userId: strin
   return {
     accessKeyId: s3Config.access_key_id,
     secretAccessKey: s3Config.secret_access_key,
-    region: s3Config.region || 'us-east-1',
+    region: s3Config.region || 'us-east-1', // Use provided region or default
     bucketName: s3Config.bucket_name,
     endpoint: s3Config.endpoint
   };
@@ -55,7 +55,8 @@ function getHostFromEndpoint(endpoint: string): string {
   }
 }
 
-async function createSignature(
+// Simplified signature creation specifically for iDrive E2 compatibility
+async function createiDriveE2Signature(
   method: string,
   key: string,
   config: S3Config,
@@ -68,151 +69,102 @@ async function createSignature(
   const dateString = date.toISOString().slice(0, 10).replace(/-/g, '');
   const timestamp = date.toISOString().replace(/[:\-]|\.\d{3}/g, '');
   
-  console.log('Creating signature for:', { method, key, host, timestamp });
+  console.log('Creating iDrive E2 signature for:', { method, key, host, timestamp });
   
+  // Use a fixed region for iDrive E2 - many providers use 'us-east-1' as default
+  const region = 'us-east-1';
   const service = 's3';
   const algorithm = 'AWS4-HMAC-SHA256';
-  const credential = `${config.accessKeyId}/${dateString}/${config.region}/${service}/aws4_request`;
+  const credential = `${config.accessKeyId}/${dateString}/${region}/${service}/aws4_request`;
   
-  // Simplified canonical headers for iDrive E2 compatibility
-  const canonicalHeaders = [`host:${host}`, `x-amz-date:${timestamp}`];
-  const signedHeaders = 'host;x-amz-date';
+  // Simplified canonical headers for iDrive E2 - only include essential headers
+  let canonicalHeaders: string[];
+  let signedHeaders: string;
   
-  // For PUT requests, add content-type if provided
   if (method === 'PUT' && contentType) {
-    canonicalHeaders.splice(0, 0, `content-type:${contentType}`);
-    const signedHeadersList = signedHeaders.split(';');
-    signedHeadersList.unshift('content-type');
-    const newSignedHeaders = signedHeadersList.join(';');
-    
-    const canonicalRequest = [
-      method,
-      `/${config.bucketName}/${key}`,
-      '', // query string
-      canonicalHeaders.join('\n') + '\n',
-      '',
-      newSignedHeaders,
-      'UNSIGNED-PAYLOAD'
-    ].join('\n');
-    
-    console.log('Canonical Request:', canonicalRequest);
-    
-    const encoder = new TextEncoder();
-    const canonicalRequestHash = await crypto.subtle.digest('SHA-256', encoder.encode(canonicalRequest));
-    const canonicalRequestHashHex = Array.from(new Uint8Array(canonicalRequestHash))
-      .map(b => b.toString(16).padStart(2, '0')).join('');
-    
-    const stringToSign = [
-      algorithm,
-      timestamp,
-      `${dateString}/${config.region}/${service}/aws4_request`,
-      canonicalRequestHashHex
-    ].join('\n');
-    
-    console.log('String to Sign:', stringToSign);
-    
-    // Create signing key
-    const kDate = await crypto.subtle.importKey(
-      'raw',
-      encoder.encode(`AWS4${config.secretAccessKey}`),
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign']
-    );
-    
-    const dateKey = new Uint8Array(await crypto.subtle.sign('HMAC', kDate, encoder.encode(dateString)));
-    
-    const kRegion = await crypto.subtle.importKey('raw', dateKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    const regionKey = new Uint8Array(await crypto.subtle.sign('HMAC', kRegion, encoder.encode(config.region)));
-    
-    const kService = await crypto.subtle.importKey('raw', regionKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    const serviceKey = new Uint8Array(await crypto.subtle.sign('HMAC', kService, encoder.encode(service)));
-    
-    const kSigning = await crypto.subtle.importKey('raw', serviceKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    const signingKey = new Uint8Array(await crypto.subtle.sign('HMAC', kSigning, encoder.encode('aws4_request')));
-    
-    const kFinal = await crypto.subtle.importKey('raw', signingKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    const signature = new Uint8Array(await crypto.subtle.sign('HMAC', kFinal, encoder.encode(stringToSign)));
-    const signatureHex = Array.from(signature).map(b => b.toString(16).padStart(2, '0')).join('');
-    
-    const authorization = `${algorithm} Credential=${credential}, SignedHeaders=${newSignedHeaders}, Signature=${signatureHex}`;
-    
-    const headers: Record<string, string> = {
-      'Authorization': authorization,
-      'x-amz-date': timestamp,
-      'Content-Type': contentType,
-    };
-    
-    console.log('Generated signature headers:', Object.keys(headers));
-    
-    return { url, headers };
+    canonicalHeaders = [
+      `host:${host}`,
+      `x-amz-date:${timestamp}`
+    ];
+    signedHeaders = 'host;x-amz-date';
   } else {
-    // For DELETE and other requests
-    const canonicalRequest = [
-      method,
-      `/${config.bucketName}/${key}`,
-      '', // query string
-      canonicalHeaders.join('\n') + '\n',
-      '',
-      signedHeaders,
-      'UNSIGNED-PAYLOAD'
-    ].join('\n');
-    
-    console.log('Canonical Request:', canonicalRequest);
-    
-    const encoder = new TextEncoder();
-    const canonicalRequestHash = await crypto.subtle.digest('SHA-256', encoder.encode(canonicalRequest));
-    const canonicalRequestHashHex = Array.from(new Uint8Array(canonicalRequestHash))
-      .map(b => b.toString(16).padStart(2, '0')).join('');
-    
-    const stringToSign = [
-      algorithm,
-      timestamp,
-      `${dateString}/${config.region}/${service}/aws4_request`,
-      canonicalRequestHashHex
-    ].join('\n');
-    
-    console.log('String to Sign:', stringToSign);
-    
-    // Create signing key
-    const kDate = await crypto.subtle.importKey(
-      'raw',
-      encoder.encode(`AWS4${config.secretAccessKey}`),
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign']
-    );
-    
-    const dateKey = new Uint8Array(await crypto.subtle.sign('HMAC', kDate, encoder.encode(dateString)));
-    
-    const kRegion = await crypto.subtle.importKey('raw', dateKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    const regionKey = new Uint8Array(await crypto.subtle.sign('HMAC', kRegion, encoder.encode(config.region)));
-    
-    const kService = await crypto.subtle.importKey('raw', regionKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    const serviceKey = new Uint8Array(await crypto.subtle.sign('HMAC', kService, encoder.encode(service)));
-    
-    const kSigning = await crypto.subtle.importKey('raw', serviceKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    const signingKey = new Uint8Array(await crypto.subtle.sign('HMAC', kSigning, encoder.encode('aws4_request')));
-    
-    const kFinal = await crypto.subtle.importKey('raw', signingKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    const signature = new Uint8Array(await crypto.subtle.sign('HMAC', kFinal, encoder.encode(stringToSign)));
-    const signatureHex = Array.from(signature).map(b => b.toString(16).padStart(2, '0')).join('');
-    
-    const authorization = `${algorithm} Credential=${credential}, SignedHeaders=${signedHeaders}, Signature=${signatureHex}`;
-    
-    const headers: Record<string, string> = {
-      'Authorization': authorization,
-      'x-amz-date': timestamp,
-    };
-    
-    console.log('Generated signature headers:', Object.keys(headers));
-    
-    return { url, headers };
+    canonicalHeaders = [
+      `host:${host}`,
+      `x-amz-date:${timestamp}`
+    ];
+    signedHeaders = 'host;x-amz-date';
   }
+  
+  // Create canonical request with simplified format for iDrive E2
+  const canonicalRequest = [
+    method,
+    `/${config.bucketName}/${key}`,
+    '', // query string
+    canonicalHeaders.join('\n') + '\n',
+    '',
+    signedHeaders,
+    'UNSIGNED-PAYLOAD' // iDrive E2 typically uses unsigned payload
+  ].join('\n');
+  
+  console.log('Canonical Request for iDrive E2:', canonicalRequest);
+  
+  const encoder = new TextEncoder();
+  const canonicalRequestHash = await crypto.subtle.digest('SHA-256', encoder.encode(canonicalRequest));
+  const canonicalRequestHashHex = Array.from(new Uint8Array(canonicalRequestHash))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  const stringToSign = [
+    algorithm,
+    timestamp,
+    `${dateString}/${region}/${service}/aws4_request`,
+    canonicalRequestHashHex
+  ].join('\n');
+  
+  console.log('String to Sign for iDrive E2:', stringToSign);
+  
+  // Create signing key using HMAC-SHA256
+  const kDate = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(`AWS4${config.secretAccessKey}`),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  
+  const dateKey = new Uint8Array(await crypto.subtle.sign('HMAC', kDate, encoder.encode(dateString)));
+  
+  const kRegion = await crypto.subtle.importKey('raw', dateKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const regionKey = new Uint8Array(await crypto.subtle.sign('HMAC', kRegion, encoder.encode(region)));
+  
+  const kService = await crypto.subtle.importKey('raw', regionKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const serviceKey = new Uint8Array(await crypto.subtle.sign('HMAC', kService, encoder.encode(service)));
+  
+  const kSigning = await crypto.subtle.importKey('raw', serviceKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const signingKey = new Uint8Array(await crypto.subtle.sign('HMAC', kSigning, encoder.encode('aws4_request')));
+  
+  const kFinal = await crypto.subtle.importKey('raw', signingKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const signature = new Uint8Array(await crypto.subtle.sign('HMAC', kFinal, encoder.encode(stringToSign)));
+  const signatureHex = Array.from(signature).map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  const authorization = `${algorithm} Credential=${credential}, SignedHeaders=${signedHeaders}, Signature=${signatureHex}`;
+  
+  const headers: Record<string, string> = {
+    'Authorization': authorization,
+    'x-amz-date': timestamp,
+  };
+  
+  // Only add Content-Type for PUT requests
+  if (method === 'PUT' && contentType) {
+    headers['Content-Type'] = contentType;
+  }
+  
+  console.log('Generated iDrive E2 signature headers:', Object.keys(headers));
+  
+  return { url, headers };
 }
 
 async function uploadToS3(file: File, key: string, config: S3Config): Promise<string> {
-  console.log('Uploading file to S3:', { 
+  console.log('Uploading file to iDrive E2:', { 
     fileName: file.name, 
     fileSize: file.size, 
     fileType: file.type, 
@@ -221,10 +173,10 @@ async function uploadToS3(file: File, key: string, config: S3Config): Promise<st
     endpoint: config.endpoint 
   });
   
-  const { url, headers } = await createSignature('PUT', key, config, file.type);
+  const { url, headers } = await createiDriveE2Signature('PUT', key, config, file.type);
   
-  console.log('Upload URL:', url);
-  console.log('Upload headers:', headers);
+  console.log('iDrive E2 Upload URL:', url);
+  console.log('iDrive E2 Upload headers:', headers);
   
   const response = await fetch(url, {
     method: 'PUT',
@@ -232,48 +184,48 @@ async function uploadToS3(file: File, key: string, config: S3Config): Promise<st
     body: file
   });
   
-  console.log('Upload response status:', response.status);
-  console.log('Upload response headers:', Object.fromEntries(response.headers.entries()));
+  console.log('iDrive E2 Upload response status:', response.status);
+  console.log('iDrive E2 Upload response headers:', Object.fromEntries(response.headers.entries()));
   
   if (!response.ok) {
     const responseText = await response.text();
-    console.error('S3 upload failed:', {
+    console.error('iDrive E2 upload failed:', {
       status: response.status,
       statusText: response.statusText,
       responseText,
       requestHeaders: headers,
       url
     });
-    throw new Error(`S3 upload failed: ${response.status} ${response.statusText} - ${responseText}`);
+    throw new Error(`iDrive E2 upload failed: ${response.status} ${response.statusText} - ${responseText}`);
   }
   
-  console.log('S3 upload successful');
+  console.log('iDrive E2 upload successful');
   return key;
 }
 
 async function deleteFromS3(key: string, config: S3Config): Promise<void> {
-  console.log('Deleting file from S3:', { key, bucket: config.bucketName });
+  console.log('Deleting file from iDrive E2:', { key, bucket: config.bucketName });
   
-  const { url, headers } = await createSignature('DELETE', key, config);
+  const { url, headers } = await createiDriveE2Signature('DELETE', key, config);
   
   const response = await fetch(url, {
     method: 'DELETE',
     headers
   });
   
-  console.log('Delete response status:', response.status);
+  console.log('iDrive E2 Delete response status:', response.status);
   
   if (!response.ok && response.status !== 404) {
     const responseText = await response.text();
-    console.error('S3 delete failed:', {
+    console.error('iDrive E2 delete failed:', {
       status: response.status,
       statusText: response.statusText,
       responseText
     });
-    throw new Error(`S3 delete failed: ${response.status} ${response.statusText}`);
+    throw new Error(`iDrive E2 delete failed: ${response.status} ${response.statusText}`);
   }
   
-  console.log('S3 delete successful or file not found');
+  console.log('iDrive E2 delete successful or file not found');
 }
 
 Deno.serve(async (req) => {
@@ -310,8 +262,8 @@ Deno.serve(async (req) => {
     // Get S3 config from user preferences
     const s3Config = await getS3ConfigFromUserPreferences(supabaseClient, user.id);
     if (!s3Config) {
-      console.error('S3 configuration not found or disabled');
-      return new Response(JSON.stringify({ error: 'S3 configuration not found or disabled. Please configure S3 settings in your user preferences.' }), {
+      console.error('iDrive E2 configuration not found or disabled');
+      return new Response(JSON.stringify({ error: 'iDrive E2 configuration not found or disabled. Please configure iDrive E2 settings in your user preferences.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -345,10 +297,10 @@ Deno.serve(async (req) => {
       const fileExt = file.name.split('.').pop();
       const s3Key = `notes/${user.id}/${noteId}/${Date.now()}.${fileExt}`;
       
-      console.log('Uploading to S3 with key:', s3Key);
+      console.log('Uploading to iDrive E2 with key:', s3Key);
       
       try {
-        // Upload to S3
+        // Upload to iDrive E2
         const uploadedKey = await uploadToS3(file, s3Key, s3Config);
         
         // Save attachment record to database
@@ -410,15 +362,15 @@ Deno.serve(async (req) => {
           });
         }
 
-        console.log('Deleting from S3:', attachment.file_path);
+        console.log('Deleting from iDrive E2:', attachment.file_path);
         
         try {
-          // Delete from S3
+          // Delete from iDrive E2
           await deleteFromS3(attachment.file_path, s3Config);
-          console.log('S3 delete successful');
+          console.log('iDrive E2 delete successful');
         } catch (s3Error) {
-          console.error('S3 delete error (continuing with database delete):', s3Error);
-          // Continue with database deletion even if S3 delete fails
+          console.error('iDrive E2 delete error (continuing with database delete):', s3Error);
+          // Continue with database deletion even if iDrive E2 delete fails
         }
         
         // Delete record from database
@@ -446,7 +398,7 @@ Deno.serve(async (req) => {
     }
 
   } catch (error) {
-    console.error('S3 operation error:', error);
+    console.error('iDrive E2 operation error:', error);
     return new Response(JSON.stringify({ 
       error: error.message,
       stack: error.stack 
