@@ -14,20 +14,6 @@ export interface ExperimentNoteAttachment {
   created_at: string;
 }
 
-interface S3Config {
-  endpoint: string;
-  bucket_name: string;
-  access_key_id: string;
-  secret_access_key: string;
-  region: string;
-  enabled: boolean;
-}
-
-interface UserPreferences {
-  s3Config?: S3Config;
-  [key: string]: any;
-}
-
 export const useExperimentNoteAttachments = (noteId: string) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -55,17 +41,41 @@ export const useExperimentNoteAttachments = (noteId: string) => {
 
       console.log('Starting file upload:', file.name, file.size);
 
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('noteId', noteId);
+      // Validate file size (max 50MB)
+      if (file.size > 50 * 1024 * 1024) {
+        throw new Error('File size exceeds 50MB limit');
+      }
 
-      const { data, error } = await supabase.functions.invoke('s3-file-operations', {
-        body: formData,
-      });
+      const fileExt = file.name.split('.').pop();
+      const fileName = `notes/${user.id}/${noteId}/${Date.now()}.${fileExt}`;
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('experiment-attachments')
+        .upload(fileName, file);
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw new Error(uploadError.message || 'Upload failed');
+      }
+
+      // Save attachment record to database
+      const { data, error } = await supabase
+        .from('experiment_note_attachments')
+        .insert([{
+          note_id: noteId,
+          user_id: user.id,
+          filename: file.name,
+          file_path: fileName,
+          file_type: file.type,
+          file_size: file.size,
+        }])
+        .select()
+        .single();
 
       if (error) {
-        console.error('Upload error:', error);
-        throw new Error(error.message || 'Upload failed');
+        console.error('Database insert error:', error);
+        throw new Error(`Database error: ${error.message}`);
       }
 
       console.log('Upload successful:', data);
@@ -80,17 +90,29 @@ export const useExperimentNoteAttachments = (noteId: string) => {
     mutationFn: async (attachment: ExperimentNoteAttachment) => {
       console.log('Deleting attachment:', attachment.id);
 
-      const { data, error } = await supabase.functions.invoke('s3-file-operations', {
-        body: { attachmentId: attachment.id },
-      });
+      // Delete from Supabase Storage
+      const { error: storageError } = await supabase.storage
+        .from('experiment-attachments')
+        .remove([attachment.file_path]);
 
-      if (error) {
-        console.error('Delete error:', error);
-        throw new Error(error.message || 'Delete failed');
+      if (storageError) {
+        console.error('Storage delete error:', storageError);
+        // Continue with database deletion even if storage delete fails
       }
 
-      console.log('Delete successful:', data);
-      return data;
+      // Delete record from database
+      const { error } = await supabase
+        .from('experiment_note_attachments')
+        .delete()
+        .eq('id', attachment.id);
+
+      if (error) {
+        console.error('Database delete error:', error);
+        throw new Error(`Database delete error: ${error.message}`);
+      }
+
+      console.log('Delete successful');
+      return true;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['experimentNoteAttachments', noteId] });
@@ -101,38 +123,20 @@ export const useExperimentNoteAttachments = (noteId: string) => {
     try {
       console.log('Starting download for:', attachment.filename);
 
-      // Get user preferences to construct the download URL
-      const { data: userPrefs, error: prefsError } = await supabase
-        .from('user_preferences')
-        .select('preferences')
-        .eq('user_id', user?.id)
-        .single();
+      // Get the public URL for the file
+      const { data } = supabase.storage
+        .from('experiment-attachments')
+        .getPublicUrl(attachment.file_path);
 
-      if (prefsError) {
-        console.error('Error fetching user preferences:', prefsError);
-        throw new Error('Failed to fetch user preferences');
-      }
-
-      // Safely access the preferences
-      const preferences = userPrefs?.preferences as UserPreferences;
-      if (!preferences?.s3Config) {
-        throw new Error('S3 configuration not found in user preferences');
-      }
-
-      const s3Config = preferences.s3Config;
-      if (!s3Config.enabled) {
-        throw new Error('S3 configuration is disabled');
+      if (!data.publicUrl) {
+        throw new Error('Failed to generate download URL');
       }
       
-      // Generate direct download URL using the correct iDrive E2 format
-      // The endpoint should be like: https://v2j1.c1.e2-9.dev/kapelczak-eln
-      const downloadUrl = `${s3Config.endpoint}/${attachment.file_path}`;
-      
-      console.log('Download URL:', downloadUrl);
+      console.log('Download URL:', data.publicUrl);
       
       // Create download link
       const a = document.createElement('a');
-      a.href = downloadUrl;
+      a.href = data.publicUrl;
       a.download = attachment.filename;
       a.target = '_blank';
       document.body.appendChild(a);
