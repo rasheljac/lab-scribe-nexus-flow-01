@@ -23,6 +23,11 @@ interface S3Config {
   enabled: boolean;
 }
 
+interface UserPreferences {
+  s3Config?: S3Config;
+  [key: string]: any;
+}
+
 export const useExperimentNoteAttachments = (noteId: string) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -48,6 +53,8 @@ export const useExperimentNoteAttachments = (noteId: string) => {
     mutationFn: async ({ file, noteId }: { file: File; noteId: string }) => {
       if (!user) throw new Error('User not authenticated');
 
+      console.log('Starting file upload:', file.name, file.size);
+
       const formData = new FormData();
       formData.append('file', file);
       formData.append('noteId', noteId);
@@ -56,7 +63,12 @@ export const useExperimentNoteAttachments = (noteId: string) => {
         body: formData,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Upload error:', error);
+        throw new Error(error.message || 'Upload failed');
+      }
+
+      console.log('Upload successful:', data);
       return data;
     },
     onSuccess: () => {
@@ -66,11 +78,18 @@ export const useExperimentNoteAttachments = (noteId: string) => {
 
   const deleteAttachment = useMutation({
     mutationFn: async (attachment: ExperimentNoteAttachment) => {
+      console.log('Deleting attachment:', attachment.id);
+
       const { data, error } = await supabase.functions.invoke('s3-file-operations', {
         body: { attachmentId: attachment.id },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Delete error:', error);
+        throw new Error(error.message || 'Delete failed');
+      }
+
+      console.log('Delete successful:', data);
       return data;
     },
     onSuccess: () => {
@@ -80,29 +99,35 @@ export const useExperimentNoteAttachments = (noteId: string) => {
 
   const downloadAttachment = async (attachment: ExperimentNoteAttachment) => {
     try {
+      console.log('Starting download for:', attachment.filename);
+
       // Get user preferences to construct the download URL
-      const { data: userPrefs } = await supabase
+      const { data: userPrefs, error: prefsError } = await supabase
         .from('user_preferences')
         .select('preferences')
         .eq('user_id', user?.id)
         .single();
 
-      // Type guard to check if preferences is an object and has s3Config
-      const preferences = userPrefs?.preferences;
-      if (!preferences || typeof preferences !== 'object' || preferences === null) {
-        throw new Error('User preferences not found');
+      if (prefsError) {
+        console.error('Error fetching user preferences:', prefsError);
+        throw new Error('Failed to fetch user preferences');
       }
 
-      // Type assertion with additional safety check
-      const prefsObject = preferences as Record<string, any>;
-      const s3Config = prefsObject.s3Config as S3Config;
-      
-      if (!s3Config || typeof s3Config !== 'object' || !s3Config.enabled) {
-        throw new Error('S3 configuration not found or disabled');
+      // Safely access the preferences
+      const preferences = userPrefs?.preferences as UserPreferences;
+      if (!preferences?.s3Config) {
+        throw new Error('S3 configuration not found in user preferences');
+      }
+
+      const s3Config = preferences.s3Config;
+      if (!s3Config.enabled) {
+        throw new Error('S3 configuration is disabled');
       }
       
       // Generate direct S3 URL for download
       const downloadUrl = `${s3Config.endpoint}/${s3Config.bucket_name}/${attachment.file_path}`;
+      
+      console.log('Download URL:', downloadUrl);
       
       // Create download link
       const a = document.createElement('a');

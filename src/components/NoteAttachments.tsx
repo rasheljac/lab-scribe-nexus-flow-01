@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Paperclip, Upload, Download, Trash2, FileText, Image, File, Loader2 } from "lucide-react";
+import { Paperclip, Upload, Download, Trash2, FileText, Image, File, Loader2, AlertCircle } from "lucide-react";
 import { useExperimentNoteAttachments } from "@/hooks/useExperimentNoteAttachments";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -30,32 +30,51 @@ const NoteAttachments = ({ noteId, showUploadButton = true, compact = false }: N
     setIsUploading(true);
     
     try {
+      let successCount = 0;
+      let errorCount = 0;
+      
       for (const file of Array.from(files)) {
-        // Check file size (max 50MB)
-        if (file.size > 50 * 1024 * 1024) {
+        try {
+          // Check file size (max 50MB)
+          if (file.size > 50 * 1024 * 1024) {
+            toast({
+              title: "File Too Large",
+              description: `${file.name} exceeds the 50MB size limit`,
+              variant: "destructive",
+            });
+            errorCount++;
+            continue;
+          }
+
+          console.log('Uploading file:', file.name, file.size);
+          await uploadAttachment.mutateAsync({ file, noteId });
+          successCount++;
+        } catch (error) {
+          console.error('Upload error for file:', file.name, error);
+          errorCount++;
+          
           toast({
-            title: "Error",
-            description: `File ${file.name} is too large. Maximum size is 50MB.`,
+            title: "Upload Failed",
+            description: `Failed to upload ${file.name}: ${error.message || 'Unknown error'}`,
             variant: "destructive",
           });
-          continue;
         }
-
-        await uploadAttachment.mutateAsync({ file, noteId });
       }
       
-      toast({
-        title: "Success",
-        description: `${files.length} file(s) uploaded successfully`,
-      });
+      if (successCount > 0) {
+        toast({
+          title: "Upload Complete",
+          description: `${successCount} file(s) uploaded successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}`,
+        });
+      }
       
       // Clear the input
       event.target.value = '';
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('General upload error:', error);
       toast({
-        title: "Error",
-        description: "Failed to upload file(s)",
+        title: "Upload Error",
+        description: "An unexpected error occurred during upload",
         variant: "destructive",
       });
     } finally {
@@ -65,12 +84,18 @@ const NoteAttachments = ({ noteId, showUploadButton = true, compact = false }: N
 
   const handleDownload = async (attachment: any) => {
     try {
+      console.log('Starting download for:', attachment.filename);
       await downloadAttachment(attachment);
+      
+      toast({
+        title: "Download Started",
+        description: `Downloading ${attachment.filename}`,
+      });
     } catch (error) {
       console.error('Download error:', error);
       toast({
-        title: "Error",
-        description: "Failed to download file",
+        title: "Download Failed",
+        description: `Failed to download ${attachment.filename}: ${error.message || 'Unknown error'}`,
         variant: "destructive",
       });
     }
@@ -78,18 +103,19 @@ const NoteAttachments = ({ noteId, showUploadButton = true, compact = false }: N
 
   const handleDelete = async (attachment: any) => {
     try {
+      console.log('Deleting attachment:', attachment.id);
       await deleteAttachment.mutateAsync(attachment);
       toast({
-        title: "Success",
-        description: "File deleted successfully",
+        title: "File Deleted",
+        description: `${attachment.filename} has been deleted`,
       });
       setDeleteDialogOpen(false);
       setAttachmentToDelete(null);
     } catch (error) {
       console.error('Delete error:', error);
       toast({
-        title: "Error",
-        description: "Failed to delete file",
+        title: "Delete Failed",
+        description: `Failed to delete ${attachment.filename}: ${error.message || 'Unknown error'}`,
         variant: "destructive",
       });
     }
@@ -132,6 +158,7 @@ const NoteAttachments = ({ noteId, showUploadButton = true, compact = false }: N
                     onChange={handleFileUpload}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     disabled={isUploading}
+                    accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xls,.xlsx,.ppt,.pptx"
                   />
                   <Button size="sm" variant="outline" disabled={isUploading}>
                     {isUploading ? (
@@ -143,7 +170,7 @@ const NoteAttachments = ({ noteId, showUploadButton = true, compact = false }: N
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Upload files</p>
+                <p>Upload files (max 50MB each)</p>
               </TooltipContent>
             </Tooltip>
           )}
@@ -243,6 +270,7 @@ const NoteAttachments = ({ noteId, showUploadButton = true, compact = false }: N
                 onChange={handleFileUpload}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 disabled={isUploading}
+                accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.xls,.xlsx,.ppt,.pptx"
               />
               <Button size="sm" disabled={isUploading}>
                 {isUploading ? (
@@ -255,6 +283,9 @@ const NoteAttachments = ({ noteId, showUploadButton = true, compact = false }: N
             </div>
           )}
         </div>
+        <p className="text-sm text-gray-600">
+          Supported files: PDF, DOC, TXT, images, and more (max 50MB each)
+        </p>
       </CardHeader>
       {attachments.length > 0 && (
         <CardContent>

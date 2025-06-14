@@ -15,6 +15,8 @@ interface S3Config {
 }
 
 async function getS3ConfigFromUserPreferences(supabaseClient: any, userId: string): Promise<S3Config | null> {
+  console.log('Fetching S3 config for user:', userId);
+  
   const { data: userPrefs, error } = await supabaseClient
     .from('user_preferences')
     .select('preferences')
@@ -33,6 +35,7 @@ async function getS3ConfigFromUserPreferences(supabaseClient: any, userId: strin
     return null;
   }
 
+  console.log('S3 config loaded successfully');
   return {
     accessKeyId: s3Config.access_key_id,
     secretAccessKey: s3Config.secret_access_key,
@@ -65,23 +68,32 @@ async function createSignature(
   const dateString = date.toISOString().slice(0, 10).replace(/-/g, '');
   const timestamp = date.toISOString().replace(/[:\-]|\.\d{3}/g, '');
   
+  console.log('Creating signature for:', { method, key, host, timestamp });
+  
   const service = 's3';
   const algorithm = 'AWS4-HMAC-SHA256';
   const credential = `${config.accessKeyId}/${dateString}/${config.region}/${service}/aws4_request`;
   
-  // Build canonical headers - order matters!
+  // Build canonical headers in alphabetical order for iDrive E2 compatibility
   const canonicalHeaders: string[] = [];
-  canonicalHeaders.push(`host:${host}`);
-  canonicalHeaders.push(`x-amz-content-sha256:UNSIGNED-PAYLOAD`);
-  canonicalHeaders.push(`x-amz-date:${timestamp}`);
-  
-  let signedHeaders = 'host;x-amz-content-sha256;x-amz-date';
+  const signedHeadersList: string[] = [];
   
   // Add content-type only for PUT requests
   if (method === 'PUT' && contentType) {
-    canonicalHeaders.splice(0, 0, `content-type:${contentType}`);
-    signedHeaders = 'content-type;host;x-amz-content-sha256;x-amz-date';
+    canonicalHeaders.push(`content-type:${contentType}`);
+    signedHeadersList.push('content-type');
   }
+  
+  canonicalHeaders.push(`host:${host}`);
+  signedHeadersList.push('host');
+  
+  canonicalHeaders.push(`x-amz-content-sha256:UNSIGNED-PAYLOAD`);
+  signedHeadersList.push('x-amz-content-sha256');
+  
+  canonicalHeaders.push(`x-amz-date:${timestamp}`);
+  signedHeadersList.push('x-amz-date');
+  
+  const signedHeaders = signedHeadersList.join(';');
   
   const canonicalRequest = [
     method,
@@ -109,7 +121,7 @@ async function createSignature(
   
   console.log('String to Sign:', stringToSign);
   
-  // Create signing key step by step
+  // Create signing key using the corrected AWS v4 signature process
   const kDate = await crypto.subtle.importKey(
     'raw',
     encoder.encode(`AWS4${config.secretAccessKey}`),
@@ -139,25 +151,31 @@ async function createSignature(
     'Authorization': authorization,
     'x-amz-content-sha256': 'UNSIGNED-PAYLOAD',
     'x-amz-date': timestamp,
-    'Host': host
   };
   
   if (method === 'PUT' && contentType) {
     headers['Content-Type'] = contentType;
   }
   
-  console.log('Request headers:', Object.keys(headers));
+  console.log('Generated signature headers:', Object.keys(headers));
   
   return { url, headers };
 }
 
 async function uploadToS3(file: File, key: string, config: S3Config): Promise<string> {
-  console.log('Uploading file to S3:', { key, bucket: config.bucketName, endpoint: config.endpoint });
+  console.log('Uploading file to S3:', { 
+    fileName: file.name, 
+    fileSize: file.size, 
+    fileType: file.type, 
+    key, 
+    bucket: config.bucketName, 
+    endpoint: config.endpoint 
+  });
   
   const { url, headers } = await createSignature('PUT', key, config, file.type);
   
   console.log('Upload URL:', url);
-  console.log('Upload headers:', Object.keys(headers));
+  console.log('Upload headers:', headers);
   
   const response = await fetch(url, {
     method: 'PUT',
@@ -166,13 +184,21 @@ async function uploadToS3(file: File, key: string, config: S3Config): Promise<st
   });
   
   console.log('Upload response status:', response.status);
+  console.log('Upload response headers:', Object.fromEntries(response.headers.entries()));
   
   if (!response.ok) {
     const responseText = await response.text();
-    console.error('S3 upload failed:', response.status, response.statusText, responseText);
-    throw new Error(`S3 upload failed: ${response.status} ${response.statusText}`);
+    console.error('S3 upload failed:', {
+      status: response.status,
+      statusText: response.statusText,
+      responseText,
+      requestHeaders: headers,
+      url
+    });
+    throw new Error(`S3 upload failed: ${response.status} ${response.statusText} - ${responseText}`);
   }
   
+  console.log('S3 upload successful');
   return key;
 }
 
@@ -186,11 +212,19 @@ async function deleteFromS3(key: string, config: S3Config): Promise<void> {
     headers
   });
   
+  console.log('Delete response status:', response.status);
+  
   if (!response.ok && response.status !== 404) {
     const responseText = await response.text();
-    console.error('S3 delete failed:', response.status, response.statusText, responseText);
+    console.error('S3 delete failed:', {
+      status: response.status,
+      statusText: response.statusText,
+      responseText
+    });
     throw new Error(`S3 delete failed: ${response.status} ${response.statusText}`);
   }
+  
+  console.log('S3 delete successful or file not found');
 }
 
 Deno.serve(async (req) => {
@@ -228,7 +262,7 @@ Deno.serve(async (req) => {
     const s3Config = await getS3ConfigFromUserPreferences(supabaseClient, user.id);
     if (!s3Config) {
       console.error('S3 configuration not found or disabled');
-      return new Response(JSON.stringify({ error: 'S3 configuration not found or disabled' }), {
+      return new Response(JSON.stringify({ error: 'S3 configuration not found or disabled. Please configure S3 settings in your user preferences.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -251,40 +285,59 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Validate file size (max 50MB)
+      if (file.size > 50 * 1024 * 1024) {
+        return new Response(JSON.stringify({ error: 'File size exceeds 50MB limit' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       const fileExt = file.name.split('.').pop();
       const s3Key = `notes/${user.id}/${noteId}/${Date.now()}.${fileExt}`;
       
       console.log('Uploading to S3 with key:', s3Key);
       
-      // Upload to S3
-      const uploadedKey = await uploadToS3(file, s3Key, s3Config);
-      
-      // Save attachment record to database
-      const { data, error } = await supabaseClient
-        .from('experiment_note_attachments')
-        .insert([{
-          note_id: noteId,
-          user_id: user.id,
-          filename: file.name,
-          file_path: uploadedKey,
-          file_type: file.type,
-          file_size: file.size,
-        }])
-        .select()
-        .single();
+      try {
+        // Upload to S3
+        const uploadedKey = await uploadToS3(file, s3Key, s3Config);
+        
+        // Save attachment record to database
+        const { data, error } = await supabaseClient
+          .from('experiment_note_attachments')
+          .insert([{
+            note_id: noteId,
+            user_id: user.id,
+            filename: file.name,
+            file_path: uploadedKey,
+            file_type: file.type,
+            file_size: file.size,
+          }])
+          .select()
+          .single();
 
-      if (error) {
-        console.error('Database insert error:', error);
-        throw error;
+        if (error) {
+          console.error('Database insert error:', error);
+          throw error;
+        }
+
+        console.log('Upload and database insert successful:', data);
+        return new Response(JSON.stringify(data), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (uploadError) {
+        console.error('Upload process failed:', uploadError);
+        return new Response(JSON.stringify({ 
+          error: `Upload failed: ${uploadError.message}`,
+          details: uploadError.toString()
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
-      console.log('Upload successful:', data);
-      return new Response(JSON.stringify(data), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-
     } else {
-      // Handle JSON requests (delete and download)
+      // Handle JSON requests (delete)
       const body = await req.json();
       console.log('JSON request body:', body);
       
@@ -310,12 +363,12 @@ Deno.serve(async (req) => {
 
         console.log('Deleting from S3:', attachment.file_path);
         
-        // Delete from S3
         try {
+          // Delete from S3
           await deleteFromS3(attachment.file_path, s3Config);
           console.log('S3 delete successful');
         } catch (s3Error) {
-          console.error('S3 delete error:', s3Error);
+          console.error('S3 delete error (continuing with database delete):', s3Error);
           // Continue with database deletion even if S3 delete fails
         }
         
@@ -330,13 +383,13 @@ Deno.serve(async (req) => {
           throw deleteError;
         }
 
-        console.log('Delete operation completed');
+        console.log('Delete operation completed successfully');
         return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
 
       } else {
-        return new Response(JSON.stringify({ error: 'Invalid request body' }), {
+        return new Response(JSON.stringify({ error: 'Invalid request body. Expected attachmentId for delete operation.' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -345,7 +398,10 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('S3 operation error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      stack: error.stack 
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
