@@ -23,12 +23,6 @@ interface S3Config {
   enabled: boolean;
 }
 
-// Fix: The preferences object structure matches what's actually stored in the database
-interface DatabasePreferences {
-  s3Config?: S3Config;
-  [key: string]: any;
-}
-
 export const useExperimentNoteAttachments = (noteId: string) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -93,13 +87,19 @@ export const useExperimentNoteAttachments = (noteId: string) => {
         .eq('user_id', user?.id)
         .single();
 
-      // Fix: Properly type the preferences with correct structure
-      const preferences = userPrefs?.preferences as DatabasePreferences | null;
-      if (!preferences?.s3Config) {
-        throw new Error('S3 configuration not found');
+      // Type guard to check if preferences is an object and has s3Config
+      const preferences = userPrefs?.preferences;
+      if (!preferences || typeof preferences !== 'object' || preferences === null) {
+        throw new Error('User preferences not found');
       }
 
-      const s3Config = preferences.s3Config;
+      // Type assertion with additional safety check
+      const prefsObject = preferences as Record<string, any>;
+      const s3Config = prefsObject.s3Config as S3Config;
+      
+      if (!s3Config || typeof s3Config !== 'object' || !s3Config.enabled) {
+        throw new Error('S3 configuration not found or disabled');
+      }
       
       // Generate direct S3 URL for download
       const downloadUrl = `${s3Config.endpoint}/${s3Config.bucket_name}/${attachment.file_path}`;
