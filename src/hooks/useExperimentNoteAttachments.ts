@@ -70,22 +70,35 @@ export const useExperimentNoteAttachments = (noteId: string) => {
   });
 
   const downloadAttachment = async (attachment: ExperimentNoteAttachment) => {
-    const config = {
-      region: 'us-east-1', // This should match your S3 region
-      bucketName: 'experiment-attachments' // This should match your bucket name
-    };
-    
-    // Generate direct S3 URL for download
-    const downloadUrl = `https://${config.bucketName}.s3.${config.region}.amazonaws.com/${attachment.file_path}`;
-    
-    // Create download link
-    const a = document.createElement('a');
-    a.href = downloadUrl;
-    a.download = attachment.filename;
-    a.target = '_blank';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    try {
+      // Get user preferences to construct the download URL
+      const { data: userPrefs } = await supabase
+        .from('user_preferences')
+        .select('preferences')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (!userPrefs?.preferences?.s3Config) {
+        throw new Error('S3 configuration not found');
+      }
+
+      const s3Config = userPrefs.preferences.s3Config;
+      
+      // Generate direct S3 URL for download
+      const downloadUrl = `${s3Config.endpoint}/${s3Config.bucket_name}/${attachment.file_path}`;
+      
+      // Create download link
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = attachment.filename;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Download error:', error);
+      throw error;
+    }
   };
 
   return {
