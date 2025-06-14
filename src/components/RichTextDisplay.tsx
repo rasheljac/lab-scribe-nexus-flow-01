@@ -32,7 +32,11 @@ const RichTextDisplay = ({ content, className = "", maxLength }: RichTextDisplay
   // Render full HTML content with proper styling for headings and rich text
   return (
     <div 
-      className={`prose prose-gray max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-strong:text-gray-900 ${className}`}
+      className={`prose prose-gray max-w-none 
+        prose-headings:text-gray-900 prose-headings:mb-2 
+        prose-p:text-gray-700 prose-strong:text-gray-900 
+        prose-ul:mt-2 prose-ol:mt-2 prose-li:my-0
+        ${className}`}
       dangerouslySetInnerHTML={{ __html: content }}
     />
   );
