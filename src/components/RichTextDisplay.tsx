@@ -10,22 +10,31 @@ interface RichTextDisplayProps {
 const RichTextDisplay = ({ content, className = "", maxLength }: RichTextDisplayProps) => {
   if (!content) return null;
 
-  // Strip HTML tags for plain text display
-  const stripHtml = (html: string) => {
-    const tmp = document.createElement("div");
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || "";
-  };
+  // If maxLength is specified, strip HTML for length calculation and truncation
+  if (maxLength) {
+    const stripHtml = (html: string) => {
+      const tmp = document.createElement("div");
+      tmp.innerHTML = html;
+      return tmp.textContent || tmp.innerText || "";
+    };
 
-  const plainText = stripHtml(content);
-  const displayText = maxLength && plainText.length > maxLength 
-    ? plainText.substring(0, maxLength) + '...' 
-    : plainText;
+    const plainText = stripHtml(content);
+    if (plainText.length > maxLength) {
+      const truncatedPlainText = plainText.substring(0, maxLength) + '...';
+      return (
+        <div className={className}>
+          {truncatedPlainText}
+        </div>
+      );
+    }
+  }
 
+  // Render full HTML content with proper styling
   return (
-    <div className={className}>
-      {displayText}
-    </div>
+    <div 
+      className={`prose prose-sm max-w-none ${className}`}
+      dangerouslySetInnerHTML={{ __html: content }}
+    />
   );
 };
 
