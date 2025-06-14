@@ -124,8 +124,9 @@ export const useExperimentNoteAttachments = (noteId: string) => {
         throw new Error('S3 configuration is disabled');
       }
       
-      // Generate direct S3 URL for download
-      const downloadUrl = `${s3Config.endpoint}/${s3Config.bucket_name}/${attachment.file_path}`;
+      // Generate direct download URL using the correct iDrive E2 format
+      // The endpoint should be like: https://v2j1.c1.e2-9.dev/kapelczak-eln
+      const downloadUrl = `${s3Config.endpoint}/${attachment.file_path}`;
       
       console.log('Download URL:', downloadUrl);
       

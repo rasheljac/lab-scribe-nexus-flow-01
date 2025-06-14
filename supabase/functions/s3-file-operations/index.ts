@@ -36,7 +36,7 @@ async function getE2ConfigFromUserPreferences(supabaseClient: any, userId: strin
       return null;
     }
 
-    // Normalize endpoint - iDrive E2 endpoints should include protocol
+    // Normalize endpoint - ensure it starts with https://
     let endpoint = config.endpoint || '';
     if (!endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
       endpoint = `https://${endpoint}`;
@@ -71,7 +71,7 @@ async function getE2ConfigFromUserPreferences(supabaseClient: any, userId: strin
   }
 }
 
-// Simple HMAC-SHA256 implementation for iDrive E2
+// Simple HMAC-SHA256 implementation
 async function hmacSha256(key: string, message: string): Promise<string> {
   const encoder = new TextEncoder();
   const keyData = encoder.encode(key);
@@ -90,7 +90,7 @@ async function hmacSha256(key: string, message: string): Promise<string> {
   return btoa(String.fromCharCode(...signatureArray));
 }
 
-// Create iDrive E2 compatible request with simplified authentication
+// Create iDrive E2 compatible request
 async function createE2Request(
   method: string,
   objectKey: string,
@@ -100,30 +100,30 @@ async function createE2Request(
   console.log('Creating iDrive E2 request:', { method, objectKey, endpoint: config.endpoint });
   
   try {
-    // Build the full URL for iDrive E2
-    const url = new URL(config.endpoint);
-    const fullUrl = `${url.protocol}//${url.host}/${config.bucketName}/${objectKey}`;
+    // Build the correct URL format for iDrive E2
+    // The endpoint already includes the bucket in the path: https://v2j1.c1.e2-9.dev/kapelczak-eln
+    const fullUrl = `${config.endpoint}/${objectKey}`;
     
-    // Create timestamp
+    // Create timestamp in ISO format
     const now = new Date();
     const dateString = now.toISOString().slice(0, 10).replace(/-/g, '');
     const timestamp = now.toISOString().replace(/[:\-]|\.\d{3}/g, '');
     
-    // Build string to sign for iDrive E2 (simplified approach)
-    const stringToSign = `${method}\n\n${contentType || ''}\n${timestamp}\n/${config.bucketName}/${objectKey}`;
+    // For iDrive E2, use a simpler authorization approach
+    // Create the string to sign based on the actual request
+    const stringToSign = `${method}\n\n${contentType || ''}\n${now.toUTCString()}\n/${config.bucketName}/${objectKey}`;
     
     console.log('String to sign:', stringToSign);
     
     // Create signature
     const signature = await hmacSha256(config.secretAccessKey, stringToSign);
     
-    // Build authorization header
+    // Build authorization header in AWS format
     const authorization = `AWS ${config.accessKeyId}:${signature}`;
     
     const headers: Record<string, string> = {
       'Authorization': authorization,
       'Date': now.toUTCString(),
-      'Host': url.host,
     };
     
     if (method === 'PUT' && contentType) {
@@ -253,7 +253,7 @@ Deno.serve(async (req) => {
     if (!e2Config) {
       console.error('iDrive E2 configuration not found or invalid');
       return new Response(JSON.stringify({ 
-        error: 'iDrive E2 configuration not found or invalid. Please check your settings and ensure all required fields are filled.' 
+        error: 'iDrive E2 configuration not found or invalid. Please check your settings and ensure all required fields are filled. Make sure your endpoint is set to: https://v2j1.c1.e2-9.dev' 
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
