@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -7,7 +8,7 @@ export interface ExperimentNoteAttachment {
   note_id: string;
   user_id: string;
   filename: string;
-  file_path: string;
+  file_content: string; // base64 encoded file content
   file_type: string;
   file_size: number | null;
   created_at: string;
@@ -46,39 +47,37 @@ export const useExperimentNoteAttachments = (noteId: string) => {
 
       console.log('Starting file upload:', file.name, file.size, 'user:', user.id, 'noteId:', noteId);
 
-      // Validate file size (max 50MB)
-      if (file.size > 50 * 1024 * 1024) {
-        throw new Error('File size exceeds 50MB limit');
+      // Validate file size (max 10MB for localStorage)
+      if (file.size > 10 * 1024 * 1024) {
+        throw new Error('File size exceeds 10MB limit for local storage');
       }
 
-      const fileExt = file.name.split('.').pop();
-      const fileName = `notes/${user.id}/${noteId}/${Date.now()}.${fileExt}`;
+      // Convert file to base64
+      const base64Content = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Remove data URL prefix to get just base64 content
+          const base64 = result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
 
-      console.log('Upload path:', fileName);
-
-      // Upload to Supabase Storage using the correct bucket name
-      const { error: uploadError } = await supabase.storage
-        .from('experiment-note-attachments')
-        .upload(fileName, file);
-
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        throw new Error(uploadError.message || 'Upload failed');
-      }
-
-      console.log('File uploaded successfully, now saving to database...');
+      console.log('File converted to base64, now saving to database...');
 
       // Prepare the attachment record
       const attachmentData = {
         note_id: noteId,
         user_id: user.id,
         filename: file.name,
-        file_path: fileName,
+        file_content: base64Content,
         file_type: file.type,
         file_size: file.size,
       };
 
-      console.log('Inserting attachment data:', attachmentData);
+      console.log('Inserting attachment data:', { ...attachmentData, file_content: 'base64...' });
 
       // Save attachment record to database
       const { data, error } = await supabase
@@ -90,16 +89,10 @@ export const useExperimentNoteAttachments = (noteId: string) => {
       if (error) {
         console.error('Database insert error:', error);
         console.error('Error details:', JSON.stringify(error, null, 2));
-        
-        // Clean up uploaded file if database insert fails
-        await supabase.storage
-          .from('experiment-note-attachments')
-          .remove([fileName]);
-          
         throw new Error(`Database error: ${error.message}`);
       }
 
-      console.log('Upload successful:', data);
+      console.log('Upload successful:', { ...data, file_content: 'base64...' });
       return data;
     },
     onSuccess: () => {
@@ -111,17 +104,7 @@ export const useExperimentNoteAttachments = (noteId: string) => {
     mutationFn: async (attachment: ExperimentNoteAttachment) => {
       console.log('Deleting attachment:', attachment.id);
 
-      // Delete from Supabase Storage
-      const { error: storageError } = await supabase.storage
-        .from('experiment-note-attachments')
-        .remove([attachment.file_path]);
-
-      if (storageError) {
-        console.error('Storage delete error:', storageError);
-        // Continue with database deletion even if storage delete fails
-      }
-
-      // Delete record from database
+      // Delete record from database (no storage cleanup needed for localStorage)
       const { error } = await supabase
         .from('experiment_note_attachments')
         .delete()
@@ -144,25 +127,29 @@ export const useExperimentNoteAttachments = (noteId: string) => {
     try {
       console.log('Starting download for:', attachment.filename);
 
-      // Get the public URL for the file
-      const { data } = supabase.storage
-        .from('experiment-note-attachments')
-        .getPublicUrl(attachment.file_path);
-
-      if (!data.publicUrl) {
-        throw new Error('Failed to generate download URL');
+      // Convert base64 back to blob
+      const binaryString = atob(attachment.file_content);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
       }
+      const blob = new Blob([bytes], { type: attachment.file_type });
       
-      console.log('Download URL:', data.publicUrl);
+      // Create download URL
+      const url = URL.createObjectURL(blob);
+      
+      console.log('Download URL created');
       
       // Create download link
       const a = document.createElement('a');
-      a.href = data.publicUrl;
+      a.href = url;
       a.download = attachment.filename;
-      a.target = '_blank';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      
+      // Clean up URL
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Download error:', error);
       throw error;

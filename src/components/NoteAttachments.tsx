@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,11 +34,11 @@ const NoteAttachments = ({ noteId, showUploadButton = true, compact = false }: N
       
       for (const file of Array.from(files)) {
         try {
-          // Check file size (max 50MB)
-          if (file.size > 50 * 1024 * 1024) {
+          // Check file size (max 10MB for localStorage)
+          if (file.size > 10 * 1024 * 1024) {
             toast({
               title: "File Too Large",
-              description: `${file.name} exceeds the 50MB size limit`,
+              description: `${file.name} exceeds the 10MB size limit for local storage`,
               variant: "destructive",
             });
             errorCount++;
@@ -170,7 +169,7 @@ const NoteAttachments = ({ noteId, showUploadButton = true, compact = false }: N
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Upload files (max 50MB each)</p>
+                <p>Upload files (max 10MB each)</p>
               </TooltipContent>
             </Tooltip>
           )}
@@ -235,7 +234,7 @@ const NoteAttachments = ({ noteId, showUploadButton = true, compact = false }: N
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Attachment</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete "{attachmentToDelete?.filename}"? This action cannot be undone and the file will be permanently removed from storage.
+                Are you sure you want to delete "{attachmentToDelete?.filename}"? This action cannot be undone and the file will be permanently removed.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -284,7 +283,7 @@ const NoteAttachments = ({ noteId, showUploadButton = true, compact = false }: N
           )}
         </div>
         <p className="text-sm text-gray-600">
-          Supported files: PDF, DOC, TXT, images, and more (max 50MB each)
+          Supported files: PDF, DOC, TXT, images, and more (max 10MB each)
         </p>
       </CardHeader>
       {attachments.length > 0 && (
@@ -335,7 +334,7 @@ const NoteAttachments = ({ noteId, showUploadButton = true, compact = false }: N
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Attachment</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{attachmentToDelete?.filename}"? This action cannot be undone and the file will be permanently removed from storage.
+              Are you sure you want to delete "{attachmentToDelete?.filename}"? This action cannot be undone and the file will be permanently removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
