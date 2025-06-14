@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8'
 
 const corsHeaders = {
@@ -5,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface S3Config {
+interface iDriveE2Config {
   accessKeyId: string;
   secretAccessKey: string;
   region: string;
@@ -13,8 +14,8 @@ interface S3Config {
   endpoint: string;
 }
 
-async function getS3ConfigFromUserPreferences(supabaseClient: any, userId: string): Promise<S3Config | null> {
-  console.log('Fetching S3 config for user:', userId);
+async function getE2ConfigFromUserPreferences(supabaseClient: any, userId: string): Promise<iDriveE2Config | null> {
+  console.log('Fetching iDrive E2 config for user:', userId);
   
   try {
     const { data: userPrefs, error } = await supabaseClient
@@ -24,175 +25,139 @@ async function getS3ConfigFromUserPreferences(supabaseClient: any, userId: strin
       .single();
 
     if (error || !userPrefs?.preferences?.s3Config) {
-      console.error('No S3 config found in user preferences:', error);
+      console.error('No iDrive E2 config found in user preferences:', error);
       return null;
     }
 
-    const s3Config = userPrefs.preferences.s3Config;
+    const config = userPrefs.preferences.s3Config;
     
-    if (!s3Config.enabled) {
-      console.error('S3 config is disabled');
+    if (!config.enabled) {
+      console.error('iDrive E2 config is disabled');
       return null;
     }
 
-    // Ensure endpoint has proper protocol
-    let endpoint = s3Config.endpoint || '';
-    if (endpoint && !endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
+    // Normalize endpoint - iDrive E2 endpoints should include protocol
+    let endpoint = config.endpoint || '';
+    if (!endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
       endpoint = `https://${endpoint}`;
     }
 
-    const config = {
-      accessKeyId: s3Config.access_key_id,
-      secretAccessKey: s3Config.secret_access_key,
-      region: s3Config.region || 'us-east-1',
-      bucketName: s3Config.bucket_name,
+    const e2Config: iDriveE2Config = {
+      accessKeyId: config.access_key_id,
+      secretAccessKey: config.secret_access_key,
+      region: config.region || 'us-east-1',
+      bucketName: config.bucket_name,
       endpoint: endpoint
     };
 
     // Validate required fields
-    if (!config.accessKeyId || !config.secretAccessKey || !config.bucketName || !config.endpoint) {
-      console.error('Missing required S3 configuration fields');
+    if (!e2Config.accessKeyId || !e2Config.secretAccessKey || !e2Config.bucketName || !e2Config.endpoint) {
+      console.error('Missing required iDrive E2 configuration fields');
       return null;
     }
 
-    console.log('S3 config loaded successfully:', {
-      endpoint: config.endpoint,
-      bucket: config.bucketName,
-      region: config.region
+    console.log('iDrive E2 config loaded successfully:', {
+      endpoint: e2Config.endpoint,
+      bucket: e2Config.bucketName,
+      region: e2Config.region,
+      hasAccessKey: !!e2Config.accessKeyId,
+      hasSecretKey: !!e2Config.secretAccessKey
     });
     
-    return config;
+    return e2Config;
   } catch (error) {
-    console.error('Error fetching S3 config:', error);
+    console.error('Error fetching iDrive E2 config:', error);
     return null;
   }
 }
 
-function normalizeEndpoint(endpoint: string): string {
-  try {
-    const url = new URL(endpoint);
-    return url.host;
-  } catch (error) {
-    console.error('Invalid endpoint URL:', endpoint);
-    // Fallback: remove protocol if present
-    return endpoint.replace(/^https?:\/\//, '');
-  }
+// Simple HMAC-SHA256 implementation for iDrive E2
+async function hmacSha256(key: string, message: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(key);
+  const messageData = encoder.encode(message);
+  
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  
+  const signature = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
+  const signatureArray = new Uint8Array(signature);
+  return btoa(String.fromCharCode(...signatureArray));
 }
 
-// Simplified iDrive E2 compatible authentication
-async function createiDriveE2Request(
+// Create iDrive E2 compatible request with simplified authentication
+async function createE2Request(
   method: string,
-  key: string,
-  config: S3Config,
-  contentType?: string,
-  body?: any
+  objectKey: string,
+  config: iDriveE2Config,
+  contentType?: string
 ): Promise<{ url: string; headers: Record<string, string> }> {
-  console.log('Creating iDrive E2 request for:', { method, key, endpoint: config.endpoint });
+  console.log('Creating iDrive E2 request:', { method, objectKey, endpoint: config.endpoint });
   
   try {
-    const host = normalizeEndpoint(config.endpoint);
-    const url = `${config.endpoint}/${config.bucketName}/${key}`;
+    // Build the full URL for iDrive E2
+    const url = new URL(config.endpoint);
+    const fullUrl = `${url.protocol}//${url.host}/${config.bucketName}/${objectKey}`;
     
-    const date = new Date();
-    const timestamp = date.toISOString().replace(/[:\-]|\.\d{3}/g, '');
-    const dateString = date.toISOString().slice(0, 10).replace(/-/g, '');
+    // Create timestamp
+    const now = new Date();
+    const dateString = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const timestamp = now.toISOString().replace(/[:\-]|\.\d{3}/g, '');
     
-    // Use the configured region or default
-    const region = config.region;
-    const service = 's3';
-    const algorithm = 'AWS4-HMAC-SHA256';
-    const credential = `${config.accessKeyId}/${dateString}/${region}/${service}/aws4_request`;
+    // Build string to sign for iDrive E2 (simplified approach)
+    const stringToSign = `${method}\n\n${contentType || ''}\n${timestamp}\n/${config.bucketName}/${objectKey}`;
     
-    // Build canonical headers - keep it simple for iDrive E2
-    const canonicalHeaders = [
-      `host:${host}`,
-      `x-amz-date:${timestamp}`
-    ];
-    const signedHeaders = 'host;x-amz-date';
+    console.log('String to sign:', stringToSign);
     
-    // Create canonical request
-    const canonicalRequest = [
-      method,
-      `/${config.bucketName}/${key}`,
-      '', // query string
-      canonicalHeaders.join('\n') + '\n',
-      '',
-      signedHeaders,
-      'UNSIGNED-PAYLOAD'
-    ].join('\n');
+    // Create signature
+    const signature = await hmacSha256(config.secretAccessKey, stringToSign);
     
-    console.log('Canonical Request:', canonicalRequest);
-    
-    // Create string to sign
-    const encoder = new TextEncoder();
-    const canonicalRequestHash = await crypto.subtle.digest('SHA-256', encoder.encode(canonicalRequest));
-    const canonicalRequestHashHex = Array.from(new Uint8Array(canonicalRequestHash))
-      .map(b => b.toString(16).padStart(2, '0')).join('');
-    
-    const stringToSign = [
-      algorithm,
-      timestamp,
-      `${dateString}/${region}/${service}/aws4_request`,
-      canonicalRequestHashHex
-    ].join('\n');
-    
-    console.log('String to Sign:', stringToSign);
-    
-    // Create signing key
-    const kDate = await crypto.subtle.importKey(
-      'raw',
-      encoder.encode(`AWS4${config.secretAccessKey}`),
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign']
-    );
-    
-    const dateKey = new Uint8Array(await crypto.subtle.sign('HMAC', kDate, encoder.encode(dateString)));
-    const kRegion = await crypto.subtle.importKey('raw', dateKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    const regionKey = new Uint8Array(await crypto.subtle.sign('HMAC', kRegion, encoder.encode(region)));
-    const kService = await crypto.subtle.importKey('raw', regionKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    const serviceKey = new Uint8Array(await crypto.subtle.sign('HMAC', kService, encoder.encode(service)));
-    const kSigning = await crypto.subtle.importKey('raw', serviceKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    const signingKey = new Uint8Array(await crypto.subtle.sign('HMAC', kSigning, encoder.encode('aws4_request')));
-    const kFinal = await crypto.subtle.importKey('raw', signingKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    const signature = new Uint8Array(await crypto.subtle.sign('HMAC', kFinal, encoder.encode(stringToSign)));
-    const signatureHex = Array.from(signature).map(b => b.toString(16).padStart(2, '0')).join('');
-    
-    const authorization = `${algorithm} Credential=${credential}, SignedHeaders=${signedHeaders}, Signature=${signatureHex}`;
+    // Build authorization header
+    const authorization = `AWS ${config.accessKeyId}:${signature}`;
     
     const headers: Record<string, string> = {
       'Authorization': authorization,
-      'x-amz-date': timestamp,
+      'Date': now.toUTCString(),
+      'Host': url.host,
     };
     
     if (method === 'PUT' && contentType) {
       headers['Content-Type'] = contentType;
     }
     
-    console.log('Generated headers:', Object.keys(headers));
+    console.log('Generated request:', {
+      url: fullUrl,
+      headers: Object.keys(headers),
+      method
+    });
     
-    return { url, headers };
+    return { url: fullUrl, headers };
   } catch (error) {
     console.error('Error creating iDrive E2 request:', error);
     throw new Error(`Failed to create iDrive E2 request: ${error.message}`);
   }
 }
 
-async function uploadToS3(file: File, key: string, config: S3Config): Promise<string> {
+async function uploadToE2(file: File, key: string, config: iDriveE2Config): Promise<string> {
   console.log('Starting iDrive E2 upload:', { 
     fileName: file.name, 
     fileSize: file.size, 
     fileType: file.type, 
     key, 
-    bucket: config.bucketName, 
-    endpoint: config.endpoint 
+    bucket: config.bucketName,
+    endpoint: config.endpoint
   });
   
   try {
-    const { url, headers } = await createiDriveE2Request('PUT', key, config, file.type);
+    const { url, headers } = await createE2Request('PUT', key, config, file.type);
     
-    console.log('Upload URL:', url);
-    console.log('Upload headers:', Object.keys(headers));
+    console.log('Uploading to URL:', url);
+    console.log('Upload headers:', headers);
     
     const response = await fetch(url, {
       method: 'PUT',
@@ -214,19 +179,19 @@ async function uploadToS3(file: File, key: string, config: S3Config): Promise<st
       throw new Error(`Upload failed: ${response.status} ${response.statusText} - ${responseText}`);
     }
     
-    console.log('Upload successful');
+    console.log('Upload successful to iDrive E2');
     return key;
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('iDrive E2 upload error:', error);
     throw error;
   }
 }
 
-async function deleteFromS3(key: string, config: S3Config): Promise<void> {
+async function deleteFromE2(key: string, config: iDriveE2Config): Promise<void> {
   console.log('Starting iDrive E2 delete:', { key, bucket: config.bucketName });
   
   try {
-    const { url, headers } = await createiDriveE2Request('DELETE', key, config);
+    const { url, headers } = await createE2Request('DELETE', key, config);
     
     const response = await fetch(url, {
       method: 'DELETE',
@@ -247,7 +212,7 @@ async function deleteFromS3(key: string, config: S3Config): Promise<void> {
     
     console.log('Delete successful or file not found');
   } catch (error) {
-    console.error('Delete error:', error);
+    console.error('iDrive E2 delete error:', error);
     throw error;
   }
 }
@@ -283,9 +248,9 @@ Deno.serve(async (req) => {
 
     console.log('Authenticated user:', user.id);
 
-    // Get S3 config from user preferences
-    const s3Config = await getS3ConfigFromUserPreferences(supabaseClient, user.id);
-    if (!s3Config) {
+    // Get iDrive E2 config from user preferences
+    const e2Config = await getE2ConfigFromUserPreferences(supabaseClient, user.id);
+    if (!e2Config) {
       console.error('iDrive E2 configuration not found or invalid');
       return new Response(JSON.stringify({ 
         error: 'iDrive E2 configuration not found or invalid. Please check your settings and ensure all required fields are filled.' 
@@ -321,13 +286,13 @@ Deno.serve(async (req) => {
       }
 
       const fileExt = file.name.split('.').pop();
-      const s3Key = `notes/${user.id}/${noteId}/${Date.now()}.${fileExt}`;
+      const objectKey = `notes/${user.id}/${noteId}/${Date.now()}.${fileExt}`;
       
-      console.log('Uploading to iDrive E2 with key:', s3Key);
+      console.log('Uploading to iDrive E2 with key:', objectKey);
       
       try {
         // Upload to iDrive E2
-        const uploadedKey = await uploadToS3(file, s3Key, s3Config);
+        const uploadedKey = await uploadToE2(file, objectKey, e2Config);
         
         // Save attachment record to database
         const { data, error } = await supabaseClient
@@ -392,10 +357,10 @@ Deno.serve(async (req) => {
         
         try {
           // Delete from iDrive E2
-          await deleteFromS3(attachment.file_path, s3Config);
+          await deleteFromE2(attachment.file_path, e2Config);
           console.log('iDrive E2 delete successful');
-        } catch (s3Error) {
-          console.error('iDrive E2 delete error (continuing with database delete):', s3Error);
+        } catch (e2Error) {
+          console.error('iDrive E2 delete error (continuing with database delete):', e2Error);
           // Continue with database deletion even if iDrive E2 delete fails
         }
         
