@@ -23,7 +23,8 @@ interface S3Config {
   enabled: boolean;
 }
 
-interface UserPreferences {
+// Fix: The preferences object structure matches what's actually stored in the database
+interface DatabasePreferences {
   s3Config?: S3Config;
   [key: string]: any;
 }
@@ -92,8 +93,8 @@ export const useExperimentNoteAttachments = (noteId: string) => {
         .eq('user_id', user?.id)
         .single();
 
-      // Properly type the preferences object
-      const preferences = userPrefs?.preferences as UserPreferences | null;
+      // Fix: Properly type the preferences with correct structure
+      const preferences = userPrefs?.preferences as DatabasePreferences | null;
       if (!preferences?.s3Config) {
         throw new Error('S3 configuration not found');
       }
