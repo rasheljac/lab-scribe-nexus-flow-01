@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -23,13 +22,19 @@ export const useExperimentNoteAttachments = (noteId: string) => {
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
       
+      console.log('Fetching attachments for noteId:', noteId, 'user:', user.id);
+      
       const { data, error } = await supabase
         .from('experiment_note_attachments')
         .select('*')
         .eq('note_id', noteId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching attachments:', error);
+        throw error;
+      }
+      console.log('Fetched attachments:', data);
       return data as ExperimentNoteAttachment[];
     },
     enabled: !!user && !!noteId,
@@ -39,7 +44,7 @@ export const useExperimentNoteAttachments = (noteId: string) => {
     mutationFn: async ({ file, noteId }: { file: File; noteId: string }) => {
       if (!user) throw new Error('User not authenticated');
 
-      console.log('Starting file upload:', file.name, file.size);
+      console.log('Starting file upload:', file.name, file.size, 'user:', user.id, 'noteId:', noteId);
 
       // Validate file size (max 50MB)
       if (file.size > 50 * 1024 * 1024) {
@@ -48,6 +53,8 @@ export const useExperimentNoteAttachments = (noteId: string) => {
 
       const fileExt = file.name.split('.').pop();
       const fileName = `notes/${user.id}/${noteId}/${Date.now()}.${fileExt}`;
+
+      console.log('Upload path:', fileName);
 
       // Upload to Supabase Storage using the correct bucket name
       const { error: uploadError } = await supabase.storage
@@ -59,22 +66,36 @@ export const useExperimentNoteAttachments = (noteId: string) => {
         throw new Error(uploadError.message || 'Upload failed');
       }
 
+      console.log('File uploaded successfully, now saving to database...');
+
+      // Prepare the attachment record
+      const attachmentData = {
+        note_id: noteId,
+        user_id: user.id,
+        filename: file.name,
+        file_path: fileName,
+        file_type: file.type,
+        file_size: file.size,
+      };
+
+      console.log('Inserting attachment data:', attachmentData);
+
       // Save attachment record to database
       const { data, error } = await supabase
         .from('experiment_note_attachments')
-        .insert([{
-          note_id: noteId,
-          user_id: user.id,
-          filename: file.name,
-          file_path: fileName,
-          file_type: file.type,
-          file_size: file.size,
-        }])
+        .insert([attachmentData])
         .select()
         .single();
 
       if (error) {
         console.error('Database insert error:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+        
+        // Clean up uploaded file if database insert fails
+        await supabase.storage
+          .from('experiment-note-attachments')
+          .remove([fileName]);
+          
         throw new Error(`Database error: ${error.message}`);
       }
 
