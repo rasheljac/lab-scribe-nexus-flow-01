@@ -45,9 +45,6 @@ export const useExperimentNoteAttachments = (noteId: string) => {
 
       const { data, error } = await supabase.functions.invoke('s3-file-operations', {
         body: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
       });
 
       if (error) throw error;
@@ -62,9 +59,6 @@ export const useExperimentNoteAttachments = (noteId: string) => {
     mutationFn: async (attachment: ExperimentNoteAttachment) => {
       const { data, error } = await supabase.functions.invoke('s3-file-operations', {
         body: { attachmentId: attachment.id },
-        headers: {
-          'Content-Type': 'application/json',
-        },
       });
 
       if (error) throw error;
@@ -76,18 +70,17 @@ export const useExperimentNoteAttachments = (noteId: string) => {
   });
 
   const downloadAttachment = async (attachment: ExperimentNoteAttachment) => {
-    const { data, error } = await supabase.functions.invoke('s3-file-operations', {
-      body: null,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (error) throw error;
-
+    const config = {
+      region: 'us-east-1', // This should match your S3 region
+      bucketName: 'experiment-attachments' // This should match your bucket name
+    };
+    
+    // Generate direct S3 URL for download
+    const downloadUrl = `https://${config.bucketName}.s3.${config.region}.amazonaws.com/${attachment.file_path}`;
+    
     // Create download link
     const a = document.createElement('a');
-    a.href = data.downloadUrl;
+    a.href = downloadUrl;
     a.download = attachment.filename;
     a.target = '_blank';
     document.body.appendChild(a);

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Paperclip, Upload, Download, Trash2, FileText, Image, File, Loader2 } from "lucide-react";
 import { useExperimentNoteAttachments } from "@/hooks/useExperimentNoteAttachments";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +18,8 @@ interface NoteAttachmentsProps {
 
 const NoteAttachments = ({ noteId, showUploadButton = true, compact = false }: NoteAttachmentsProps) => {
   const [isUploading, setIsUploading] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [attachmentToDelete, setAttachmentToDelete] = useState<any>(null);
   const { attachments, uploadAttachment, deleteAttachment, downloadAttachment } = useExperimentNoteAttachments(noteId);
   const { toast } = useToast();
 
@@ -81,6 +83,8 @@ const NoteAttachments = ({ noteId, showUploadButton = true, compact = false }: N
         title: "Success",
         description: "File deleted successfully",
       });
+      setDeleteDialogOpen(false);
+      setAttachmentToDelete(null);
     } catch (error) {
       console.error('Delete error:', error);
       toast({
@@ -91,11 +95,9 @@ const NoteAttachments = ({ noteId, showUploadButton = true, compact = false }: N
     }
   };
 
-  const handleAttachmentClick = () => {
-    if (attachments.length === 1) {
-      handleDownload(attachments[0]);
-    }
-    // For multiple files, the dropdown will handle the clicks
+  const openDeleteDialog = (attachment: any) => {
+    setAttachmentToDelete(attachment);
+    setDeleteDialogOpen(true);
   };
 
   const getFileIcon = (fileType: string) => {
@@ -149,49 +151,77 @@ const NoteAttachments = ({ noteId, showUploadButton = true, compact = false }: N
           {attachments.length > 0 && (
             <Tooltip>
               <TooltipTrigger asChild>
-                {attachments.length === 1 ? (
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="gap-1"
-                    onClick={handleAttachmentClick}
-                  >
-                    <Paperclip className="h-3 w-3" />
-                    <span className="text-xs">{attachments.length}</span>
-                  </Button>
-                ) : (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button size="sm" variant="outline" className="gap-1">
-                        <Paperclip className="h-3 w-3" />
-                        <span className="text-xs">{attachments.length}</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-64">
-                      {attachments.map((attachment) => (
-                        <DropdownMenuItem
-                          key={attachment.id}
-                          onClick={() => handleDownload(attachment)}
-                          className="flex items-center gap-2 cursor-pointer"
-                        >
-                          {getFileIcon(attachment.file_type)}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{attachment.filename}</p>
-                            <p className="text-xs text-gray-500">{formatFileSize(attachment.file_size || 0)}</p>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline" className="gap-1">
+                      <Paperclip className="h-3 w-3" />
+                      <span className="text-xs">{attachments.length}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64">
+                    {attachments.map((attachment, index) => (
+                      <div key={attachment.id}>
+                        <div className="px-2 py-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            {getFileIcon(attachment.file_type)}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{attachment.filename}</p>
+                              <p className="text-xs text-gray-500">{formatFileSize(attachment.file_size || 0)}</p>
+                            </div>
                           </div>
-                          <Download className="h-3 w-3" />
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-xs flex-1"
+                              onClick={() => handleDownload(attachment)}
+                            >
+                              <Download className="h-3 w-3 mr-1" />
+                              Download
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-xs text-red-600 hover:text-red-700"
+                              onClick={() => openDeleteDialog(attachment)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        {index < attachments.length - 1 && <DropdownMenuSeparator />}
+                      </div>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TooltipTrigger>
               <TooltipContent>
-                <p>{attachments.length} attachment(s) - Click to download</p>
+                <p>{attachments.length} attachment(s) - Click to manage</p>
               </TooltipContent>
             </Tooltip>
           )}
         </div>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Attachment</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete "{attachmentToDelete?.filename}"? This action cannot be undone and the file will be permanently removed from storage.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setAttachmentToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => attachmentToDelete && handleDelete(attachmentToDelete)}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </TooltipProvider>
     );
   }
@@ -253,36 +283,41 @@ const NoteAttachments = ({ noteId, showUploadButton = true, compact = false }: N
                   >
                     <Download className="h-3 w-3" />
                   </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Attachment</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to delete "{attachment.filename}"? This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleDelete(attachment)}
-                          className="bg-red-600 hover:bg-red-700"
-                        >
-                          Delete
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-red-600 hover:text-red-700"
+                    onClick={() => openDeleteDialog(attachment)}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
                 </div>
               </div>
             ))}
           </div>
         </CardContent>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Attachment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{attachmentToDelete?.filename}"? This action cannot be undone and the file will be permanently removed from storage.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setAttachmentToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => attachmentToDelete && handleDelete(attachmentToDelete)}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
