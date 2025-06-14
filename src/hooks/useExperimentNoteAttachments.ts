@@ -78,11 +78,16 @@ export const useExperimentNoteAttachments = (noteId: string) => {
         .eq('user_id', user?.id)
         .single();
 
-      if (!userPrefs?.preferences?.s3Config) {
+      // Type assertion to access s3Config safely
+      const preferences = userPrefs?.preferences as Record<string, any> | null;
+      if (!preferences?.s3Config) {
         throw new Error('S3 configuration not found');
       }
 
-      const s3Config = userPrefs.preferences.s3Config;
+      const s3Config = preferences.s3Config as {
+        endpoint: string;
+        bucket_name: string;
+      };
       
       // Generate direct S3 URL for download
       const downloadUrl = `${s3Config.endpoint}/${s3Config.bucket_name}/${attachment.file_path}`;
