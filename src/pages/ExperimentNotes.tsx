@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -247,63 +246,59 @@ const ExperimentNotes = () => {
             ) : (
               <div className="space-y-4">
                 {filteredNotes.map((note) => (
-                  <div key={note.id} className="space-y-4">
-                    <Card>
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-5 w-5 text-blue-600" />
-                            <CardTitle className="text-lg">{note.title}</CardTitle>
-                          </div>
-                          <div className="flex gap-2">
-                            <EditNoteDialog note={note} experimentId={experimentId!} />
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Note</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete "{note.title}"? This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleDeleteNote(note.id, note.title)}
-                                    className="bg-red-600 hover:bg-red-700"
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
+                  <Card key={note.id}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-5 w-5 text-blue-600" />
+                          <CardTitle className="text-lg">{note.title}</CardTitle>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <Calendar className="h-4 w-4" />
-                          <span>Created {new Date(note.created_at).toLocaleDateString()}</span>
-                          {note.updated_at !== note.created_at && (
-                            <span>• Updated {new Date(note.updated_at).toLocaleDateString()}</span>
-                          )}
+                        <div className="flex gap-2">
+                          <NoteAttachments noteId={note.id} compact={true} />
+                          <EditNoteDialog note={note} experimentId={experimentId!} />
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Note</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete "{note.title}"? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteNote(note.id, note.title)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
-                      </CardHeader>
-                      {note.content && (
-                        <CardContent>
-                          <div 
-                            className="prose max-w-none"
-                            dangerouslySetInnerHTML={{ __html: note.content }}
-                          />
-                        </CardContent>
-                      )}
-                    </Card>
-                    
-                    {/* Note Attachments */}
-                    <NoteAttachments noteId={note.id} />
-                  </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Calendar className="h-4 w-4" />
+                        <span>Created {new Date(note.created_at).toLocaleDateString()}</span>
+                        {note.updated_at !== note.created_at && (
+                          <span>• Updated {new Date(note.updated_at).toLocaleDateString()}</span>
+                        )}
+                      </div>
+                    </CardHeader>
+                    {note.content && (
+                      <CardContent>
+                        <div 
+                          className="prose max-w-none"
+                          dangerouslySetInnerHTML={{ __html: note.content }}
+                        />
+                      </CardContent>
+                    )}
+                  </Card>
                 ))}
                 {filteredNotes.length === 0 && !isLoading && (
                   <div className="text-center py-12">

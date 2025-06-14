@@ -7,12 +7,15 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Paperclip, Upload, Download, Trash2, FileText, Image, File, Loader2 } from "lucide-react";
 import { useExperimentNoteAttachments } from "@/hooks/useExperimentNoteAttachments";
 import { useToast } from "@/hooks/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface NoteAttachmentsProps {
   noteId: string;
+  showUploadButton?: boolean;
+  compact?: boolean;
 }
 
-const NoteAttachments = ({ noteId }: NoteAttachmentsProps) => {
+const NoteAttachments = ({ noteId, showUploadButton = true, compact = false }: NoteAttachmentsProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const { attachments, uploadAttachment, deleteAttachment, downloadAttachment } = useExperimentNoteAttachments(noteId);
   const { toast } = useToast();
@@ -104,6 +107,56 @@ const NoteAttachments = ({ noteId }: NoteAttachmentsProps) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // Compact version for inline display
+  if (compact) {
+    return (
+      <TooltipProvider>
+        <div className="flex items-center gap-1">
+          {showUploadButton && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="relative">
+                  <input
+                    type="file"
+                    multiple
+                    onChange={handleFileUpload}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    disabled={isUploading}
+                  />
+                  <Button size="sm" variant="outline" disabled={isUploading}>
+                    {isUploading ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Upload className="h-3 w-3" />
+                    )}
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Upload files</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+          
+          {attachments.length > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="sm" variant="outline" className="gap-1">
+                  <Paperclip className="h-3 w-3" />
+                  <span className="text-xs">{attachments.length}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{attachments.length} attachment(s)</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      </TooltipProvider>
+    );
+  }
+
+  // Full version for expanded display
   return (
     <Card>
       <CardHeader>
@@ -112,23 +165,25 @@ const NoteAttachments = ({ noteId }: NoteAttachmentsProps) => {
             <Paperclip className="h-5 w-5" />
             Attachments ({attachments.length})
           </CardTitle>
-          <div className="relative">
-            <input
-              type="file"
-              multiple
-              onChange={handleFileUpload}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              disabled={isUploading}
-            />
-            <Button size="sm" disabled={isUploading}>
-              {isUploading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Upload className="h-4 w-4 mr-2" />
-              )}
-              {isUploading ? "Uploading..." : "Upload Files"}
-            </Button>
-          </div>
+          {showUploadButton && (
+            <div className="relative">
+              <input
+                type="file"
+                multiple
+                onChange={handleFileUpload}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                disabled={isUploading}
+              />
+              <Button size="sm" disabled={isUploading}>
+                {isUploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-2" />
+                )}
+                {isUploading ? "Uploading..." : "Upload Files"}
+              </Button>
+            </div>
+          )}
         </div>
       </CardHeader>
       {attachments.length > 0 && (
