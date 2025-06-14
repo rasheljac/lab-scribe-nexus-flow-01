@@ -49,9 +49,9 @@ export const useExperimentNoteAttachments = (noteId: string) => {
       const fileExt = file.name.split('.').pop();
       const fileName = `notes/${user.id}/${noteId}/${Date.now()}.${fileExt}`;
 
-      // Upload to Supabase Storage
+      // Upload to Supabase Storage using the correct bucket name
       const { error: uploadError } = await supabase.storage
-        .from('experiment-attachments')
+        .from('experiment-note-attachments')
         .upload(fileName, file);
 
       if (uploadError) {
@@ -92,7 +92,7 @@ export const useExperimentNoteAttachments = (noteId: string) => {
 
       // Delete from Supabase Storage
       const { error: storageError } = await supabase.storage
-        .from('experiment-attachments')
+        .from('experiment-note-attachments')
         .remove([attachment.file_path]);
 
       if (storageError) {
@@ -125,7 +125,7 @@ export const useExperimentNoteAttachments = (noteId: string) => {
 
       // Get the public URL for the file
       const { data } = supabase.storage
-        .from('experiment-attachments')
+        .from('experiment-note-attachments')
         .getPublicUrl(attachment.file_path);
 
       if (!data.publicUrl) {
