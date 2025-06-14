@@ -14,6 +14,20 @@ export interface ExperimentNoteAttachment {
   created_at: string;
 }
 
+interface S3Config {
+  endpoint: string;
+  bucket_name: string;
+  access_key_id: string;
+  secret_access_key: string;
+  region: string;
+  enabled: boolean;
+}
+
+interface UserPreferences {
+  s3Config?: S3Config;
+  [key: string]: any;
+}
+
 export const useExperimentNoteAttachments = (noteId: string) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -78,16 +92,13 @@ export const useExperimentNoteAttachments = (noteId: string) => {
         .eq('user_id', user?.id)
         .single();
 
-      // Type assertion to access s3Config safely
-      const preferences = userPrefs?.preferences as Record<string, any> | null;
+      // Properly type the preferences object
+      const preferences = userPrefs?.preferences as UserPreferences | null;
       if (!preferences?.s3Config) {
         throw new Error('S3 configuration not found');
       }
 
-      const s3Config = preferences.s3Config as {
-        endpoint: string;
-        bucket_name: string;
-      };
+      const s3Config = preferences.s3Config;
       
       // Generate direct S3 URL for download
       const downloadUrl = `${s3Config.endpoint}/${s3Config.bucket_name}/${attachment.file_path}`;

@@ -69,29 +69,31 @@ async function createSignature(
   const algorithm = 'AWS4-HMAC-SHA256';
   const credential = `${config.accessKeyId}/${dateString}/${config.region}/${service}/aws4_request`;
   
-  const canonicalHeaders = [
-    `host:${host}`,
-    `x-amz-content-sha256:UNSIGNED-PAYLOAD`,
-    `x-amz-date:${timestamp}`
-  ];
+  // Build canonical headers - order matters!
+  const canonicalHeaders: string[] = [];
+  canonicalHeaders.push(`host:${host}`);
+  canonicalHeaders.push(`x-amz-content-sha256:UNSIGNED-PAYLOAD`);
+  canonicalHeaders.push(`x-amz-date:${timestamp}`);
   
-  if (contentType) {
-    canonicalHeaders.push(`content-type:${contentType}`);
+  let signedHeaders = 'host;x-amz-content-sha256;x-amz-date';
+  
+  // Add content-type only for PUT requests
+  if (method === 'PUT' && contentType) {
+    canonicalHeaders.splice(0, 0, `content-type:${contentType}`);
+    signedHeaders = 'content-type;host;x-amz-content-sha256;x-amz-date';
   }
-  
-  canonicalHeaders.sort();
-  
-  const signedHeaders = contentType ? 'content-type;host;x-amz-content-sha256;x-amz-date' : 'host;x-amz-content-sha256;x-amz-date';
   
   const canonicalRequest = [
     method,
     `/${config.bucketName}/${key}`,
-    '',
+    '', // query string
     canonicalHeaders.join('\n') + '\n',
     '',
     signedHeaders,
     'UNSIGNED-PAYLOAD'
   ].join('\n');
+  
+  console.log('Canonical Request:', canonicalRequest);
   
   const encoder = new TextEncoder();
   const canonicalRequestHash = await crypto.subtle.digest('SHA-256', encoder.encode(canonicalRequest));
@@ -104,6 +106,8 @@ async function createSignature(
     `${dateString}/${config.region}/${service}/aws4_request`,
     canonicalRequestHashHex
   ].join('\n');
+  
+  console.log('String to Sign:', stringToSign);
   
   // Create signing key step by step
   const kDate = await crypto.subtle.importKey(
@@ -134,12 +138,15 @@ async function createSignature(
   const headers: Record<string, string> = {
     'Authorization': authorization,
     'x-amz-content-sha256': 'UNSIGNED-PAYLOAD',
-    'x-amz-date': timestamp
+    'x-amz-date': timestamp,
+    'Host': host
   };
   
-  if (contentType) {
+  if (method === 'PUT' && contentType) {
     headers['Content-Type'] = contentType;
   }
+  
+  console.log('Request headers:', Object.keys(headers));
   
   return { url, headers };
 }
