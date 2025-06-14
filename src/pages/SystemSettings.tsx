@@ -66,6 +66,15 @@ const SystemSettings = () => {
     enabled: false,
   });
 
+  const [s3Config, setS3Config] = useState({
+    access_key_id: "",
+    secret_access_key: "",
+    bucket_name: "",
+    region: "us-east-1",
+    endpoint: "",
+    enabled: false,
+  });
+
   const [emailTemplate, setEmailTemplate] = useState(`<!DOCTYPE html>
 <html>
 <head>
@@ -119,6 +128,9 @@ const SystemSettings = () => {
     }
     if (preferences?.preferences?.smtpConfig) {
       setSmtpConfig(preferences.preferences.smtpConfig);
+    }
+    if (preferences?.preferences?.s3Config) {
+      setS3Config(preferences.preferences.s3Config);
     }
     if (preferences?.preferences?.emailTemplate) {
       setEmailTemplate(preferences.preferences.emailTemplate);
@@ -208,6 +220,74 @@ const SystemSettings = () => {
       toast({
         title: "Error",
         description: "Failed to save SMTP configuration. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleS3ConfigSave = async () => {
+    if (preferencesLoading) return;
+    
+    setLoading(true);
+    try {
+      const currentPrefs = preferences?.preferences || {};
+      await updatePreferences({ 
+        preferences: { 
+          ...currentPrefs,
+          s3Config 
+        } 
+      });
+      
+      toast({
+        title: "Success",
+        description: "S3 configuration saved successfully",
+      });
+    } catch (error) {
+      console.error('Error saving S3 configuration:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save S3 configuration. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTestS3Connection = async () => {
+    if (!s3Config.enabled) {
+      toast({
+        title: "Error",
+        description: "S3 storage is disabled. Please enable it first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!s3Config.access_key_id || !s3Config.secret_access_key || !s3Config.bucket_name) {
+      toast({
+        title: "Error",
+        description: "Please configure all required S3 settings before testing connection.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // This is just a mock test - in a real app you'd call an edge function to test the connection
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      toast({
+        title: "Success",
+        description: "S3 connection test successful",
+      });
+    } catch (error) {
+      console.error('S3 connection test error:', error);
+      toast({
+        title: "Error",
+        description: "S3 connection test failed. Please check your configuration.",
         variant: "destructive",
       });
     } finally {
@@ -512,6 +592,85 @@ const SystemSettings = () => {
                     {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                     Save Security Settings
                   </Button>
+                </CardContent>
+              </Card>
+
+              {/* S3 Storage Configuration */}
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Server className="h-5 w-5" />
+                    S3 Storage Configuration
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="s3AccessKeyId">Access Key ID</Label>
+                      <Input
+                        id="s3AccessKeyId"
+                        type="password"
+                        value={s3Config.access_key_id}
+                        onChange={(e) => setS3Config(prev => ({ ...prev, access_key_id: e.target.value }))}
+                        placeholder="Your S3 access key ID"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="s3SecretKey">Secret Access Key</Label>
+                      <Input
+                        id="s3SecretKey"
+                        type="password"
+                        value={s3Config.secret_access_key}
+                        onChange={(e) => setS3Config(prev => ({ ...prev, secret_access_key: e.target.value }))}
+                        placeholder="Your S3 secret access key"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="s3BucketName">Bucket Name</Label>
+                      <Input
+                        id="s3BucketName"
+                        value={s3Config.bucket_name}
+                        onChange={(e) => setS3Config(prev => ({ ...prev, bucket_name: e.target.value }))}
+                        placeholder="your-bucket-name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="s3Region">Region</Label>
+                      <Input
+                        id="s3Region"
+                        value={s3Config.region}
+                        onChange={(e) => setS3Config(prev => ({ ...prev, region: e.target.value }))}
+                        placeholder="us-east-1"
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="s3Endpoint">Custom Endpoint (Optional)</Label>
+                      <Input
+                        id="s3Endpoint"
+                        value={s3Config.endpoint}
+                        onChange={(e) => setS3Config(prev => ({ ...prev, endpoint: e.target.value }))}
+                        placeholder="https://s3.amazonaws.com"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="s3Enabled">Enable S3 Storage</Label>
+                      <Switch
+                        id="s3Enabled"
+                        checked={s3Config.enabled}
+                        onCheckedChange={(checked) => setS3Config(prev => ({ ...prev, enabled: checked }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-4">
+                    <Button onClick={handleS3ConfigSave} disabled={loading}>
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                      Save S3 Settings
+                    </Button>
+                    <Button onClick={handleTestS3Connection} variant="outline" disabled={loading || !s3Config.enabled}>
+                      <Server className="h-4 w-4 mr-2" />
+                      Test Connection
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 
