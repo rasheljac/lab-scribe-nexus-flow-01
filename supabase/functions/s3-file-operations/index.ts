@@ -74,92 +74,141 @@ async function createSignature(
   const algorithm = 'AWS4-HMAC-SHA256';
   const credential = `${config.accessKeyId}/${dateString}/${config.region}/${service}/aws4_request`;
   
-  // Build canonical headers in alphabetical order for iDrive E2 compatibility
-  const canonicalHeaders: string[] = [];
-  const signedHeadersList: string[] = [];
+  // Simplified canonical headers for iDrive E2 compatibility
+  const canonicalHeaders = [`host:${host}`, `x-amz-date:${timestamp}`];
+  const signedHeaders = 'host;x-amz-date';
   
-  // Add content-type only for PUT requests
+  // For PUT requests, add content-type if provided
   if (method === 'PUT' && contentType) {
-    canonicalHeaders.push(`content-type:${contentType}`);
-    signedHeadersList.push('content-type');
+    canonicalHeaders.splice(0, 0, `content-type:${contentType}`);
+    const signedHeadersList = signedHeaders.split(';');
+    signedHeadersList.unshift('content-type');
+    const newSignedHeaders = signedHeadersList.join(';');
+    
+    const canonicalRequest = [
+      method,
+      `/${config.bucketName}/${key}`,
+      '', // query string
+      canonicalHeaders.join('\n') + '\n',
+      '',
+      newSignedHeaders,
+      'UNSIGNED-PAYLOAD'
+    ].join('\n');
+    
+    console.log('Canonical Request:', canonicalRequest);
+    
+    const encoder = new TextEncoder();
+    const canonicalRequestHash = await crypto.subtle.digest('SHA-256', encoder.encode(canonicalRequest));
+    const canonicalRequestHashHex = Array.from(new Uint8Array(canonicalRequestHash))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    const stringToSign = [
+      algorithm,
+      timestamp,
+      `${dateString}/${config.region}/${service}/aws4_request`,
+      canonicalRequestHashHex
+    ].join('\n');
+    
+    console.log('String to Sign:', stringToSign);
+    
+    // Create signing key
+    const kDate = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(`AWS4${config.secretAccessKey}`),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    
+    const dateKey = new Uint8Array(await crypto.subtle.sign('HMAC', kDate, encoder.encode(dateString)));
+    
+    const kRegion = await crypto.subtle.importKey('raw', dateKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const regionKey = new Uint8Array(await crypto.subtle.sign('HMAC', kRegion, encoder.encode(config.region)));
+    
+    const kService = await crypto.subtle.importKey('raw', regionKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const serviceKey = new Uint8Array(await crypto.subtle.sign('HMAC', kService, encoder.encode(service)));
+    
+    const kSigning = await crypto.subtle.importKey('raw', serviceKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const signingKey = new Uint8Array(await crypto.subtle.sign('HMAC', kSigning, encoder.encode('aws4_request')));
+    
+    const kFinal = await crypto.subtle.importKey('raw', signingKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const signature = new Uint8Array(await crypto.subtle.sign('HMAC', kFinal, encoder.encode(stringToSign)));
+    const signatureHex = Array.from(signature).map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    const authorization = `${algorithm} Credential=${credential}, SignedHeaders=${newSignedHeaders}, Signature=${signatureHex}`;
+    
+    const headers: Record<string, string> = {
+      'Authorization': authorization,
+      'x-amz-date': timestamp,
+      'Content-Type': contentType,
+    };
+    
+    console.log('Generated signature headers:', Object.keys(headers));
+    
+    return { url, headers };
+  } else {
+    // For DELETE and other requests
+    const canonicalRequest = [
+      method,
+      `/${config.bucketName}/${key}`,
+      '', // query string
+      canonicalHeaders.join('\n') + '\n',
+      '',
+      signedHeaders,
+      'UNSIGNED-PAYLOAD'
+    ].join('\n');
+    
+    console.log('Canonical Request:', canonicalRequest);
+    
+    const encoder = new TextEncoder();
+    const canonicalRequestHash = await crypto.subtle.digest('SHA-256', encoder.encode(canonicalRequest));
+    const canonicalRequestHashHex = Array.from(new Uint8Array(canonicalRequestHash))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    const stringToSign = [
+      algorithm,
+      timestamp,
+      `${dateString}/${config.region}/${service}/aws4_request`,
+      canonicalRequestHashHex
+    ].join('\n');
+    
+    console.log('String to Sign:', stringToSign);
+    
+    // Create signing key
+    const kDate = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(`AWS4${config.secretAccessKey}`),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    
+    const dateKey = new Uint8Array(await crypto.subtle.sign('HMAC', kDate, encoder.encode(dateString)));
+    
+    const kRegion = await crypto.subtle.importKey('raw', dateKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const regionKey = new Uint8Array(await crypto.subtle.sign('HMAC', kRegion, encoder.encode(config.region)));
+    
+    const kService = await crypto.subtle.importKey('raw', regionKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const serviceKey = new Uint8Array(await crypto.subtle.sign('HMAC', kService, encoder.encode(service)));
+    
+    const kSigning = await crypto.subtle.importKey('raw', serviceKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const signingKey = new Uint8Array(await crypto.subtle.sign('HMAC', kSigning, encoder.encode('aws4_request')));
+    
+    const kFinal = await crypto.subtle.importKey('raw', signingKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const signature = new Uint8Array(await crypto.subtle.sign('HMAC', kFinal, encoder.encode(stringToSign)));
+    const signatureHex = Array.from(signature).map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    const authorization = `${algorithm} Credential=${credential}, SignedHeaders=${signedHeaders}, Signature=${signatureHex}`;
+    
+    const headers: Record<string, string> = {
+      'Authorization': authorization,
+      'x-amz-date': timestamp,
+    };
+    
+    console.log('Generated signature headers:', Object.keys(headers));
+    
+    return { url, headers };
   }
-  
-  canonicalHeaders.push(`host:${host}`);
-  signedHeadersList.push('host');
-  
-  canonicalHeaders.push(`x-amz-content-sha256:UNSIGNED-PAYLOAD`);
-  signedHeadersList.push('x-amz-content-sha256');
-  
-  canonicalHeaders.push(`x-amz-date:${timestamp}`);
-  signedHeadersList.push('x-amz-date');
-  
-  const signedHeaders = signedHeadersList.join(';');
-  
-  const canonicalRequest = [
-    method,
-    `/${config.bucketName}/${key}`,
-    '', // query string
-    canonicalHeaders.join('\n') + '\n',
-    '',
-    signedHeaders,
-    'UNSIGNED-PAYLOAD'
-  ].join('\n');
-  
-  console.log('Canonical Request:', canonicalRequest);
-  
-  const encoder = new TextEncoder();
-  const canonicalRequestHash = await crypto.subtle.digest('SHA-256', encoder.encode(canonicalRequest));
-  const canonicalRequestHashHex = Array.from(new Uint8Array(canonicalRequestHash))
-    .map(b => b.toString(16).padStart(2, '0')).join('');
-  
-  const stringToSign = [
-    algorithm,
-    timestamp,
-    `${dateString}/${config.region}/${service}/aws4_request`,
-    canonicalRequestHashHex
-  ].join('\n');
-  
-  console.log('String to Sign:', stringToSign);
-  
-  // Create signing key using the corrected AWS v4 signature process
-  const kDate = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(`AWS4${config.secretAccessKey}`),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  
-  const dateKey = new Uint8Array(await crypto.subtle.sign('HMAC', kDate, encoder.encode(dateString)));
-  
-  const kRegion = await crypto.subtle.importKey('raw', dateKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const regionKey = new Uint8Array(await crypto.subtle.sign('HMAC', kRegion, encoder.encode(config.region)));
-  
-  const kService = await crypto.subtle.importKey('raw', regionKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const serviceKey = new Uint8Array(await crypto.subtle.sign('HMAC', kService, encoder.encode(service)));
-  
-  const kSigning = await crypto.subtle.importKey('raw', serviceKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const signingKey = new Uint8Array(await crypto.subtle.sign('HMAC', kSigning, encoder.encode('aws4_request')));
-  
-  const kFinal = await crypto.subtle.importKey('raw', signingKey, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const signature = new Uint8Array(await crypto.subtle.sign('HMAC', kFinal, encoder.encode(stringToSign)));
-  const signatureHex = Array.from(signature).map(b => b.toString(16).padStart(2, '0')).join('');
-  
-  const authorization = `${algorithm} Credential=${credential}, SignedHeaders=${signedHeaders}, Signature=${signatureHex}`;
-  
-  const headers: Record<string, string> = {
-    'Authorization': authorization,
-    'x-amz-content-sha256': 'UNSIGNED-PAYLOAD',
-    'x-amz-date': timestamp,
-  };
-  
-  if (method === 'PUT' && contentType) {
-    headers['Content-Type'] = contentType;
-  }
-  
-  console.log('Generated signature headers:', Object.keys(headers));
-  
-  return { url, headers };
 }
 
 async function uploadToS3(file: File, key: string, config: S3Config): Promise<string> {
