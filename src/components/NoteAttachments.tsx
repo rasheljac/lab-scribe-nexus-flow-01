@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Paperclip, Upload, Download, Trash2, FileText, Image, File, Loader2 } from "lucide-react";
 import { useExperimentNoteAttachments } from "@/hooks/useExperimentNoteAttachments";
 import { useToast } from "@/hooks/use-toast";
@@ -90,6 +91,13 @@ const NoteAttachments = ({ noteId, showUploadButton = true, compact = false }: N
     }
   };
 
+  const handleAttachmentClick = () => {
+    if (attachments.length === 1) {
+      handleDownload(attachments[0]);
+    }
+    // For multiple files, the dropdown will handle the clicks
+  };
+
   const getFileIcon = (fileType: string) => {
     if (fileType.startsWith('image/')) {
       return <Image className="h-4 w-4" />;
@@ -141,13 +149,45 @@ const NoteAttachments = ({ noteId, showUploadButton = true, compact = false }: N
           {attachments.length > 0 && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button size="sm" variant="outline" className="gap-1">
-                  <Paperclip className="h-3 w-3" />
-                  <span className="text-xs">{attachments.length}</span>
-                </Button>
+                {attachments.length === 1 ? (
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="gap-1"
+                    onClick={handleAttachmentClick}
+                  >
+                    <Paperclip className="h-3 w-3" />
+                    <span className="text-xs">{attachments.length}</span>
+                  </Button>
+                ) : (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm" variant="outline" className="gap-1">
+                        <Paperclip className="h-3 w-3" />
+                        <span className="text-xs">{attachments.length}</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-64">
+                      {attachments.map((attachment) => (
+                        <DropdownMenuItem
+                          key={attachment.id}
+                          onClick={() => handleDownload(attachment)}
+                          className="flex items-center gap-2 cursor-pointer"
+                        >
+                          {getFileIcon(attachment.file_type)}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{attachment.filename}</p>
+                            <p className="text-xs text-gray-500">{formatFileSize(attachment.file_size || 0)}</p>
+                          </div>
+                          <Download className="h-3 w-3" />
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </TooltipTrigger>
               <TooltipContent>
-                <p>{attachments.length} attachment(s)</p>
+                <p>{attachments.length} attachment(s) - Click to download</p>
               </TooltipContent>
             </Tooltip>
           )}
