@@ -29,10 +29,10 @@ const RichTextDisplay = ({ content, className = "", maxLength }: RichTextDisplay
     }
   }
 
-  // Render full HTML content with proper styling
+  // Render full HTML content with proper styling for headings and rich text
   return (
     <div 
-      className={`prose prose-sm max-w-none ${className}`}
+      className={`prose prose-sm max-w-none prose-headings:font-semibold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-h4:text-base prose-h5:text-sm prose-h6:text-xs prose-p:mb-4 prose-ul:mb-4 prose-ol:mb-4 prose-li:mb-1 ${className}`}
       dangerouslySetInnerHTML={{ __html: content }}
     />
   );
