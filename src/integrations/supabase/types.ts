@@ -164,7 +164,7 @@ export type Database = {
       experiment_note_attachments: {
         Row: {
           created_at: string
-          file_path: string
+          file_content: string
           file_size: number | null
           file_type: string
           filename: string
@@ -174,7 +174,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          file_path: string
+          file_content?: string
           file_size?: number | null
           file_type: string
           filename: string
@@ -184,7 +184,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          file_path?: string
+          file_content?: string
           file_size?: number | null
           file_type?: string
           filename?: string
