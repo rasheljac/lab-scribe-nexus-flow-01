@@ -334,6 +334,7 @@ export type Database = {
           category: string
           created_at: string
           description: string | null
+          display_order: number | null
           end_date: string | null
           folder_id: string | null
           id: string
@@ -352,6 +353,7 @@ export type Database = {
           category: string
           created_at?: string
           description?: string | null
+          display_order?: number | null
           end_date?: string | null
           folder_id?: string | null
           id?: string
@@ -370,6 +372,7 @@ export type Database = {
           category?: string
           created_at?: string
           description?: string | null
+          display_order?: number | null
           end_date?: string | null
           folder_id?: string | null
           id?: string
@@ -585,6 +588,7 @@ export type Database = {
           category: string
           created_at: string
           description: string | null
+          display_order: number | null
           end_date: string | null
           experiments_count: number
           id: string
@@ -600,6 +604,7 @@ export type Database = {
           category: string
           created_at?: string
           description?: string | null
+          display_order?: number | null
           end_date?: string | null
           experiments_count?: number
           id?: string
@@ -615,6 +620,7 @@ export type Database = {
           category?: string
           created_at?: string
           description?: string | null
+          display_order?: number | null
           end_date?: string | null
           experiments_count?: number
           id?: string

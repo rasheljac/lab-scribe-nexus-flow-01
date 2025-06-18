@@ -31,7 +31,8 @@ import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import CreateProjectDialog from "@/components/CreateProjectDialog";
 import EditProjectDialog from "@/components/EditProjectDialog";
-import { useProjects } from "@/hooks/useProjects";
+import DraggableGrid from "@/components/DraggableGrid";
+import { useProjects, Project } from "@/hooks/useProjects";
 import { useExperiments } from "@/hooks/useExperiments";
 import { useToast } from "@/hooks/use-toast";
 
@@ -43,7 +44,7 @@ const Projects = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const { projects, isLoading, error, deleteProject } = useProjects();
+  const { projects, isLoading, error, deleteProject, updateProjectOrder } = useProjects();
   const { experiments } = useExperiments();
 
   // Update search params when search term changes
@@ -144,6 +145,123 @@ const Projects = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleReorder = async (reorderedProjects: Project[]) => {
+    try {
+      // Update display_order for all projects in the current page
+      const updates = reorderedProjects.map((proj, index) => ({
+        id: proj.id,
+        display_order: startIndex + index + 1
+      }));
+
+      await updateProjectOrder.mutateAsync(updates);
+    } catch (error) {
+      console.error("Error updating project order:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update project order",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const renderProjectCard = (project: Project) => {
+    const projectExperiments = getProjectExperiments(project.id);
+    return (
+      <Card key={project.id} className="hover:shadow-md transition-shadow cursor-pointer">
+        <CardHeader className="pb-3" onClick={() => handleProjectClick(project.id)}>
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-2">
+              <FolderOpen className="h-5 w-5 text-blue-600" />
+              <CardTitle className="text-lg hover:text-blue-600">
+                {project.title}
+              </CardTitle>
+            </div>
+            <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+              <Badge className={getStatusColor(project.status)}>
+                {project.status}
+              </Badge>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 p-1 h-6 w-6">
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Project</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete "{project.title}"? This action cannot be undone and will also delete all associated experiments.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => handleDeleteProject(project.id)}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </div>
+          <p className="text-sm text-gray-600 mt-2">
+            {project.description ? stripHtmlTags(project.description) : ""}
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4" onClick={() => handleProjectClick(project.id)}>
+          {/* Progress */}
+          <div>
+            <div className="flex justify-between text-sm mb-2">
+              <span>Progress</span>
+              <span>{project.progress}%</span>
+            </div>
+            <Progress value={project.progress} className="h-2" />
+          </div>
+
+          {/* Project Details */}
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-gray-400" />
+              <span>{project.start_date} - {project.end_date || "Ongoing"}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-gray-400" />
+              <span>{projectExperiments.length} experiments</span>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-between items-center pt-2">
+            <Badge variant="outline">{project.category}</Badge>
+            <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+              <EditProjectDialog project={project} />
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleProjectClick(project.id);
+                }}
+                className="gap-1"
+              >
+                <Eye className="h-3 w-3" />
+                View
+              </Button>
+            </div>
+          </div>
+          
+          {project.budget && (
+            <div className="text-sm font-medium text-green-600 text-center">
+              Budget: {project.budget}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 flex">
@@ -206,111 +324,19 @@ const Projects = () => {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {paginatedProjects.map((project) => {
-                    const projectExperiments = getProjectExperiments(project.id);
-                    return (
-                      <Card key={project.id} className="hover:shadow-md transition-shadow cursor-pointer">
-                        <CardHeader className="pb-3" onClick={() => handleProjectClick(project.id)}>
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-2">
-                              <FolderOpen className="h-5 w-5 text-blue-600" />
-                              <CardTitle className="text-lg hover:text-blue-600">
-                                {project.title}
-                              </CardTitle>
-                            </div>
-                            <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                              <Badge className={getStatusColor(project.status)}>
-                                {project.status}
-                              </Badge>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 p-1 h-6 w-6">
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete Project</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Are you sure you want to delete "{project.title}"? This action cannot be undone and will also delete all associated experiments.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => handleDeleteProject(project.id)}
-                                      className="bg-red-600 hover:bg-red-700"
-                                    >
-                                      Delete
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          </div>
-                          <p className="text-sm text-gray-600 mt-2">
-                            {project.description ? stripHtmlTags(project.description) : ""}
-                          </p>
-                        </CardHeader>
-                        <CardContent className="space-y-4" onClick={() => handleProjectClick(project.id)}>
-                          {/* Progress */}
-                          <div>
-                            <div className="flex justify-between text-sm mb-2">
-                              <span>Progress</span>
-                              <span>{project.progress}%</span>
-                            </div>
-                            <Progress value={project.progress} className="h-2" />
-                          </div>
-
-                          {/* Project Details */}
-                          <div className="space-y-2 text-sm">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4 text-gray-400" />
-                              <span>{project.start_date} - {project.end_date || "Ongoing"}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <BarChart3 className="h-4 w-4 text-gray-400" />
-                              <span>{projectExperiments.length} experiments</span>
-                            </div>
-                          </div>
-
-                          {/* Actions */}
-                          <div className="flex justify-between items-center pt-2">
-                            <Badge variant="outline">{project.category}</Badge>
-                            <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                              <EditProjectDialog project={project} />
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleProjectClick(project.id);
-                                }}
-                                className="gap-1"
-                              >
-                                <Eye className="h-3 w-3" />
-                                View
-                              </Button>
-                            </div>
-                          </div>
-                          
-                          {project.budget && (
-                            <div className="text-sm font-medium text-green-600 text-center">
-                              Budget: {project.budget}
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                  {paginatedProjects.length === 0 && !isLoading && (
-                    <div className="col-span-full text-center py-12">
-                      <FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-600">No projects found. Create your first project to get started.</p>
-                    </div>
-                  )}
-                </div>
+                {paginatedProjects.length > 0 ? (
+                  <DraggableGrid
+                    items={paginatedProjects}
+                    onReorder={handleReorder}
+                    renderItem={renderProjectCard}
+                    droppableId="projects"
+                  />
+                ) : (
+                  <div className="text-center py-12">
+                    <FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600">No projects found. Create your first project to get started.</p>
+                  </div>
+                )}
 
                 {/* Pagination */}
                 {totalPages > 1 && (
