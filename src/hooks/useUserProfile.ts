@@ -9,6 +9,7 @@ export interface UserProfile {
   user_id: string;
   first_name: string;
   last_name: string;
+  email: string;
   avatar_url: string;
   created_at: string;
   updated_at: string;
@@ -39,7 +40,7 @@ export const useUserProfile = () => {
     }
   };
 
-  const updateProfile = async (updates: Partial<Pick<UserProfile, 'first_name' | 'last_name' | 'avatar_url'>>) => {
+  const updateProfile = async (updates: Partial<Pick<UserProfile, 'first_name' | 'last_name' | 'avatar_url' | 'email'>>) => {
     if (!user) return;
 
     try {
@@ -47,6 +48,7 @@ export const useUserProfile = () => {
         .from('user_profiles')
         .upsert([{ 
           user_id: user.id, 
+          email: user.email || '', // Fallback to auth email
           ...updates 
         }])
         .select()

@@ -17,6 +17,7 @@ export type Database = {
           end_time: string
           event_type: string
           id: string
+          last_reminder_sent: string | null
           location: string | null
           reminder_enabled: boolean | null
           reminder_minutes_before: number | null
@@ -34,6 +35,7 @@ export type Database = {
           end_time: string
           event_type?: string
           id?: string
+          last_reminder_sent?: string | null
           location?: string | null
           reminder_enabled?: boolean | null
           reminder_minutes_before?: number | null
@@ -51,6 +53,7 @@ export type Database = {
           end_time?: string
           event_type?: string
           id?: string
+          last_reminder_sent?: string | null
           location?: string | null
           reminder_enabled?: boolean | null
           reminder_minutes_before?: number | null
@@ -716,6 +719,7 @@ export type Database = {
           description: string | null
           due_date: string
           id: string
+          last_reminder_sent: string | null
           priority: string
           status: string
           title: string
@@ -729,6 +733,7 @@ export type Database = {
           description?: string | null
           due_date: string
           id?: string
+          last_reminder_sent?: string | null
           priority?: string
           status?: string
           title: string
@@ -742,6 +747,7 @@ export type Database = {
           description?: string | null
           due_date?: string
           id?: string
+          last_reminder_sent?: string | null
           priority?: string
           status?: string
           title?: string
@@ -835,6 +841,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          email: string
           first_name: string | null
           id: string
           last_name: string | null
@@ -844,6 +851,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          email: string
           first_name?: string | null
           id?: string
           last_name?: string | null
@@ -853,6 +861,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          email?: string
           first_name?: string | null
           id?: string
           last_name?: string | null
