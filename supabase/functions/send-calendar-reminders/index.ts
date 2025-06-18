@@ -1,7 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.8";
-import { Resend } from "npm:resend@2.0.0";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,6 +27,16 @@ interface UserProfile {
   last_name?: string;
 }
 
+interface SMTPConfig {
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  from_email: string;
+  use_tls: boolean;
+  enabled: boolean;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -37,17 +47,6 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
-
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
-    if (!resendApiKey) {
-      console.error('RESEND_API_KEY is not configured');
-      return new Response(
-        JSON.stringify({ error: 'Email service not configured' }),
-        { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-      );
-    }
-
-    const resend = new Resend(resendApiKey);
 
     console.log("Checking for calendar reminders...");
 
@@ -100,6 +99,20 @@ const handler = async (req: Request): Promise<Response> => {
           continue;
         }
 
+        // Get SMTP configuration from user preferences
+        const { data: preferences, error: prefsError } = await supabaseClient
+          .from('user_preferences')
+          .select('preferences')
+          .eq('user_id', event.user_id)
+          .single();
+
+        if (prefsError || !preferences?.preferences?.smtpConfig?.enabled) {
+          console.error(`SMTP not configured for user ${event.user_id}`);
+          continue;
+        }
+
+        const smtpConfig: SMTPConfig = preferences.preferences.smtpConfig;
+
         // Generate email content
         const userName = userProfile.first_name 
           ? `${userProfile.first_name} ${userProfile.last_name || ''}`.trim()
@@ -107,18 +120,28 @@ const handler = async (req: Request): Promise<Response> => {
 
         const emailHtml = generateCalendarReminderEmail(userName, event);
 
-        // Send email using Resend
-        const emailResult = await resend.emails.send({
-          from: 'Kapelczak Laboratory <noreply@resend.dev>',
-          to: [userProfile.email],
+        // Send email using SMTP
+        const client = new SMTPClient({
+          connection: {
+            hostname: smtpConfig.host,
+            port: smtpConfig.port,
+            tls: smtpConfig.use_tls,
+            auth: {
+              username: smtpConfig.username,
+              password: smtpConfig.password,
+            },
+          },
+        });
+
+        await client.send({
+          from: smtpConfig.from_email,
+          to: userProfile.email,
           subject: `Upcoming Event: ${event.title}`,
+          content: emailHtml,
           html: emailHtml,
         });
 
-        if (emailResult.error) {
-          console.error(`Resend error for event ${event.id}:`, emailResult.error);
-          continue;
-        }
+        await client.close();
 
         console.log(`Calendar reminder sent for event "${event.title}" to ${userProfile.email}`);
         

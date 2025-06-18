@@ -1,7 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "npm:resend@2.0.0";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -27,6 +27,16 @@ interface UserProfile {
   last_name?: string;
 }
 
+interface SMTPConfig {
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  from_email: string;
+  use_tls: boolean;
+  enabled: boolean;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -39,17 +49,7 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
-    if (!resendApiKey) {
-      console.error('RESEND_API_KEY is not configured');
-      return new Response(
-        JSON.stringify({ error: 'Email service not configured' }),
-        { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-      );
-    }
-
-    const resend = new Resend(resendApiKey);
-    const { user_id } = await req.json();
+    const { user_id, test_mode, test_email } = await req.json();
 
     if (!user_id) {
       return new Response(
@@ -72,6 +72,22 @@ const handler = async (req: Request): Promise<Response> => {
         { status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
+
+    // Get SMTP configuration from user preferences
+    const { data: preferences, error: prefsError } = await supabaseClient
+      .from('user_preferences')
+      .select('preferences')
+      .eq('user_id', user_id)
+      .single();
+
+    if (prefsError || !preferences?.preferences?.smtpConfig?.enabled) {
+      return new Response(
+        JSON.stringify({ error: 'SMTP not configured or disabled' }),
+        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    const smtpConfig: SMTPConfig = preferences.preferences.smtpConfig;
 
     // Get tasks due in the next 3 days that haven't had reminders sent recently
     const threeDaysFromNow = new Date();
@@ -109,43 +125,52 @@ const handler = async (req: Request): Promise<Response> => {
       : userProfile.email?.split('@')[0] || 'User';
 
     const emailHtml = generateTaskReminderEmail(userName, tasks);
+    const recipientEmail = test_mode && test_email ? test_email : userProfile.email;
 
-    // Send email using Resend
+    // Send email using SMTP
     try {
-      const emailResult = await resend.emails.send({
-        from: 'Kapelczak Laboratory <noreply@resend.dev>',
-        to: [userProfile.email],
+      const client = new SMTPClient({
+        connection: {
+          hostname: smtpConfig.host,
+          port: smtpConfig.port,
+          tls: smtpConfig.use_tls,
+          auth: {
+            username: smtpConfig.username,
+            password: smtpConfig.password,
+          },
+        },
+      });
+
+      await client.send({
+        from: smtpConfig.from_email,
+        to: recipientEmail,
         subject: `Task Reminders - ${tasks.length} upcoming task${tasks.length > 1 ? 's' : ''}`,
+        content: emailHtml,
         html: emailHtml,
       });
 
-      if (emailResult.error) {
-        console.error('Resend error:', emailResult.error);
-        return new Response(
-          JSON.stringify({ error: 'Failed to send email', details: emailResult.error }),
-          { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-        );
+      await client.close();
+
+      // Update last_reminder_sent for all tasks (unless in test mode)
+      if (!test_mode) {
+        const taskIds = tasks.map(task => task.id);
+        const { error: updateError } = await supabaseClient
+          .from('tasks')
+          .update({ last_reminder_sent: new Date().toISOString() })
+          .in('id', taskIds);
+
+        if (updateError) {
+          console.error('Error updating reminder timestamps:', updateError);
+        }
       }
 
-      // Update last_reminder_sent for all tasks
-      const taskIds = tasks.map(task => task.id);
-      const { error: updateError } = await supabaseClient
-        .from('tasks')
-        .update({ last_reminder_sent: new Date().toISOString() })
-        .in('id', taskIds);
-
-      if (updateError) {
-        console.error('Error updating reminder timestamps:', updateError);
-      }
-
-      console.log(`Task reminder email sent successfully to ${userProfile.email}`, emailResult);
+      console.log(`Task reminder email sent successfully to ${recipientEmail}`);
       
       return new Response(
         JSON.stringify({ 
           message: 'Task reminders sent successfully',
           tasks_count: tasks.length,
-          recipient: userProfile.email,
-          email_id: emailResult.data?.id
+          recipient: recipientEmail
         }),
         { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );

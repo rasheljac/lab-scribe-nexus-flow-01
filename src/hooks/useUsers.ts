@@ -1,232 +1,204 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 export interface User {
   id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
   email: string;
+  avatar_url: string;
   created_at: string;
-  email_confirmed_at: string | null;
-  last_sign_in_at: string | null;
-  role?: string;
-  raw_user_meta_data: {
-    first_name?: string;
-    last_name?: string;
-    avatar_url?: string;
-  };
+  updated_at: string;
 }
 
 export const useUsers = () => {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-  const { data: users, isLoading, error } = useQuery({
+  const { data: users = [], isLoading, error } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
-      if (!user) throw new Error('User not authenticated');
-      
-      try {
-        // Get user profiles which contain the actual user data
-        const { data: profiles, error: profilesError } = await supabase
-          .from('user_profiles')
-          .select('*');
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-        if (profilesError && profilesError.code !== 'PGRST116') {
-          console.warn('Could not fetch user profiles:', profilesError);
-        }
-
-        // Get all unique user IDs from various tables using specific table names
-        const userIds = new Set([user.id]); // Always include current user
-
-        // Fetch from each table individually with proper typing
-        try {
-          const { data: projectData } = await supabase
-            .from('projects')
-            .select('user_id')
-            .not('user_id', 'is', null);
-          projectData?.forEach((item: any) => userIds.add(item.user_id));
-        } catch (err) {
-          console.warn('Could not fetch user_ids from projects:', err);
-        }
-
-        try {
-          const { data: experimentData } = await supabase
-            .from('experiments')
-            .select('user_id')
-            .not('user_id', 'is', null);
-          experimentData?.forEach((item: any) => userIds.add(item.user_id));
-        } catch (err) {
-          console.warn('Could not fetch user_ids from experiments:', err);
-        }
-
-        try {
-          const { data: taskData } = await supabase
-            .from('tasks')
-            .select('user_id')
-            .not('user_id', 'is', null);
-          taskData?.forEach((item: any) => userIds.add(item.user_id));
-        } catch (err) {
-          console.warn('Could not fetch user_ids from tasks:', err);
-        }
-
-        try {
-          const { data: reportData } = await supabase
-            .from('reports')
-            .select('user_id')
-            .not('user_id', 'is', null);
-          reportData?.forEach((item: any) => userIds.add(item.user_id));
-        } catch (err) {
-          console.warn('Could not fetch user_ids from reports:', err);
-        }
-
-        try {
-          const { data: teamData } = await supabase
-            .from('team_members')
-            .select('user_id')
-            .not('user_id', 'is', null);
-          teamData?.forEach((item: any) => userIds.add(item.user_id));
-        } catch (err) {
-          console.warn('Could not fetch user_ids from team_members:', err);
-        }
-
-        const allUsers: User[] = [];
-
-        // Create user entries for all discovered user IDs
-        for (const userId of userIds) {
-          const profile = profiles?.find(p => p.user_id === userId);
-          
-          if (userId === user.id) {
-            // Current user - use auth data
-            allUsers.push({
-              id: user.id,
-              email: user.email || 'current.user@lab.system',
-              created_at: user.created_at || new Date().toISOString(),
-              email_confirmed_at: user.email_confirmed_at || null,
-              last_sign_in_at: user.last_sign_in_at || null,
-              raw_user_meta_data: {
-                first_name: profile?.first_name || user.user_metadata?.first_name,
-                last_name: profile?.last_name || user.user_metadata?.last_name,
-                avatar_url: profile?.avatar_url || user.user_metadata?.avatar_url,
-              }
-            });
-          } else if (profile) {
-            // User with profile data - use actual email from auth metadata if available
-            const displayEmail = profile.first_name && profile.last_name 
-              ? `${profile.first_name.toLowerCase()}.${profile.last_name.toLowerCase()}@lab.system`
-              : `researcher.${userId.slice(0, 8)}@lab.system`;
-              
-            allUsers.push({
-              id: userId,
-              email: displayEmail,
-              created_at: profile.created_at,
-              email_confirmed_at: profile.created_at,
-              last_sign_in_at: profile.updated_at,
-              raw_user_meta_data: {
-                first_name: profile.first_name,
-                last_name: profile.last_name,
-                avatar_url: profile.avatar_url,
-              }
-            });
-          } else {
-            // User without profile - create basic entry
-            allUsers.push({
-              id: userId,
-              email: `researcher.${userId.slice(0, 8)}@lab.system`,
-              created_at: new Date().toISOString(),
-              email_confirmed_at: new Date().toISOString(),
-              last_sign_in_at: new Date().toISOString(),
-              raw_user_meta_data: {
-                first_name: 'Lab',
-                last_name: 'User'
-              }
-            });
-          }
-        }
-
-        return allUsers.sort((a, b) => {
-          // Current user first, then by creation date
-          if (a.id === user.id) return -1;
-          if (b.id === user.id) return 1;
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        });
-
-      } catch (error) {
-        console.error('Error fetching users:', error);
-        // Return current user as fallback
-        return [{
-          id: user.id,
-          email: user.email || 'current.user@lab.system',
-          created_at: user.created_at || new Date().toISOString(),
-          email_confirmed_at: user.email_confirmed_at || null,
-          last_sign_in_at: user.last_sign_in_at || null,
-          raw_user_meta_data: user.user_metadata || {}
-        }] as User[];
-      }
+      if (error) throw error;
+      return data as User[];
     },
-    enabled: !!user,
   });
 
-  const updateUser = useMutation({
-    mutationFn: async ({ id, userData }: { id: string; userData: any }) => {
-      // Update user metadata via Supabase Auth (only for current user)
-      if (id === user?.id) {
-        const { data, error } = await supabase.auth.updateUser({
-          data: {
-            first_name: userData.user_metadata?.first_name,
-            last_name: userData.user_metadata?.last_name,
-          }
-        });
-        
-        if (error) throw error;
-        
-        // Also update user profile
-        const { error: profileError } = await supabase
-          .from('user_profiles')
-          .upsert([{
-            user_id: id,
-            first_name: userData.user_metadata?.first_name,
-            last_name: userData.user_metadata?.last_name,
-          }]);
-          
-        if (profileError) throw profileError;
-        
-        return data.user;
-      } else {
-        // For other users, only update profile
-        const { data, error } = await supabase
-          .from('user_profiles')
-          .upsert([{
-            user_id: id,
-            first_name: userData.user_metadata?.first_name,
-            last_name: userData.user_metadata?.last_name,
-          }])
-          .select()
-          .single();
-          
-        if (error) throw error;
-        return data;
-      }
+  const createUser = useMutation({
+    mutationFn: async (userData: { first_name: string; last_name: string; email: string }) => {
+      // Generate a temporary user_id for the profile
+      const tempUserId = crypto.randomUUID();
+      
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .insert([{
+          user_id: tempUserId,
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          email: userData.email,
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast({
+        title: "Success",
+        description: "User profile created successfully",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error creating user:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create user",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateUser = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<User> }) => {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast({
+        title: "Success",
+        description: "User updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error updating user:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update user",
+        variant: "destructive",
+      });
     },
   });
 
   const deleteUser = useMutation({
     mutationFn: async (id: string) => {
-      throw new Error('User deletion requires admin privileges and server-side implementation');
+      const { error } = await supabase
+        .from('user_profiles')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast({
+        title: "Success",
+        description: "User deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error deleting user:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete user",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const bulkCreateUsers = useMutation({
+    mutationFn: async (usersData: Array<{ first_name: string; last_name: string; email: string }>) => {
+      const usersWithIds = usersData.map(user => ({
+        ...user,
+        user_id: crypto.randomUUID(),
+      }));
+
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .insert(usersWithIds)
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast({
+        title: "Success",
+        description: `${data?.length || 0} users created successfully`,
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error creating users:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create users",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const bulkUpdateUsers = useMutation({
+    mutationFn: async (updates: Array<{ id: string; updates: Partial<User> }>) => {
+      const promises = updates.map(({ id, updates: userUpdates }) =>
+        supabase
+          .from('user_profiles')
+          .update(userUpdates)
+          .eq('id', id)
+          .select()
+          .single()
+      );
+
+      const results = await Promise.all(promises);
+      const errors = results.filter(result => result.error);
+      
+      if (errors.length > 0) {
+        throw new Error(`Failed to update ${errors.length} users`);
+      }
+
+      return results.map(result => result.data);
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast({
+        title: "Success",
+        description: `${data?.length || 0} users updated successfully`,
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error updating users:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update users",
+        variant: "destructive",
+      });
     },
   });
 
   return {
-    users: users || [],
+    users,
     isLoading,
     error,
+    createUser,
     updateUser,
     deleteUser,
+    bulkCreateUsers,
+    bulkUpdateUsers,
   };
 };

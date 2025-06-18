@@ -1,101 +1,36 @@
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Plus, Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useUsers } from '@/hooks/useUsers';
+import { UserPlus } from 'lucide-react';
 
 const CreateUserDialog = () => {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
-  
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    firstName: "",
-    lastName: "",
-  });
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const { createUser } = useUsers();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    if (!firstName.trim() || !lastName.trim() || !email.trim()) return;
 
     try {
-      // Create user account
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: formData.email,
-        password: formData.password,
-        user_metadata: {
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-        },
-        email_confirm: true, // Auto-confirm email for admin-created accounts
+      await createUser.mutateAsync({
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
       });
-
-      if (authError) throw authError;
-
-      if (authData.user) {
-        // Create user profile
-        const { error: profileError } = await supabase
-          .from('user_profiles')
-          .insert([{
-            user_id: authData.user.id,
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-          }]);
-
-        if (profileError) {
-          console.error('Error creating user profile:', profileError);
-          // Don't throw here as the user was created successfully
-        }
-
-        // Create default user preferences
-        const { error: prefsError } = await supabase
-          .from('user_preferences')
-          .insert([{
-            user_id: authData.user.id,
-            hidden_pages: [],
-            preferences: {},
-          }]);
-
-        if (prefsError) {
-          console.error('Error creating user preferences:', prefsError);
-          // Don't throw here as the user was created successfully
-        }
-      }
-
-      toast({
-        title: "Success",
-        description: "User account created successfully!",
-      });
-
-      setFormData({
-        email: "",
-        password: "",
-        firstName: "",
-        lastName: "",
-      });
+      
+      setFirstName('');
+      setLastName('');
+      setEmail('');
       setOpen(false);
-    } catch (error: any) {
-      console.error("Error creating user:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create user account",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error('Error creating user:', error);
     }
   };
 
@@ -103,66 +38,59 @@ const CreateUserDialog = () => {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          Add New User
+          <UserPlus className="h-4 w-4" />
+          Add User
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create New User Account</DialogTitle>
-          <DialogDescription>
-            Create a new user account with email and password. The user will be able to log in immediately.
-          </DialogDescription>
+          <DialogTitle>Create New User</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">First Name</Label>
-              <Input
-                id="firstName"
-                value={formData.firstName}
-                onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Last Name</Label>
-              <Input
-                id="lastName"
-                value={formData.lastName}
-                onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                required
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="firstName">First Name</Label>
+            <Input
+              id="firstName"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              placeholder="Enter first name"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="lastName">Last Name</Label>
+            <Input
+              id="lastName"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              placeholder="Enter last name"
+              required
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
-              value={formData.email}
-              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter email address"
               required
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-              required
-              minLength={6}
-            />
-          </div>
-          <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Create User
+            <Button
+              type="submit"
+              disabled={createUser.isPending}
+            >
+              {createUser.isPending ? 'Creating...' : 'Create User'}
             </Button>
           </div>
         </form>
