@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Edit } from "lucide-react";
 import { useUsers, User } from "@/hooks/useUsers";
-import { useToast } from "@/hooks/use-toast";
 
 interface EditUserDialogProps {
   user: User;
@@ -15,12 +14,11 @@ interface EditUserDialogProps {
 const EditUserDialog = ({ user }: EditUserDialogProps) => {
   const [open, setOpen] = useState(false);
   const [userData, setUserData] = useState({
-    first_name: user.raw_user_meta_data?.first_name || '',
-    last_name: user.raw_user_meta_data?.last_name || '',
+    first_name: user.first_name || '',
+    last_name: user.last_name || '',
   });
 
   const { updateUser } = useUsers();
-  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,26 +26,15 @@ const EditUserDialog = ({ user }: EditUserDialogProps) => {
     try {
       await updateUser.mutateAsync({
         id: user.id,
-        userData: {
-          user_metadata: {
-            first_name: userData.first_name,
-            last_name: userData.last_name,
-          }
+        updates: {
+          first_name: userData.first_name,
+          last_name: userData.last_name,
         }
       });
       
       setOpen(false);
-      toast({
-        title: "Success",
-        description: "User profile updated successfully!",
-      });
     } catch (error) {
       console.error("Error updating user:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update user profile",
-        variant: "destructive",
-      });
     }
   };
 

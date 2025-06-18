@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,8 +31,8 @@ const Users = () => {
 
   const filteredUsers = users.filter(user => 
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (user.raw_user_meta_data?.first_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (user.raw_user_meta_data?.last_name || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (user.first_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (user.last_name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleDeleteUser = async (userId: string) => {
@@ -45,7 +46,7 @@ const Users = () => {
       console.error("Error deleting user:", error);
       toast({
         title: "Error",
-        description: "User deletion requires admin privileges",
+        description: "Failed to delete user profile",
         variant: "destructive",
       });
     }
@@ -61,7 +62,6 @@ const Users = () => {
             <div className="max-w-7xl mx-auto">
               <div className="text-center py-12">
                 <p className="text-red-600">Error loading users: {error.message}</p>
-                <p className="text-gray-600 mt-2">Showing current authenticated user only.</p>
               </div>
             </div>
           </main>
@@ -109,9 +109,7 @@ const Users = () => {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-600">Active Users</p>
-                      <p className="text-xl font-bold">
-                        {users.filter(u => u.email_confirmed_at).length}
-                      </p>
+                      <p className="text-xl font-bold">{users.length}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -123,9 +121,9 @@ const Users = () => {
                       <UsersIcon className="h-5 w-5 text-orange-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-600">Recent Logins</p>
+                      <p className="text-sm font-medium text-gray-600">Recent Users</p>
                       <p className="text-xl font-bold">
-                        {users.filter(u => u.last_sign_in_at && new Date(u.last_sign_in_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length}
+                        {users.filter(u => new Date(u.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length}
                       </p>
                     </div>
                   </div>
@@ -158,15 +156,15 @@ const Users = () => {
                     <CardHeader className="pb-3">
                       <div className="flex items-center gap-4">
                         <Avatar className="h-12 w-12">
-                          <AvatarImage src={user.raw_user_meta_data?.avatar_url} />
+                          <AvatarImage src={user.avatar_url || undefined} />
                           <AvatarFallback>
-                            {user.raw_user_meta_data?.first_name?.[0] || user.email[0].toUpperCase()}
+                            {user.first_name?.[0] || user.email[0].toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
                           <CardTitle className="text-lg">
-                            {user.raw_user_meta_data?.first_name || user.raw_user_meta_data?.last_name 
-                              ? `${user.raw_user_meta_data.first_name || ''} ${user.raw_user_meta_data.last_name || ''}`.trim()
+                            {user.first_name || user.last_name 
+                              ? `${user.first_name || ''} ${user.last_name || ''}`.trim()
                               : user.email}
                           </CardTitle>
                           <p className="text-sm text-gray-600">{user.email}</p>
@@ -175,7 +173,7 @@ const Users = () => {
                           <EditUserDialog user={user} />
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700" disabled>
+                              <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </AlertDialogTrigger>
@@ -183,11 +181,17 @@ const Users = () => {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Delete User Profile</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  User deletion requires admin privileges and server-side implementation.
+                                  Are you sure you want to delete this user profile? This action cannot be undone.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
-                                <AlertDialogCancel>Close</AlertDialogCancel>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleDeleteUser(user.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Delete
+                                </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
@@ -198,16 +202,14 @@ const Users = () => {
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <span className="text-gray-500">Status:</span>
-                          <Badge className={user.email_confirmed_at ? "bg-green-100 text-green-800 ml-2" : "bg-yellow-100 text-yellow-800 ml-2"}>
-                            {user.email_confirmed_at ? "Confirmed" : "Pending"}
+                          <Badge className="bg-green-100 text-green-800 ml-2">
+                            Active
                           </Badge>
                         </div>
                         <div>
-                          <span className="text-gray-500">Last Login:</span>
-                          <span className="ml-2">
-                            {user.last_sign_in_at 
-                              ? new Date(user.last_sign_in_at).toLocaleDateString() 
-                              : "Never"}
+                          <span className="text-gray-500">Profile ID:</span>
+                          <span className="ml-2 font-mono text-xs">
+                            {user.id.substring(0, 8)}...
                           </span>
                         </div>
                       </div>

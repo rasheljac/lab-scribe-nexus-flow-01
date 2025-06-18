@@ -6,10 +6,10 @@ import { useToast } from "@/hooks/use-toast";
 export interface User {
   id: string;
   user_id: string;
-  first_name: string;
-  last_name: string;
+  first_name: string | null;
+  last_name: string | null;
   email: string;
-  avatar_url: string;
+  avatar_url: string | null;
   created_at: string;
   updated_at: string;
 }
