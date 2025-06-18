@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,7 @@ import { useExperimentIdeas } from "@/hooks/useExperimentIdeas";
 import { useProjects } from "@/hooks/useProjects";
 import { useTasks } from "@/hooks/useTasks";
 import { useReports } from "@/hooks/useReports";
+import { useProtocols } from "@/hooks/useProtocols";
 import { useUserPreferences } from "@/hooks/useUserPreferences";
 
 const Sidebar = () => {
@@ -41,6 +43,7 @@ const Sidebar = () => {
   const { projects } = useProjects();
   const { tasks } = useTasks();
   const { reports } = useReports();
+  const { protocols } = useProtocols();
 
   // Filter uncompleted tasks
   const uncompletedTasksCount = tasks.filter(task => task.status !== 'completed').length;
@@ -50,7 +53,7 @@ const Sidebar = () => {
     { icon: Beaker, label: "Experiments", path: "/experiments", badge: experiments.length.toString(), key: "experiments" },
     { icon: Lightbulb, label: "Experiment Ideas", path: "/experiment-ideas", badge: ideas.length.toString(), key: "experiment-ideas" },
     { icon: FolderOpen, label: "Projects", path: "/projects", badge: projects.length.toString(), key: "projects" },
-    { icon: FileText, label: "Protocols", path: "/protocols", badge: null, key: "protocols" },
+    { icon: FileText, label: "Protocols", path: "/protocols", badge: protocols.length.toString(), key: "protocols" },
     { icon: Calendar, label: "Calendar", path: "/calendar", badge: null, key: "calendar" },
     { icon: CheckSquare, label: "Tasks", path: "/tasks", badge: uncompletedTasksCount.toString(), key: "tasks" },
     { icon: BarChart3, label: "Analytics", path: "/analytics", badge: null, key: "analytics" },

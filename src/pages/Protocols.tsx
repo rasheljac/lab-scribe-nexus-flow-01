@@ -66,12 +66,6 @@ const Protocols = () => {
     }
   };
 
-  const stripHtmlTags = (html: string) => {
-    const tmp = document.createElement("div");
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || "";
-  };
-
   const handleProtocolClick = (protocolId: string) => {
     navigate(`/protocols/${protocolId}`);
   };
@@ -199,13 +193,6 @@ const Protocols = () => {
                       )}
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {/* Protocol Content Preview */}
-                      <div>
-                        <p className="text-sm text-gray-700 line-clamp-3">
-                          {stripHtmlTags(protocol.content)}
-                        </p>
-                      </div>
-
                       {/* Protocol Details */}
                       <div className="space-y-2 text-sm">
                         <div className="flex items-center gap-2">
