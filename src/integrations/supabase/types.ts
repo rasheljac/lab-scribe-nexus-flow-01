@@ -113,6 +113,7 @@ export type Database = {
           category: string
           created_at: string
           description: string | null
+          display_order: number | null
           estimated_duration: string | null
           expected_outcomes: string | null
           hypothesis: string | null
@@ -131,6 +132,7 @@ export type Database = {
           category: string
           created_at?: string
           description?: string | null
+          display_order?: number | null
           estimated_duration?: string | null
           expected_outcomes?: string | null
           hypothesis?: string | null
@@ -149,6 +151,7 @@ export type Database = {
           category?: string
           created_at?: string
           description?: string | null
+          display_order?: number | null
           estimated_duration?: string | null
           expected_outcomes?: string | null
           hypothesis?: string | null

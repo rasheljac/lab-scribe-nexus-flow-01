@@ -19,12 +19,13 @@ export interface ExperimentIdea {
   budget_estimate: string | null;
   status: 'brainstorming' | 'researching' | 'planning' | 'ready' | 'archived';
   tags: string[];
+  display_order: number;
   created_at: string;
   updated_at: string;
 }
 
 type ExperimentIdeaRow = Tables<'experiment_ideas'>;
-type ExperimentIdeaInsert = Omit<ExperimentIdeaRow, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
+type ExperimentIdeaInsert = Omit<ExperimentIdeaRow, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'display_order'>;
 
 export const useExperimentIdeas = () => {
   const { user } = useAuth();
@@ -39,7 +40,7 @@ export const useExperimentIdeas = () => {
         .from('experiment_ideas')
         .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .order('display_order', { ascending: true });
 
       if (error) throw error;
       return data as ExperimentIdea[];
@@ -51,9 +52,19 @@ export const useExperimentIdeas = () => {
     mutationFn: async (idea: ExperimentIdeaInsert) => {
       if (!user) throw new Error('User not authenticated');
 
+      // Get the highest display_order for this user
+      const { data: maxOrderData } = await supabase
+        .from('experiment_ideas')
+        .select('display_order')
+        .eq('user_id', user.id)
+        .order('display_order', { ascending: false })
+        .limit(1);
+
+      const nextOrder = maxOrderData && maxOrderData.length > 0 ? maxOrderData[0].display_order + 1 : 1;
+
       const { data, error } = await supabase
         .from('experiment_ideas')
-        .insert([{ ...idea, user_id: user.id }])
+        .insert([{ ...idea, user_id: user.id, display_order: nextOrder }])
         .select()
         .single();
 
@@ -77,6 +88,27 @@ export const useExperimentIdeas = () => {
 
       if (error) throw error;
       return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['experiment-ideas'] });
+    },
+  });
+
+  const updateIdeaOrder = useMutation({
+    mutationFn: async (ideas: { id: string; display_order: number }[]) => {
+      const updates = ideas.map(idea => 
+        supabase
+          .from('experiment_ideas')
+          .update({ display_order: idea.display_order })
+          .eq('id', idea.id)
+          .eq('user_id', user?.id)
+      );
+
+      const results = await Promise.all(updates);
+      const errors = results.filter(result => result.error);
+      if (errors.length > 0) {
+        throw new Error('Failed to update idea order');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['experiment-ideas'] });
@@ -153,6 +185,7 @@ export const useExperimentIdeas = () => {
     error,
     createIdea,
     updateIdea,
+    updateIdeaOrder,
     deleteIdea,
     convertToExperiment,
   };
