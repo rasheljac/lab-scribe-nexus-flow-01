@@ -642,6 +642,7 @@ export type Database = {
           content: string
           created_at: string
           description: string | null
+          display_order: number | null
           id: string
           is_template: boolean
           title: string
@@ -654,6 +655,7 @@ export type Database = {
           content: string
           created_at?: string
           description?: string | null
+          display_order?: number | null
           id?: string
           is_template?: boolean
           title: string
@@ -666,6 +668,7 @@ export type Database = {
           content?: string
           created_at?: string
           description?: string | null
+          display_order?: number | null
           id?: string
           is_template?: boolean
           title?: string

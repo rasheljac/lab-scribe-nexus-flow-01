@@ -12,6 +12,7 @@ export interface Protocol {
   category: string;
   version: number;
   is_template: boolean;
+  display_order: number;
   created_at: string;
   updated_at: string;
 }
@@ -49,7 +50,7 @@ export const useProtocols = () => {
         .from('protocols')
         .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .order('display_order', { ascending: true });
 
       if (error) throw error;
       return data as Protocol[];
@@ -58,12 +59,22 @@ export const useProtocols = () => {
   });
 
   const createProtocol = useMutation({
-    mutationFn: async (protocol: Omit<Protocol, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (protocol: Omit<Protocol, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'display_order'>) => {
       if (!user) throw new Error('User not authenticated');
+
+      // Get the highest display_order for this user
+      const { data: maxOrderData } = await supabase
+        .from('protocols')
+        .select('display_order')
+        .eq('user_id', user.id)
+        .order('display_order', { ascending: false })
+        .limit(1);
+
+      const nextOrder = maxOrderData && maxOrderData.length > 0 ? maxOrderData[0].display_order + 1 : 1;
 
       const { data, error } = await supabase
         .from('protocols')
-        .insert([{ ...protocol, user_id: user.id }])
+        .insert([{ ...protocol, user_id: user.id, display_order: nextOrder }])
         .select()
         .single();
 
@@ -87,6 +98,27 @@ export const useProtocols = () => {
 
       if (error) throw error;
       return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['protocols'] });
+    },
+  });
+
+  const updateProtocolOrder = useMutation({
+    mutationFn: async (protocols: { id: string; display_order: number }[]) => {
+      const updates = protocols.map(protocol => 
+        supabase
+          .from('protocols')
+          .update({ display_order: protocol.display_order })
+          .eq('id', protocol.id)
+          .eq('user_id', user?.id)
+      );
+
+      const results = await Promise.all(updates);
+      const errors = results.filter(result => result.error);
+      if (errors.length > 0) {
+        throw new Error('Failed to update protocol order');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['protocols'] });
@@ -192,6 +224,7 @@ export const useProtocols = () => {
     error,
     createProtocol,
     updateProtocol,
+    updateProtocolOrder,
     deleteProtocol,
     attachToExperiment,
     detachFromExperiment,

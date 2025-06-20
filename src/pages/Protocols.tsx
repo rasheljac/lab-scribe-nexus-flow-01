@@ -23,23 +23,29 @@ import {
   Calendar,
   Loader2,
   BookOpen,
-  Tag
+  Tag,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import CreateProtocolDialog from "@/components/CreateProtocolDialog";
 import EditProtocolDialog from "@/components/EditProtocolDialog";
+import DraggableGrid from "@/components/DraggableGrid";
 import { useProtocols } from "@/hooks/useProtocols";
 import { useToast } from "@/hooks/use-toast";
+
+const ITEMS_PER_PAGE = 8;
 
 const Protocols = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [createProtocolOpen, setCreateProtocolOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   
   const { toast } = useToast();
-  const { protocols, isLoading, error, deleteProtocol } = useProtocols();
+  const { protocols, isLoading, error, deleteProtocol, updateProtocolOrder } = useProtocols();
 
   const categories = ["all", ...Array.from(new Set(protocols.map(p => p.category)))];
 
@@ -49,6 +55,12 @@ const Protocols = () => {
     const matchesCategory = selectedCategory === "all" || protocol.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredProtocols.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const currentProtocols = filteredProtocols.slice(startIndex, endIndex);
 
   const handleDeleteProtocol = async (protocolId: string, protocolTitle: string) => {
     try {
@@ -69,6 +81,94 @@ const Protocols = () => {
   const handleProtocolClick = (protocolId: string) => {
     navigate(`/protocols/${protocolId}`);
   };
+
+  const handleReorder = async (reorderedItems: any[]) => {
+    // Update the order based on global position, not just current page
+    const reorderedWithGlobalOrder = reorderedItems.map((item, index) => ({
+      id: item.id,
+      display_order: startIndex + index + 1
+    }));
+
+    try {
+      await updateProtocolOrder.mutateAsync(reorderedWithGlobalOrder);
+    } catch (error) {
+      console.error("Error updating protocol order:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update protocol order",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const renderProtocolCard = (protocol: any, index: number) => (
+    <Card key={protocol.id} className="hover:shadow-md transition-shadow">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-2 flex-1">
+            <BookOpen className="h-5 w-5 text-blue-600" />
+            <CardTitle 
+              className="text-lg cursor-pointer hover:text-blue-600 transition-colors"
+              onClick={() => handleProtocolClick(protocol.id)}
+            >
+              {protocol.title}
+            </CardTitle>
+          </div>
+          <div className="flex gap-1 items-center">
+            <Badge variant="outline" className="capitalize">
+              {protocol.category}
+            </Badge>
+            <EditProtocolDialog protocol={protocol} />
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 p-1 h-6 w-6">
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Protocol</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete "{protocol.title}"? This action cannot be undone and will remove this protocol from all experiments and notes.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => handleDeleteProtocol(protocol.id, protocol.title)}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+        {protocol.description && (
+          <p className="text-sm text-gray-600 mt-2">
+            {protocol.description}
+          </p>
+        )}
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Protocol Details */}
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-gray-400" />
+            <span>Created {new Date(protocol.created_at).toLocaleDateString()}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Tag className="h-4 w-4 text-gray-400" />
+            <span>Version {protocol.version}</span>
+            {protocol.is_template && (
+              <Badge variant="secondary" className="text-xs">Template</Badge>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   if (error) {
     return (
@@ -141,77 +241,16 @@ const Protocols = () => {
                 <Loader2 className="h-8 w-8 animate-spin" />
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredProtocols.map((protocol) => (
-                  <Card key={protocol.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2 flex-1">
-                          <BookOpen className="h-5 w-5 text-blue-600" />
-                          <CardTitle 
-                            className="text-lg cursor-pointer hover:text-blue-600 transition-colors"
-                            onClick={() => handleProtocolClick(protocol.id)}
-                          >
-                            {protocol.title}
-                          </CardTitle>
-                        </div>
-                        <div className="flex gap-1 items-center">
-                          <Badge variant="outline" className="capitalize">
-                            {protocol.category}
-                          </Badge>
-                          <EditProtocolDialog protocol={protocol} />
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 p-1 h-6 w-6">
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Protocol</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete "{protocol.title}"? This action cannot be undone and will remove this protocol from all experiments and notes.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDeleteProtocol(protocol.id, protocol.title)}
-                                  className="bg-red-600 hover:bg-red-700"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </div>
-                      {protocol.description && (
-                        <p className="text-sm text-gray-600 mt-2">
-                          {protocol.description}
-                        </p>
-                      )}
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {/* Protocol Details */}
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-gray-400" />
-                          <span>Created {new Date(protocol.created_at).toLocaleDateString()}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Tag className="h-4 w-4 text-gray-400" />
-                          <span>Version {protocol.version}</span>
-                          {protocol.is_template && (
-                            <Badge variant="secondary" className="text-xs">Template</Badge>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-                {filteredProtocols.length === 0 && !isLoading && (
-                  <div className="col-span-full text-center py-12">
+              <>
+                {currentProtocols.length > 0 ? (
+                  <DraggableGrid
+                    items={currentProtocols}
+                    onReorder={handleReorder}
+                    renderItem={renderProtocolCard}
+                    droppableId="protocols"
+                  />
+                ) : (
+                  <div className="text-center py-12">
                     <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-600">
                       {searchTerm || selectedCategory !== "all" ? "No protocols found matching your criteria." : "No protocols found."}
@@ -225,7 +264,51 @@ const Protocols = () => {
                     </Button>
                   </div>
                 )}
-              </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 mt-6">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(page)}
+                          className="w-8 h-8 p-0"
+                        >
+                          {page}
+                        </Button>
+                      ))}
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+
+                {/* Items count */}
+                <div className="text-center text-sm text-gray-500 mt-4">
+                  Showing {Math.min(startIndex + 1, filteredProtocols.length)} to {Math.min(endIndex, filteredProtocols.length)} of {filteredProtocols.length} protocols
+                </div>
+              </>
             )}
           </div>
         </main>
