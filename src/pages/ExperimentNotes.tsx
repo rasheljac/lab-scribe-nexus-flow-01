@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +29,7 @@ import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import EditNoteDialog from "@/components/EditNoteDialog";
 import RichTextEditor from "@/components/RichTextEditor";
+import RichTextDisplay from "@/components/RichTextDisplay";
 import NoteAttachments from "@/components/NoteAttachments";
 import { useExperimentNotes } from "@/hooks/useExperimentNotes";
 import { useExperiments } from "@/hooks/useExperiments";
@@ -292,10 +294,7 @@ const ExperimentNotes = () => {
                     </CardHeader>
                     {note.content && (
                       <CardContent>
-                        <div 
-                          className="prose max-w-none"
-                          dangerouslySetInnerHTML={{ __html: note.content }}
-                        />
+                        <RichTextDisplay content={note.content} />
                       </CardContent>
                     )}
                   </Card>
