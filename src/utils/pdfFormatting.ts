@@ -12,7 +12,7 @@ export class PDFFormatter {
   private pdf: jsPDF;
   private options: PDFFormattingOptions;
   private currentY: number;
-  private lineHeight: number = 6;
+  private lineHeight: number = 5; // Reduced from 6
 
   constructor(pdf: jsPDF, options: PDFFormattingOptions) {
     this.pdf = pdf;
@@ -23,8 +23,8 @@ export class PDFFormatter {
   addHeading(text: string, level: number = 1): void {
     if (!text.trim()) return;
     
-    // Calculate space above heading
-    const spaceAbove = level === 1 ? 15 : 10;
+    // Reduced space above heading
+    const spaceAbove = level === 1 ? 8 : 6; // Reduced from 15/10
     
     // Set font based on heading level
     const fontSize = Math.max(16 - (level - 1) * 2, 12);
@@ -34,8 +34,8 @@ export class PDFFormatter {
     
     // Split text and calculate required height
     const lines = this.pdf.splitTextToSize(text.trim(), this.options.contentWidth);
-    const textHeight = lines.length * (fontSize * 0.4); // More accurate height calculation
-    const totalHeight = spaceAbove + textHeight + 8;
+    const textHeight = lines.length * (fontSize * 0.35); // Reduced multiplier
+    const totalHeight = spaceAbove + textHeight + 5; // Reduced bottom spacing
     
     // Check for page break
     this.checkPageBreak(totalHeight);
@@ -45,7 +45,7 @@ export class PDFFormatter {
     
     // Add the heading
     this.pdf.text(lines, this.options.margin, this.currentY);
-    this.currentY += textHeight + 8;
+    this.currentY += textHeight + 5; // Reduced from 8
   }
 
   addParagraph(text: string): void {
@@ -59,14 +59,14 @@ export class PDFFormatter {
     const cleanText = text.trim().replace(/\s+/g, ' ');
     const lines = this.pdf.splitTextToSize(cleanText, this.options.contentWidth);
     const textHeight = lines.length * this.lineHeight;
-    const totalHeight = textHeight + 8;
+    const totalHeight = textHeight + 4; // Reduced from 8
     
     // Check for page break
     this.checkPageBreak(totalHeight);
     
     // Add the paragraph
     this.pdf.text(lines, this.options.margin, this.currentY);
-    this.currentY += textHeight + 8;
+    this.currentY += textHeight + 4; // Reduced from 8
   }
 
   addList(items: string[], isOrdered: boolean = false): void {
@@ -84,7 +84,7 @@ export class PDFFormatter {
       const fullText = `${prefix}${trimmedItem}`;
       
       const lines = this.pdf.splitTextToSize(fullText, this.options.contentWidth - 10);
-      const itemHeight = lines.length * this.lineHeight + 3;
+      const itemHeight = lines.length * this.lineHeight + 2; // Reduced from 3
       
       // Check for page break before each item
       this.checkPageBreak(itemHeight);
@@ -93,8 +93,8 @@ export class PDFFormatter {
       this.currentY += itemHeight;
     });
     
-    // Add space after the list
-    this.currentY += 6;
+    // Reduced space after the list
+    this.currentY += 3; // Reduced from 6
   }
 
   addText(text: string): void {
@@ -107,19 +107,19 @@ export class PDFFormatter {
     const cleanText = text.trim().replace(/\s+/g, ' ');
     const lines = this.pdf.splitTextToSize(cleanText, this.options.contentWidth);
     const textHeight = lines.length * this.lineHeight;
-    const totalHeight = textHeight + 4;
+    const totalHeight = textHeight + 3; // Reduced from 4
     
     this.checkPageBreak(totalHeight);
     
     this.pdf.text(lines, this.options.margin, this.currentY);
-    this.currentY += textHeight + 4;
+    this.currentY += textHeight + 3; // Reduced from 4
   }
 
   addSeparator(): void {
-    const separatorHeight = 15;
+    const separatorHeight = 10; // Reduced from 15
     this.checkPageBreak(separatorHeight);
     
-    this.currentY += 5;
+    this.currentY += 3; // Reduced from 5
     this.pdf.setDrawColor(200, 200, 200);
     this.pdf.line(
       this.options.margin, 
@@ -127,7 +127,7 @@ export class PDFFormatter {
       this.options.pageWidth - this.options.margin, 
       this.currentY
     );
-    this.currentY += 10;
+    this.currentY += 7; // Reduced from 10
   }
 
   private checkPageBreak(requiredSpace: number): void {
@@ -138,7 +138,7 @@ export class PDFFormatter {
     if (this.currentY + requiredSpace > maxY) {
       console.log(`Page break triggered: currentY=${this.currentY}, requiredSpace=${requiredSpace}, maxY=${maxY}`);
       this.pdf.addPage();
-      this.currentY = this.options.margin + 15; // Start new page with proper margin
+      this.currentY = this.options.margin + 10; // Reduced from 15
     }
   }
 
@@ -152,7 +152,7 @@ export class PDFFormatter {
 
   addPageBreak(): void {
     this.pdf.addPage();
-    this.currentY = this.options.margin + 15;
+    this.currentY = this.options.margin + 10; // Reduced from 15
   }
 
   getRemainingSpace(): number {

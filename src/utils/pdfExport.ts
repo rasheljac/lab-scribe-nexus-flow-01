@@ -35,7 +35,7 @@ export const exportProtocolToPDF = async (protocol: ProtocolPDFData) => {
   pdf.setTextColor(0, 0, 0);
   const titleLines = pdf.splitTextToSize(protocol.title, contentWidth - 20);
   pdf.text(titleLines, margin, formatter.getCurrentY());
-  formatter.setCurrentY(formatter.getCurrentY() + (titleLines.length * 8) + 15);
+  formatter.setCurrentY(formatter.getCurrentY() + (titleLines.length * 7) + 10); // Reduced spacing
 
   // Add metadata
   console.log('Adding metadata...');
@@ -49,7 +49,7 @@ export const exportProtocolToPDF = async (protocol: ProtocolPDFData) => {
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(0, 0, 0);
     pdf.text('Description:', margin, formatter.getCurrentY());
-    formatter.setCurrentY(formatter.getCurrentY() + 10);
+    formatter.setCurrentY(formatter.getCurrentY() + 8); // Reduced from 10
     
     formatter.addParagraph(protocol.description);
   }
@@ -63,7 +63,7 @@ export const exportProtocolToPDF = async (protocol: ProtocolPDFData) => {
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(0, 0, 0);
   pdf.text('Protocol Steps & Instructions:', margin, formatter.getCurrentY());
-  formatter.setCurrentY(formatter.getCurrentY() + 15);
+  formatter.setCurrentY(formatter.getCurrentY() + 10); // Reduced from 15
 
   // Process and add content
   console.log('Processing protocol content...');

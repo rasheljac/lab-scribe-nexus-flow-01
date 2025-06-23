@@ -1,4 +1,3 @@
-
 import jsPDF from 'jspdf';
 
 export interface ProtocolPDFData {
@@ -64,10 +63,10 @@ export const addMetadataSection = (
   
   metadata.forEach(line => {
     pdf.text(line, margin, currentY);
-    currentY += 5;
+    currentY += 4; // Reduced from 5
   });
   
-  return currentY + 10;
+  return currentY + 8; // Reduced from 10
 };
 
 export const addFooter = (pdf: jsPDF, pageWidth: number, pageHeight: number, margin: number): void => {
