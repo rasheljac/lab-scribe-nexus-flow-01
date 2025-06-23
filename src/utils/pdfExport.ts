@@ -5,13 +5,15 @@ import { PDFFormatter } from './pdfFormatting';
 import { ProtocolPDFData, addLogoToPDF, addMetadataSection, addFooter } from './pdfExportUtils';
 
 export const exportProtocolToPDF = async (protocol: ProtocolPDFData) => {
+  console.log('Starting PDF export for protocol:', protocol.title);
+  
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   const margin = 20;
   const contentWidth = pageWidth - (margin * 2);
   
-  console.log('Starting PDF export for protocol:', protocol.title);
+  console.log(`PDF dimensions: ${pageWidth}x${pageHeight}, content width: ${contentWidth}`);
   
   // Initialize formatter
   const formatter = new PDFFormatter(pdf, {
@@ -33,7 +35,7 @@ export const exportProtocolToPDF = async (protocol: ProtocolPDFData) => {
   pdf.setTextColor(0, 0, 0);
   const titleLines = pdf.splitTextToSize(protocol.title, contentWidth - 20);
   pdf.text(titleLines, margin, formatter.getCurrentY());
-  formatter.setCurrentY(formatter.getCurrentY() + (titleLines.length * 7) + 15);
+  formatter.setCurrentY(formatter.getCurrentY() + (titleLines.length * 8) + 15);
 
   // Add metadata
   console.log('Adding metadata...');
@@ -47,7 +49,7 @@ export const exportProtocolToPDF = async (protocol: ProtocolPDFData) => {
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(0, 0, 0);
     pdf.text('Description:', margin, formatter.getCurrentY());
-    formatter.setCurrentY(formatter.getCurrentY() + 8);
+    formatter.setCurrentY(formatter.getCurrentY() + 10);
     
     formatter.addParagraph(protocol.description);
   }
@@ -61,45 +63,51 @@ export const exportProtocolToPDF = async (protocol: ProtocolPDFData) => {
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(0, 0, 0);
   pdf.text('Protocol Steps & Instructions:', margin, formatter.getCurrentY());
-  formatter.setCurrentY(formatter.getCurrentY() + 12);
+  formatter.setCurrentY(formatter.getCurrentY() + 15);
 
-  // Process and add content using structured approach
-  console.log('Processing content...');
+  // Process and add content
+  console.log('Processing protocol content...');
   const structuredContent = convertHtmlToStructuredText(protocol.content);
-  console.log('Structured content elements:', structuredContent.length);
+  console.log(`Processing ${structuredContent.length} content elements`);
   
   structuredContent.forEach((element, index) => {
-    console.log(`Processing element ${index + 1}/${structuredContent.length}:`, element.type);
+    console.log(`Processing element ${index + 1}/${structuredContent.length}: ${element.type}`);
+    console.log(`Current Y position: ${formatter.getCurrentY()}, Remaining space: ${formatter.getRemainingSpace()}`);
     
-    switch (element.type) {
-      case 'heading':
-        formatter.addHeading(element.content, element.level || 1);
-        break;
-      case 'paragraph':
-        formatter.addParagraph(element.content);
-        break;
-      case 'list':
-        if (element.items && element.items.length > 0) {
-          formatter.addList(element.items, element.isOrdered);
-        }
-        break;
-      case 'text':
-        formatter.addText(element.content);
-        break;
-      default:
-        console.warn('Unknown element type:', element.type);
+    try {
+      switch (element.type) {
+        case 'heading':
+          formatter.addHeading(element.content, element.level || 1);
+          break;
+        case 'paragraph':
+          formatter.addParagraph(element.content);
+          break;
+        case 'list':
+          if (element.items && element.items.length > 0) {
+            formatter.addList(element.items, element.isOrdered);
+          }
+          break;
+        case 'text':
+          formatter.addText(element.content);
+          break;
+        default:
+          console.warn('Unknown element type:', element.type);
+      }
+    } catch (error) {
+      console.error(`Error processing element ${index}:`, error);
     }
   });
 
   // Add footer to all pages
-  console.log('Adding footer...');
+  console.log('Adding footer to all pages...');
   addFooter(pdf, pageWidth, pageHeight, margin);
 
   // Save the PDF
   const fileName = `${protocol.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_protocol.pdf`;
   console.log('Saving PDF as:', fileName);
-  pdf.save(fileName);
+  console.log(`Final PDF has ${pdf.internal.pages.length - 1} pages`);
   
+  pdf.save(fileName);
   console.log('PDF export completed successfully');
 };
 

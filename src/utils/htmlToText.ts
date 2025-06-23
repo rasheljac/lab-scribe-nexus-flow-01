@@ -10,171 +10,133 @@ export interface TextElement {
 export const convertHtmlToStructuredText = (html: string): TextElement[] => {
   if (!html) return [];
 
+  console.log('Converting HTML to structured text...');
+  
   // Create a temporary DOM element to parse HTML
   const temp = document.createElement('div');
-  temp.innerHTML = html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '</p>\n');
+  temp.innerHTML = html;
 
   const elements: TextElement[] = [];
 
-  const processNode = (node: Node): void => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      const text = node.textContent?.trim();
-      if (text && text.length > 0) {
-        elements.push({
-          type: 'text',
-          content: text
-        });
-      }
-    } else if (node.nodeType === Node.ELEMENT_NODE) {
-      const element = node as Element;
-      const tagName = element.tagName.toLowerCase();
-
-      switch (tagName) {
-        case 'h1':
-        case 'h2':
-        case 'h3':
-        case 'h4':
-        case 'h5':
-        case 'h6':
-          const headingText = element.textContent?.trim();
-          if (headingText) {
-            elements.push({
-              type: 'heading',
-              content: headingText,
-              level: parseInt(tagName.charAt(1))
-            });
-          }
-          break;
-
-        case 'p':
-          const paragraphText = element.textContent?.trim();
-          if (paragraphText) {
-            elements.push({
-              type: 'paragraph',
-              content: paragraphText
-            });
-          }
-          break;
-
-        case 'ul':
-        case 'ol':
-          const listItems = Array.from(element.querySelectorAll('li'))
-            .map(li => li.textContent?.trim())
-            .filter(text => text && text.length > 0) as string[];
-          
-          if (listItems.length > 0) {
-            elements.push({
-              type: 'list',
-              content: '',
-              isOrdered: tagName === 'ol',
-              items: listItems
-            });
-          }
-          break;
-
-        case 'li':
-          // Skip li elements as they're handled by ul/ol
-          break;
-
-        case 'br':
-          // Add line break as text
+  const processElement = (element: Element): void => {
+    const tagName = element.tagName.toLowerCase();
+    
+    switch (tagName) {
+      case 'h1':
+      case 'h2':
+      case 'h3':
+      case 'h4':
+      case 'h5':
+      case 'h6':
+        const headingText = element.textContent?.trim();
+        if (headingText) {
           elements.push({
-            type: 'text',
-            content: '\n'
+            type: 'heading',
+            content: headingText,
+            level: parseInt(tagName.charAt(1))
           });
-          break;
+        }
+        break;
 
-        case 'div':
-          // Process div children, but add paragraph breaks
+      case 'p':
+        const paragraphText = element.textContent?.trim();
+        if (paragraphText) {
+          elements.push({
+            type: 'paragraph',
+            content: paragraphText
+          });
+        }
+        break;
+
+      case 'ul':
+      case 'ol':
+        const listItems = Array.from(element.querySelectorAll('li'))
+          .map(li => li.textContent?.trim())
+          .filter(text => text && text.length > 0) as string[];
+        
+        if (listItems.length > 0) {
+          elements.push({
+            type: 'list',
+            content: '',
+            isOrdered: tagName === 'ol',
+            items: listItems
+          });
+        }
+        break;
+
+      case 'div':
+        // Check if div has block-level children
+        const hasBlockChildren = Array.from(element.children).some(child => 
+          ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li'].includes(child.tagName.toLowerCase())
+        );
+        
+        if (hasBlockChildren) {
+          // Process children recursively
+          Array.from(element.children).forEach(child => processElement(child));
+        } else {
+          // Treat as paragraph if it has text content
           const divText = element.textContent?.trim();
           if (divText) {
             elements.push({
               type: 'paragraph',
               content: divText
             });
-          } else {
-            // Process children if no direct text
-            for (const child of Array.from(element.childNodes)) {
-              processNode(child);
-            }
           }
-          break;
+        }
+        break;
 
-        case 'span':
-        case 'strong':
-        case 'em':
-        case 'b':
-        case 'i':
-          // For inline elements, just extract text
-          const inlineText = element.textContent?.trim();
-          if (inlineText) {
+      case 'br':
+        // Skip line breaks - they're handled by paragraph structure
+        break;
+
+      case 'li':
+        // Skip - handled by ul/ol processing
+        break;
+
+      default:
+        // For other elements, check if they have children or text content
+        if (element.children.length > 0) {
+          Array.from(element.children).forEach(child => processElement(child));
+        } else {
+          const text = element.textContent?.trim();
+          if (text) {
             elements.push({
               type: 'text',
-              content: inlineText
+              content: text
             });
           }
-          break;
-
-        default:
-          // For any other elements, process children or extract text
-          if (element.children.length > 0) {
-            for (const child of Array.from(element.childNodes)) {
-              processNode(child);
-            }
-          } else {
-            const text = element.textContent?.trim();
-            if (text) {
-              elements.push({
-                type: 'paragraph',
-                content: text
-              });
-            }
-          }
-          break;
-      }
+        }
+        break;
     }
   };
 
-  // Process all child nodes
-  for (const child of Array.from(temp.childNodes)) {
-    processNode(child);
-  }
-
-  // Clean up and merge adjacent text elements
-  const cleanedElements: TextElement[] = [];
-  let currentText = '';
-
-  for (const element of elements) {
-    if (element.type === 'text') {
-      currentText += (currentText ? ' ' : '') + element.content;
-    } else {
-      if (currentText.trim()) {
-        cleanedElements.push({
+  // Process all direct children
+  Array.from(temp.children).forEach(element => processElement(element));
+  
+  // If no structured elements were found, fall back to extracting all text as paragraphs
+  if (elements.length === 0) {
+    const allText = temp.textContent?.trim();
+    if (allText) {
+      // Split by double line breaks to create paragraphs
+      const paragraphs = allText.split(/\n\s*\n/).filter(p => p.trim());
+      paragraphs.forEach(paragraph => {
+        elements.push({
           type: 'paragraph',
-          content: currentText.trim()
+          content: paragraph.trim().replace(/\n/g, ' ').replace(/\s+/g, ' ')
         });
-        currentText = '';
-      }
-      cleanedElements.push(element);
+      });
     }
   }
 
-  // Add any remaining text
-  if (currentText.trim()) {
-    cleanedElements.push({
-      type: 'paragraph',
-      content: currentText.trim()
-    });
-  }
-
-  return cleanedElements;
+  console.log(`Extracted ${elements.length} text elements`);
+  return elements;
 };
 
 export const convertStructuredTextToPlain = (elements: TextElement[]): string => {
   return elements.map(element => {
     switch (element.type) {
       case 'heading':
-        return `\n\n${element.content.toUpperCase()}\n${'='.repeat(element.content.length)}\n`;
+        return `\n${element.content}\n${'='.repeat(Math.min(element.content.length, 50))}\n`;
       case 'paragraph':
         return `${element.content}\n\n`;
       case 'list':
@@ -186,7 +148,7 @@ export const convertStructuredTextToPlain = (elements: TextElement[]): string =>
         }
         return '';
       case 'text':
-        return `${element.content} `;
+        return `${element.content}\n`;
       default:
         return '';
     }

@@ -12,7 +12,7 @@ export class PDFFormatter {
   private pdf: jsPDF;
   private options: PDFFormattingOptions;
   private currentY: number;
-  private lineHeight: number = 5.5;
+  private lineHeight: number = 6;
 
   constructor(pdf: jsPDF, options: PDFFormattingOptions) {
     this.pdf = pdf;
@@ -21,10 +21,10 @@ export class PDFFormatter {
   }
 
   addHeading(text: string, level: number = 1): void {
-    // Add space before heading
-    const spaceAbove = level === 1 ? 15 : 12;
-    this.checkPageBreak(spaceAbove + 12);
-    this.currentY += spaceAbove;
+    if (!text.trim()) return;
+    
+    // Calculate space above heading
+    const spaceAbove = level === 1 ? 15 : 10;
     
     // Set font based on heading level
     const fontSize = Math.max(16 - (level - 1) * 2, 12);
@@ -32,14 +32,20 @@ export class PDFFormatter {
     this.pdf.setFont('helvetica', 'bold');
     this.pdf.setTextColor(0, 0, 0);
     
-    const lines = this.pdf.splitTextToSize(text, this.options.contentWidth);
+    // Split text and calculate required height
+    const lines = this.pdf.splitTextToSize(text.trim(), this.options.contentWidth);
+    const textHeight = lines.length * (fontSize * 0.4); // More accurate height calculation
+    const totalHeight = spaceAbove + textHeight + 8;
     
-    // Check if we have enough space for the heading
-    const requiredHeight = lines.length * 6;
-    this.checkPageBreak(requiredHeight + 8);
+    // Check for page break
+    this.checkPageBreak(totalHeight);
     
+    // Add space above
+    this.currentY += spaceAbove;
+    
+    // Add the heading
     this.pdf.text(lines, this.options.margin, this.currentY);
-    this.currentY += requiredHeight + 8;
+    this.currentY += textHeight + 8;
   }
 
   addParagraph(text: string): void {
@@ -49,14 +55,18 @@ export class PDFFormatter {
     this.pdf.setFont('helvetica', 'normal');
     this.pdf.setTextColor(0, 0, 0);
     
-    const lines = this.pdf.splitTextToSize(text, this.options.contentWidth);
-    const requiredHeight = lines.length * this.lineHeight + 6;
+    // Clean the text
+    const cleanText = text.trim().replace(/\s+/g, ' ');
+    const lines = this.pdf.splitTextToSize(cleanText, this.options.contentWidth);
+    const textHeight = lines.length * this.lineHeight;
+    const totalHeight = textHeight + 8;
     
-    // Check if we need a page break
-    this.checkPageBreak(requiredHeight);
+    // Check for page break
+    this.checkPageBreak(totalHeight);
     
+    // Add the paragraph
     this.pdf.text(lines, this.options.margin, this.currentY);
-    this.currentY += requiredHeight;
+    this.currentY += textHeight + 8;
   }
 
   addList(items: string[], isOrdered: boolean = false): void {
@@ -67,21 +77,24 @@ export class PDFFormatter {
     this.pdf.setTextColor(0, 0, 0);
     
     items.forEach((item, index) => {
-      if (!item.trim()) return;
+      const trimmedItem = item.trim();
+      if (!trimmedItem) return;
       
       const prefix = isOrdered ? `${index + 1}. ` : '• ';
-      const fullText = `${prefix}${item.trim()}`;
+      const fullText = `${prefix}${trimmedItem}`;
       
-      const lines = this.pdf.splitTextToSize(fullText, this.options.contentWidth - 8);
-      const itemHeight = lines.length * this.lineHeight + 2;
+      const lines = this.pdf.splitTextToSize(fullText, this.options.contentWidth - 10);
+      const itemHeight = lines.length * this.lineHeight + 3;
       
+      // Check for page break before each item
       this.checkPageBreak(itemHeight);
       
-      this.pdf.text(lines, this.options.margin + 8, this.currentY);
+      this.pdf.text(lines, this.options.margin + 10, this.currentY);
       this.currentY += itemHeight;
     });
     
-    this.currentY += 6; // Space after list
+    // Add space after the list
+    this.currentY += 6;
   }
 
   addText(text: string): void {
@@ -91,17 +104,21 @@ export class PDFFormatter {
     this.pdf.setFont('helvetica', 'normal');
     this.pdf.setTextColor(0, 0, 0);
     
-    const lines = this.pdf.splitTextToSize(text, this.options.contentWidth);
-    const requiredHeight = lines.length * this.lineHeight + 3;
+    const cleanText = text.trim().replace(/\s+/g, ' ');
+    const lines = this.pdf.splitTextToSize(cleanText, this.options.contentWidth);
+    const textHeight = lines.length * this.lineHeight;
+    const totalHeight = textHeight + 4;
     
-    this.checkPageBreak(requiredHeight);
+    this.checkPageBreak(totalHeight);
     
     this.pdf.text(lines, this.options.margin, this.currentY);
-    this.currentY += requiredHeight;
+    this.currentY += textHeight + 4;
   }
 
   addSeparator(): void {
-    this.checkPageBreak(15);
+    const separatorHeight = 15;
+    this.checkPageBreak(separatorHeight);
+    
     this.currentY += 5;
     this.pdf.setDrawColor(200, 200, 200);
     this.pdf.line(
@@ -114,12 +131,14 @@ export class PDFFormatter {
   }
 
   private checkPageBreak(requiredSpace: number): void {
-    const bottomMargin = this.options.margin + 20; // Extra space for footer
-    const availableSpace = this.options.pageHeight - bottomMargin - this.currentY;
+    // Leave more space at bottom for footer
+    const bottomMargin = this.options.margin + 25;
+    const maxY = this.options.pageHeight - bottomMargin;
     
-    if (availableSpace < requiredSpace) {
+    if (this.currentY + requiredSpace > maxY) {
+      console.log(`Page break triggered: currentY=${this.currentY}, requiredSpace=${requiredSpace}, maxY=${maxY}`);
       this.pdf.addPage();
-      this.currentY = this.options.margin + 10; // Start with some margin from top
+      this.currentY = this.options.margin + 15; // Start new page with proper margin
     }
   }
 
@@ -128,11 +147,17 @@ export class PDFFormatter {
   }
 
   setCurrentY(y: number): void {
-    this.currentY = y;
+    this.currentY = Math.max(y, this.options.margin);
   }
 
   addPageBreak(): void {
     this.pdf.addPage();
-    this.currentY = this.options.margin + 10;
+    this.currentY = this.options.margin + 15;
+  }
+
+  getRemainingSpace(): number {
+    const bottomMargin = this.options.margin + 25;
+    const maxY = this.options.pageHeight - bottomMargin;
+    return maxY - this.currentY;
   }
 }
