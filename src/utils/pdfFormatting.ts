@@ -1,6 +1,5 @@
 
 import jsPDF from 'jspdf';
-import { TextElement } from './htmlToText';
 
 export interface PDFFormattingOptions {
   margin: number;
@@ -13,6 +12,7 @@ export class PDFFormatter {
   private pdf: jsPDF;
   private options: PDFFormattingOptions;
   private currentY: number;
+  private lineHeight: number = 5.5;
 
   constructor(pdf: jsPDF, options: PDFFormattingOptions) {
     this.pdf = pdf;
@@ -21,10 +21,10 @@ export class PDFFormatter {
   }
 
   addHeading(text: string, level: number = 1): void {
-    this.checkPageBreak(15);
-    
     // Add space before heading
-    this.currentY += level === 1 ? 10 : 8;
+    const spaceAbove = level === 1 ? 15 : 12;
+    this.checkPageBreak(spaceAbove + 12);
+    this.currentY += spaceAbove;
     
     // Set font based on heading level
     const fontSize = Math.max(16 - (level - 1) * 2, 12);
@@ -33,64 +33,93 @@ export class PDFFormatter {
     this.pdf.setTextColor(0, 0, 0);
     
     const lines = this.pdf.splitTextToSize(text, this.options.contentWidth);
+    
+    // Check if we have enough space for the heading
+    const requiredHeight = lines.length * 6;
+    this.checkPageBreak(requiredHeight + 8);
+    
     this.pdf.text(lines, this.options.margin, this.currentY);
-    this.currentY += lines.length * 6 + 8;
+    this.currentY += requiredHeight + 8;
   }
 
   addParagraph(text: string): void {
-    this.checkPageBreak(10);
+    if (!text.trim()) return;
     
     this.pdf.setFontSize(11);
     this.pdf.setFont('helvetica', 'normal');
     this.pdf.setTextColor(0, 0, 0);
     
     const lines = this.pdf.splitTextToSize(text, this.options.contentWidth);
+    const requiredHeight = lines.length * this.lineHeight + 6;
+    
+    // Check if we need a page break
+    this.checkPageBreak(requiredHeight);
+    
     this.pdf.text(lines, this.options.margin, this.currentY);
-    this.currentY += lines.length * 5.5 + 6;
+    this.currentY += requiredHeight;
   }
 
   addList(items: string[], isOrdered: boolean = false): void {
-    this.checkPageBreak(items.length * 6);
+    if (!items || items.length === 0) return;
     
     this.pdf.setFontSize(11);
     this.pdf.setFont('helvetica', 'normal');
     this.pdf.setTextColor(0, 0, 0);
     
     items.forEach((item, index) => {
-      const prefix = isOrdered ? `${index + 1}. ` : '• ';
-      const fullText = `${prefix}${item}`;
+      if (!item.trim()) return;
       
-      const lines = this.pdf.splitTextToSize(fullText, this.options.contentWidth - 5);
-      this.pdf.text(lines, this.options.margin + 5, this.currentY);
-      this.currentY += lines.length * 5.5 + 2;
+      const prefix = isOrdered ? `${index + 1}. ` : '• ';
+      const fullText = `${prefix}${item.trim()}`;
+      
+      const lines = this.pdf.splitTextToSize(fullText, this.options.contentWidth - 8);
+      const itemHeight = lines.length * this.lineHeight + 2;
+      
+      this.checkPageBreak(itemHeight);
+      
+      this.pdf.text(lines, this.options.margin + 8, this.currentY);
+      this.currentY += itemHeight;
     });
     
-    this.currentY += 6;
+    this.currentY += 6; // Space after list
   }
 
   addText(text: string): void {
-    this.checkPageBreak(8);
+    if (!text.trim()) return;
     
     this.pdf.setFontSize(11);
     this.pdf.setFont('helvetica', 'normal');
     this.pdf.setTextColor(0, 0, 0);
     
     const lines = this.pdf.splitTextToSize(text, this.options.contentWidth);
+    const requiredHeight = lines.length * this.lineHeight + 3;
+    
+    this.checkPageBreak(requiredHeight);
+    
     this.pdf.text(lines, this.options.margin, this.currentY);
-    this.currentY += lines.length * 5.5 + 3;
+    this.currentY += requiredHeight;
   }
 
   addSeparator(): void {
-    this.checkPageBreak(5);
+    this.checkPageBreak(15);
+    this.currentY += 5;
     this.pdf.setDrawColor(200, 200, 200);
-    this.pdf.line(this.options.margin, this.currentY, this.options.pageWidth - this.options.margin, this.currentY);
+    this.pdf.line(
+      this.options.margin, 
+      this.currentY, 
+      this.options.pageWidth - this.options.margin, 
+      this.currentY
+    );
     this.currentY += 10;
   }
 
   private checkPageBreak(requiredSpace: number): void {
-    if (this.currentY + requiredSpace > this.options.pageHeight - this.options.margin) {
+    const bottomMargin = this.options.margin + 20; // Extra space for footer
+    const availableSpace = this.options.pageHeight - bottomMargin - this.currentY;
+    
+    if (availableSpace < requiredSpace) {
       this.pdf.addPage();
-      this.currentY = this.options.margin + 25; // Leave space for header
+      this.currentY = this.options.margin + 10; // Start with some margin from top
     }
   }
 
@@ -100,5 +129,10 @@ export class PDFFormatter {
 
   setCurrentY(y: number): void {
     this.currentY = y;
+  }
+
+  addPageBreak(): void {
+    this.pdf.addPage();
+    this.currentY = this.options.margin + 10;
   }
 }
