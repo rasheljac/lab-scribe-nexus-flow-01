@@ -102,89 +102,123 @@ export const exportProtocolToPDF = async (protocol: ProtocolPDFData) => {
   pdf.text('Protocol Steps & Instructions:', margin, currentY);
   currentY += 10;
 
-  // Enhanced HTML to text processing
+  // Improved HTML to text processing
   const processHtmlContent = (html: string) => {
     // Create a temporary DOM element to parse HTML
     const temp = document.createElement('div');
     temp.innerHTML = html;
     
-    // Process different HTML elements
-    const processNode = (node: Node): string => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        return node.textContent || '';
-      }
+    let result = '';
+    
+    const processElement = (element: Element): string => {
+      let text = '';
       
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        const element = node as Element;
-        const tagName = element.tagName.toLowerCase();
-        
-        // Handle different HTML elements
-        switch (tagName) {
-          case 'p':
-            const pContent = Array.from(element.childNodes).map(processNode).join('');
-            return pContent.trim() ? pContent + '\n\n' : '';
-          case 'br':
-            return '\n';
-          case 'h1':
-          case 'h2':
-          case 'h3':
-          case 'h4':
-          case 'h5':
-          case 'h6':
-            const hContent = Array.from(element.childNodes).map(processNode).join('');
-            return hContent.trim() ? '\n' + hContent.toUpperCase() + '\n\n' : '';
-          case 'strong':
-          case 'b':
-            return Array.from(element.childNodes).map(processNode).join('');
-          case 'em':
-          case 'i':
-            return Array.from(element.childNodes).map(processNode).join('');
-          case 'ul':
-          case 'ol':
-            const listItems = Array.from(element.children)
-              .filter(child => child.tagName.toLowerCase() === 'li')
-              .map((li, index) => {
-                const content = Array.from(li.childNodes).map(processNode).join('').trim();
-                return tagName === 'ol' ? `${index + 1}. ${content}` : `• ${content}`;
-              })
-              .join('\n');
-            return listItems ? listItems + '\n\n' : '';
-          case 'li':
-            return Array.from(element.childNodes).map(processNode).join('');
-          case 'div':
-            const divContent = Array.from(element.childNodes).map(processNode).join('');
-            return divContent + '\n';
-          default:
-            return Array.from(element.childNodes).map(processNode).join('');
+      for (const node of element.childNodes) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          // Clean up text content - normalize whitespace but preserve intentional breaks
+          const textContent = node.textContent || '';
+          const cleanText = textContent.replace(/\s+/g, ' ').trim();
+          if (cleanText) {
+            text += cleanText;
+          }
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+          const childElement = node as Element;
+          const tagName = childElement.tagName.toLowerCase();
+          
+          switch (tagName) {
+            case 'p':
+              const pText = processElement(childElement).trim();
+              if (pText) {
+                text += pText + '\n\n';
+              }
+              break;
+            case 'br':
+              text += '\n';
+              break;
+            case 'h1':
+            case 'h2':
+            case 'h3':
+            case 'h4':
+            case 'h5':
+            case 'h6':
+              const hText = processElement(childElement).trim();
+              if (hText) {
+                text += '\n\n' + hText.toUpperCase() + '\n\n';
+              }
+              break;
+            case 'strong':
+            case 'b':
+            case 'em':
+            case 'i':
+              text += processElement(childElement);
+              break;
+            case 'ul':
+            case 'ol':
+              const listItems = Array.from(childElement.children)
+                .filter(child => child.tagName.toLowerCase() === 'li')
+                .map((li, index) => {
+                  const content = processElement(li).trim();
+                  if (!content) return '';
+                  return tagName === 'ol' ? `${index + 1}. ${content}` : `• ${content}`;
+                })
+                .filter(item => item.length > 0);
+              
+              if (listItems.length > 0) {
+                text += '\n' + listItems.join('\n') + '\n\n';
+              }
+              break;
+            case 'li':
+              text += processElement(childElement);
+              break;
+            case 'div':
+              const divText = processElement(childElement);
+              if (divText.trim()) {
+                text += divText;
+                // Only add newline if the div content doesn't already end with one
+                if (!divText.endsWith('\n')) {
+                  text += '\n';
+                }
+              }
+              break;
+            default:
+              text += processElement(childElement);
+              break;
+          }
         }
       }
       
-      return '';
+      return text;
     };
     
-    return Array.from(temp.childNodes).map(processNode).join('');
+    result = processElement(temp);
+    
+    // Final cleanup
+    return result
+      .replace(/\n{3,}/g, '\n\n') // Replace 3+ consecutive newlines with 2
+      .replace(/[ \t]+/g, ' ') // Replace multiple spaces/tabs with single space
+      .replace(/\n /g, '\n') // Remove spaces at beginning of lines
+      .replace(/ \n/g, '\n') // Remove spaces at end of lines
+      .trim();
   };
 
-  const cleanContent = processHtmlContent(protocol.content)
-    .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double newlines
-    .replace(/^\s+|\s+$/g, '') // Trim whitespace from start and end
-    .replace(/[ \t]+/g, ' '); // Replace multiple spaces/tabs with single space
+  const cleanContent = processHtmlContent(protocol.content);
 
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(11);
   
   // Split content into paragraphs and process each one
   const paragraphs = cleanContent.split('\n\n').filter(p => p.trim());
-  const lineHeight = 6;
+  const lineHeight = 5.5;
   
   for (const paragraph of paragraphs) {
     const trimmedParagraph = paragraph.trim();
     if (!trimmedParagraph) continue;
     
-    // Check if this is a heading (all uppercase)
+    // Check if this is a heading (all uppercase and reasonable length)
     const isHeading = trimmedParagraph === trimmedParagraph.toUpperCase() && 
                      trimmedParagraph.length < 100 && 
-                     !trimmedParagraph.includes('.');
+                     !trimmedParagraph.includes('.') &&
+                     trimmedParagraph.split(' ').length < 10;
     
     if (isHeading) {
       // Add some space before headings
@@ -196,8 +230,13 @@ export const exportProtocolToPDF = async (protocol: ProtocolPDFData) => {
       pdf.setFontSize(11);
     }
     
+    // Handle numbered lists and bullet points with proper indentation
+    const isListItem = /^(\d+\.|•)/.test(trimmedParagraph);
+    const textMargin = isListItem ? margin + 5 : margin;
+    const textWidth = isListItem ? contentWidth - 5 : contentWidth;
+    
     // Split paragraph into lines that fit the page width
-    const lines = pdf.splitTextToSize(trimmedParagraph, contentWidth);
+    const lines = pdf.splitTextToSize(trimmedParagraph, textWidth);
     
     for (let i = 0; i < lines.length; i++) {
       // Check if we need a new page
@@ -228,12 +267,15 @@ export const exportProtocolToPDF = async (protocol: ProtocolPDFData) => {
         currentY = margin + 25;
       }
       
-      pdf.text(lines[i], margin, currentY);
+      const lineText = lines[i].trim();
+      if (lineText) {
+        pdf.text(lineText, textMargin, currentY);
+      }
       currentY += lineHeight;
     }
     
-    // Add extra space after paragraphs
-    currentY += 4;
+    // Add extra space after paragraphs, less for list items
+    currentY += isListItem ? 2 : 4;
   }
 
   // Add footer with branding
