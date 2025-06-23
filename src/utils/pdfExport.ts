@@ -1,4 +1,3 @@
-
 import jsPDF from 'jspdf';
 import { convertHtmlToStructuredText } from './htmlToText';
 import { PDFFormatter } from './pdfFormatting';
@@ -80,15 +79,15 @@ export const exportProtocolToPDF = async (protocol: ProtocolPDFData) => {
           formatter.addHeading(element.content, element.level || 1);
           break;
         case 'paragraph':
-          formatter.addParagraph(element.content);
+          formatter.addParagraph(element.content, element.formatting);
           break;
         case 'list':
           if (element.items && element.items.length > 0) {
-            formatter.addList(element.items, element.isOrdered);
+            formatter.addList(element.items, element.isOrdered, element.formatting);
           }
           break;
         case 'text':
-          formatter.addText(element.content);
+          formatter.addText(element.content, element.formatting);
           break;
         default:
           console.warn('Unknown element type:', element.type);

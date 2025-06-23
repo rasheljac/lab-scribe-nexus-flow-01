@@ -5,6 +5,15 @@ export interface TextElement {
   level?: number; // for headings (1-6)
   isOrdered?: boolean; // for lists
   items?: string[]; // for lists
+  formatting?: FormattingSpan[]; // for styled text
+}
+
+export interface FormattingSpan {
+  text: string;
+  bold?: boolean;
+  italic?: boolean;
+  start: number;
+  end: number;
 }
 
 export const convertHtmlToStructuredText = (html: string): TextElement[] => {
@@ -17,6 +26,55 @@ export const convertHtmlToStructuredText = (html: string): TextElement[] => {
   temp.innerHTML = html;
 
   const elements: TextElement[] = [];
+
+  const extractFormattedText = (element: Element): { text: string; formatting: FormattingSpan[] } => {
+    const formatting: FormattingSpan[] = [];
+    let text = '';
+    let currentPos = 0;
+
+    const processNode = (node: Node): void => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const textContent = node.textContent || '';
+        text += textContent;
+        currentPos += textContent.length;
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        const elem = node as Element;
+        const tagName = elem.tagName.toLowerCase();
+        const startPos = currentPos;
+        
+        // Process child nodes first to get the text
+        const childNodes = Array.from(elem.childNodes);
+        childNodes.forEach(child => processNode(child));
+        
+        const endPos = currentPos;
+        
+        // Add formatting span for this element
+        if (endPos > startPos) {
+          const span: FormattingSpan = {
+            text: text.substring(startPos, endPos),
+            start: startPos,
+            end: endPos
+          };
+          
+          if (tagName === 'strong' || tagName === 'b') {
+            span.bold = true;
+          }
+          if (tagName === 'em' || tagName === 'i') {
+            span.italic = true;
+          }
+          
+          if (span.bold || span.italic) {
+            formatting.push(span);
+          }
+        }
+      }
+    };
+
+    // Process all child nodes
+    Array.from(element.childNodes).forEach(child => processNode(child));
+    
+    return { text: text.trim(), formatting };
+  };
 
   const processElement = (element: Element): void => {
     const tagName = element.tagName.toLowerCase();
@@ -39,11 +97,12 @@ export const convertHtmlToStructuredText = (html: string): TextElement[] => {
         break;
 
       case 'p':
-        const paragraphText = element.textContent?.trim();
+        const { text: paragraphText, formatting: paragraphFormatting } = extractFormattedText(element);
         if (paragraphText) {
           elements.push({
             type: 'paragraph',
-            content: paragraphText
+            content: paragraphText,
+            formatting: paragraphFormatting
           });
         }
         break;
@@ -51,15 +110,26 @@ export const convertHtmlToStructuredText = (html: string): TextElement[] => {
       case 'ul':
       case 'ol':
         const listItems = Array.from(element.querySelectorAll('li'))
-          .map(li => li.textContent?.trim())
-          .filter(text => text && text.length > 0) as string[];
+          .map(li => {
+            const { text, formatting } = extractFormattedText(li);
+            return { text: text.trim(), formatting };
+          })
+          .filter(item => item.text && item.text.length > 0);
         
         if (listItems.length > 0) {
           elements.push({
             type: 'list',
             content: '',
             isOrdered: tagName === 'ol',
-            items: listItems
+            items: listItems.map(item => item.text),
+            formatting: listItems.flatMap((item, index) => 
+              item.formatting.map(span => ({
+                ...span,
+                // Adjust positions to account for list item prefixes
+                start: span.start,
+                end: span.end
+              }))
+            )
           });
         }
         break;
@@ -75,11 +145,12 @@ export const convertHtmlToStructuredText = (html: string): TextElement[] => {
           Array.from(element.children).forEach(child => processElement(child));
         } else {
           // Treat as paragraph if it has text content
-          const divText = element.textContent?.trim();
+          const { text: divText, formatting: divFormatting } = extractFormattedText(element);
           if (divText) {
             elements.push({
               type: 'paragraph',
-              content: divText
+              content: divText,
+              formatting: divFormatting
             });
           }
         }
@@ -98,11 +169,12 @@ export const convertHtmlToStructuredText = (html: string): TextElement[] => {
         if (element.children.length > 0) {
           Array.from(element.children).forEach(child => processElement(child));
         } else {
-          const text = element.textContent?.trim();
+          const { text, formatting } = extractFormattedText(element);
           if (text) {
             elements.push({
               type: 'text',
-              content: text
+              content: text,
+              formatting: formatting
             });
           }
         }
@@ -115,14 +187,15 @@ export const convertHtmlToStructuredText = (html: string): TextElement[] => {
   
   // If no structured elements were found, fall back to extracting all text as paragraphs
   if (elements.length === 0) {
-    const allText = temp.textContent?.trim();
+    const { text: allText, formatting } = extractFormattedText(temp);
     if (allText) {
       // Split by double line breaks to create paragraphs
       const paragraphs = allText.split(/\n\s*\n/).filter(p => p.trim());
       paragraphs.forEach(paragraph => {
         elements.push({
           type: 'paragraph',
-          content: paragraph.trim().replace(/\n/g, ' ').replace(/\s+/g, ' ')
+          content: paragraph.trim().replace(/\n/g, ' ').replace(/\s+/g, ' '),
+          formatting: formatting
         });
       });
     }
