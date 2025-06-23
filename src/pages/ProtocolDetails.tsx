@@ -10,22 +10,58 @@ import {
   Tag,
   BookOpen,
   Edit,
-  Loader2
+  Loader2,
+  Download
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import RichTextDisplay from "@/components/RichTextDisplay";
 import EditProtocolDialog from "@/components/EditProtocolDialog";
 import { useProtocols } from "@/hooks/useProtocols";
+import { exportProtocolToPDF } from "@/utils/pdfExport";
+import { useToast } from "@/hooks/use-toast";
 
 const ProtocolDetails = () => {
   const { protocolId } = useParams();
   const navigate = useNavigate();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   
   const { protocols, isLoading, error } = useProtocols();
+  const { toast } = useToast();
   
   const protocol = protocols.find(p => p.id === protocolId);
+
+  const handleExportPDF = async () => {
+    if (!protocol) return;
+    
+    setIsExporting(true);
+    try {
+      await exportProtocolToPDF({
+        title: protocol.title,
+        description: protocol.description || undefined,
+        content: protocol.content,
+        category: protocol.category,
+        version: protocol.version,
+        createdAt: protocol.created_at,
+        updatedAt: protocol.updated_at,
+      });
+      
+      toast({
+        title: "Success",
+        description: "Protocol exported to PDF successfully",
+      });
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      toast({
+        title: "Error",
+        description: "Failed to export protocol to PDF",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -98,10 +134,25 @@ const ProtocolDetails = () => {
                   )}
                 </div>
               </div>
-              <Button onClick={() => setEditDialogOpen(true)} className="gap-2">
-                <Edit className="h-4 w-4" />
-                Edit Protocol
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleExportPDF} 
+                  disabled={isExporting}
+                  variant="outline" 
+                  className="gap-2"
+                >
+                  {isExporting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  Export PDF
+                </Button>
+                <Button onClick={() => setEditDialogOpen(true)} className="gap-2">
+                  <Edit className="h-4 w-4" />
+                  Edit Protocol
+                </Button>
+              </div>
             </div>
 
             {/* Protocol Metadata */}
