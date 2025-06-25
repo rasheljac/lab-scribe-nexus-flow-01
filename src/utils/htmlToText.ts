@@ -1,4 +1,3 @@
-
 export interface TextElement {
   type: 'heading' | 'paragraph' | 'list' | 'text';
   content: string;
@@ -12,6 +11,8 @@ export interface FormattingSpan {
   text: string;
   bold?: boolean;
   italic?: boolean;
+  superscript?: boolean;
+  subscript?: boolean;
   start: number;
   end: number;
 }
@@ -62,8 +63,14 @@ export const convertHtmlToStructuredText = (html: string): TextElement[] => {
           if (tagName === 'em' || tagName === 'i') {
             span.italic = true;
           }
+          if (tagName === 'sup') {
+            span.superscript = true;
+          }
+          if (tagName === 'sub') {
+            span.subscript = true;
+          }
           
-          if (span.bold || span.italic) {
+          if (span.bold || span.italic || span.superscript || span.subscript) {
             formatting.push(span);
           }
         }
