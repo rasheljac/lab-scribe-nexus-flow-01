@@ -540,6 +540,45 @@ export type Database = {
         }
         Relationships: []
       }
+      label_templates: {
+        Row: {
+          created_at: string
+          height_mm: number
+          id: string
+          is_default: boolean
+          name: string
+          size: string
+          type: string
+          updated_at: string
+          user_id: string
+          width_mm: number
+        }
+        Insert: {
+          created_at?: string
+          height_mm?: number
+          id?: string
+          is_default?: boolean
+          name: string
+          size: string
+          type: string
+          updated_at?: string
+          user_id: string
+          width_mm?: number
+        }
+        Update: {
+          created_at?: string
+          height_mm?: number
+          id?: string
+          is_default?: boolean
+          name?: string
+          size?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+          width_mm?: number
+        }
+        Relationships: []
+      }
       labels: {
         Row: {
           barcode_data: string | null

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Printer, QrCode, Barcode, FileText, Download, Plus, Trash2 } from "lucide-react";
+import { Printer, QrCode, Barcode, FileText, Download, Plus, Trash2, Edit } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,27 +22,15 @@ import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { useLabels, Label as LabelData } from "@/hooks/useLabels";
+import { useLabelTemplates } from "@/hooks/useLabelTemplates";
+import CreateTemplateDialog from "@/components/CreateTemplateDialog";
 import jsPDF from 'jspdf';
-
-interface LabelTemplate {
-  id: number;
-  name: string;
-  type: string;
-  size: string;
-}
-
-const initialTemplates: LabelTemplate[] = [
-  { id: 1, name: "Sample Label", type: "sample", size: "2x1 inch" },
-  { id: 2, name: "Equipment Tag", type: "equipment", size: "1.5x1 inch" },
-  { id: 3, name: "Chemical Bottle", type: "chemical", size: "3x2 inch" },
-  { id: 4, name: "Storage Box", type: "storage", size: "4x2 inch" },
-];
 
 const LabelPrinter = () => {
   const [selectedTemplate, setSelectedTemplate] = useState("");
-  const [templates] = useState<LabelTemplate[]>(initialTemplates);
   const [printQueue, setPrintQueue] = useState<LabelData[]>([]);
-  const { labels, loading, addLabel, deleteLabel } = useLabels();
+  const { labels, loading: labelsLoading, addLabel, deleteLabel } = useLabels();
+  const { templates, loading: templatesLoading, deleteTemplate } = useLabelTemplates();
   const { toast } = useToast();
 
   const [labelData, setLabelData] = useState({
@@ -57,6 +45,10 @@ const LabelPrinter = () => {
 
   const handleInputChange = (field: keyof typeof labelData, value: string | number) => {
     setLabelData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const getSelectedTemplateData = () => {
+    return templates.find(t => t.name === selectedTemplate);
   };
 
   const handlePrint = async () => {
@@ -119,21 +111,22 @@ const LabelPrinter = () => {
     }
 
     try {
+      const templateData = getSelectedTemplateData();
       const doc = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
       });
 
-      // Define label dimensions (matching preview proportions)
-      const labelWidth = 60;
-      const labelHeight = 40;
+      // Use template dimensions if available, otherwise default
+      const labelWidth = templateData?.width_mm || 60;
+      const labelHeight = templateData?.height_mm || 40;
       const startX = 20;
       const startY = 30;
       const padding = 4;
 
       const drawSingleLabel = (x: number, y: number) => {
-        // Draw label border with rounded corners effect
+        // Draw label border
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.5);
         doc.rect(x, y, labelWidth, labelHeight);
@@ -142,50 +135,48 @@ const LabelPrinter = () => {
         doc.setFillColor(255, 255, 255);
         doc.rect(x, y, labelWidth, labelHeight, 'F');
 
-        let currentY = y + padding + 6; // Start with more padding from top
+        let currentY = y + padding + 6;
 
         // Add title
         if (labelData.title) {
-          doc.setFontSize(12);
+          doc.setFontSize(Math.min(12, labelWidth / 5));
           doc.setFont(undefined, 'bold');
           doc.setTextColor(0, 0, 0);
-          const titleText = labelData.title;
           
-          // Split text if too long
           const maxWidth = labelWidth - (padding * 2);
-          const titleLines = doc.splitTextToSize(titleText, maxWidth);
+          const titleLines = doc.splitTextToSize(labelData.title, maxWidth);
           
-          // Center align each line
           titleLines.forEach((line: string, index: number) => {
             const lineWidth = doc.getTextWidth(line);
             const titleX = x + (labelWidth - lineWidth) / 2;
             doc.text(line, titleX, currentY + (index * 5));
           });
           
-          currentY += titleLines.length * 5 + 3; // Add space after title
+          currentY += titleLines.length * 5 + 3;
         }
 
-        // Add subtitle if present
-        if (labelData.subtitle) {
-          doc.setFontSize(9);
+        // Add subtitle if present and space allows
+        if (labelData.subtitle && currentY + 8 < y + labelHeight - padding) {
+          doc.setFontSize(Math.min(9, labelWidth / 7));
           doc.setFont(undefined, 'normal');
           doc.setTextColor(120, 120, 120);
-          const subtitleText = labelData.subtitle;
+          
           const maxWidth = labelWidth - (padding * 2);
-          const subtitleLines = doc.splitTextToSize(subtitleText, maxWidth);
+          const subtitleLines = doc.splitTextToSize(labelData.subtitle, maxWidth);
+          const linesToShow = Math.min(subtitleLines.length, Math.floor((y + labelHeight - currentY - 20) / 4));
           
-          subtitleLines.forEach((line: string, index: number) => {
-            const lineWidth = doc.getTextWidth(line);
+          for (let i = 0; i < linesToShow; i++) {
+            const lineWidth = doc.getTextWidth(subtitleLines[i]);
             const subtitleX = x + (labelWidth - lineWidth) / 2;
-            doc.text(line, subtitleX, currentY + (index * 4));
-          });
+            doc.text(subtitleLines[i], subtitleX, currentY + (i * 4));
+          }
           
-          currentY += subtitleLines.length * 4 + 4; // Add space after subtitle
+          currentY += linesToShow * 4 + 4;
         }
 
-        // Add barcode area (matching the preview style exactly)
-        if (labelData.barcode_data) {
-          const barcodeHeight = 8;
+        // Add barcode area if data exists and space allows
+        if (labelData.barcode_data && currentY + 12 < y + labelHeight - padding) {
+          const barcodeHeight = Math.min(8, (y + labelHeight - currentY - 12));
           const barcodeWidth = labelWidth - (padding * 2);
           const barcodeX = x + padding;
           
@@ -193,7 +184,7 @@ const LabelPrinter = () => {
           doc.setFillColor(35, 35, 55);
           doc.rect(barcodeX, currentY, barcodeWidth, barcodeHeight, 'F');
           
-          // Add barcode lines (simulating barcode appearance)
+          // Add barcode lines
           doc.setDrawColor(255, 255, 255);
           doc.setLineWidth(0.3);
           for (let i = 0; i < 10; i++) {
@@ -202,7 +193,7 @@ const LabelPrinter = () => {
           }
           
           // Add barcode text
-          doc.setFontSize(6);
+          doc.setFontSize(Math.min(6, barcodeWidth / 10));
           doc.setTextColor(255, 255, 255);
           doc.setFont(undefined, 'normal');
           const barcodeText = labelData.barcode_data.toUpperCase();
@@ -210,40 +201,40 @@ const LabelPrinter = () => {
           const barcodeTextX = barcodeX + (barcodeWidth - barcodeTextWidth) / 2;
           doc.text(barcodeText, barcodeTextX, currentY + barcodeHeight - 1.5);
           
-          currentY += barcodeHeight + 4; // Add space after barcode
+          currentY += barcodeHeight + 4;
         }
 
-        // Add date and researcher info (with proper spacing)
-        doc.setFontSize(8);
+        // Add date and researcher info with proper spacing
+        doc.setFontSize(Math.min(8, labelWidth / 8));
         doc.setFont(undefined, 'normal');
         doc.setTextColor(0, 0, 0);
         
-        if (labelData.date) {
+        if (labelData.date && currentY + 4 < y + labelHeight - padding) {
           const dateText = labelData.date;
           const dateWidth = doc.getTextWidth(dateText);
           const dateX = x + (labelWidth - dateWidth) / 2;
           doc.text(dateText, dateX, currentY);
-          currentY += 4; // Space between date and researcher
+          currentY += 4;
         }
         
-        if (labelData.researcher) {
+        if (labelData.researcher && currentY + 4 < y + labelHeight - padding) {
           const researcherText = labelData.researcher;
           const researcherWidth = doc.getTextWidth(researcherText);
           const researcherX = x + (labelWidth - researcherWidth) / 2;
           doc.text(researcherText, researcherX, currentY);
-          currentY += 4; // Space after researcher
+          currentY += 4;
         }
 
-        // Add notes if present and there's space (smaller font, bottom of label)
+        // Add notes if present and there's space
         if (labelData.notes) {
           const availableSpace = (y + labelHeight - padding) - currentY;
-          if (availableSpace > 6) { // Only add notes if there's enough space
-            doc.setFontSize(6);
+          if (availableSpace > 6) {
+            doc.setFontSize(Math.min(6, labelWidth / 10));
             doc.setTextColor(100, 100, 100);
             doc.setFont(undefined, 'normal');
             const maxNoteWidth = labelWidth - (padding * 2);
             const notesLines = doc.splitTextToSize(labelData.notes, maxNoteWidth);
-            const maxLines = Math.floor(availableSpace / 2.5); // Calculate max lines that fit
+            const maxLines = Math.floor(availableSpace / 2.5);
             const linesToShow = Math.min(notesLines.length, maxLines);
             
             for (let i = 0; i < linesToShow; i++) {
@@ -260,21 +251,18 @@ const LabelPrinter = () => {
 
       // Add multiple copies if quantity > 1
       if (labelData.quantity > 1) {
-        const labelsPerRow = 2;
-        const labelsPerPage = 8;
-        const horizontalSpacing = 15;
-        const verticalSpacing = 15;
+        const labelsPerRow = Math.floor((210 - startX * 2) / (labelWidth + 15));
+        const labelsPerPage = Math.floor((297 - startY * 2) / (labelHeight + 15)) * labelsPerRow;
         
         for (let i = 1; i < Math.min(labelData.quantity, labelsPerPage); i++) {
           const row = Math.floor(i / labelsPerRow);
           const col = i % labelsPerRow;
-          const x = startX + col * (labelWidth + horizontalSpacing);
-          const y = startY + row * (labelHeight + verticalSpacing);
+          const x = startX + col * (labelWidth + 15);
+          const y = startY + row * (labelHeight + 15);
           
           // Check if we need a new page
           if (y + labelHeight > 280) {
             doc.addPage();
-            // Reset to first position on new page
             drawSingleLabel(startX, startY);
             break;
           }
@@ -393,7 +381,11 @@ const LabelPrinter = () => {
     await deleteLabel(label.id);
   };
 
-  if (loading) {
+  const handleDeleteTemplate = async (templateId: string) => {
+    await deleteTemplate(templateId);
+  };
+
+  if (labelsLoading || templatesLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex">
         <Sidebar />
@@ -401,7 +393,7 @@ const LabelPrinter = () => {
           <Header />
           <main className="flex-1 p-6 overflow-auto">
             <div className="max-w-7xl mx-auto">
-              <div className="text-center">Loading labels...</div>
+              <div className="text-center">Loading...</div>
             </div>
           </main>
         </div>
@@ -423,10 +415,7 @@ const LabelPrinter = () => {
                 <p className="text-gray-600 mt-1">Design and print laboratory labels</p>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  New Template
-                </Button>
+                <CreateTemplateDialog />
                 <Button variant="outline" className="gap-2" onClick={processQueue}>
                   <FileText className="h-4 w-4" />
                   Process Queue ({printQueue.length})
@@ -613,11 +602,43 @@ const LabelPrinter = () => {
                           }`}
                           onClick={() => setSelectedTemplate(template.name)}
                         >
-                          <div className="font-medium">{template.name}</div>
-                          <div className="text-sm text-gray-600">{template.size}</div>
-                          <Badge variant="outline" className="mt-1">
-                            {template.type}
-                          </Badge>
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="font-medium">{template.name}</div>
+                              <div className="text-sm text-gray-600">{template.size}</div>
+                              <Badge variant="outline" className="mt-1">
+                                {template.type}
+                              </Badge>
+                              {template.is_default && (
+                                <Badge variant="secondary" className="mt-1 ml-1">
+                                  default
+                                </Badge>
+                              )}
+                            </div>
+                            {!template.is_default && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <Trash2 className="h-4 w-4 text-red-600" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Template</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete this template? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteTemplate(template.id)}>
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
