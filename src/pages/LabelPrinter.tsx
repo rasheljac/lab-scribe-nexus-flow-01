@@ -132,193 +132,154 @@ const LabelPrinter = () => {
       const startY = 30;
       const padding = 4;
 
-      // Draw label border with rounded corners effect
-      doc.setDrawColor(200, 200, 200);
-      doc.setLineWidth(0.5);
-      doc.rect(startX, startY, labelWidth, labelHeight);
+      const drawSingleLabel = (x: number, y: number) => {
+        // Draw label border with rounded corners effect
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.5);
+        doc.rect(x, y, labelWidth, labelHeight);
 
-      // White background
-      doc.setFillColor(255, 255, 255);
-      doc.rect(startX, startY, labelWidth, labelHeight, 'F');
+        // White background
+        doc.setFillColor(255, 255, 255);
+        doc.rect(x, y, labelWidth, labelHeight, 'F');
 
-      let currentY = startY + padding + 4;
+        let currentY = y + padding + 6; // Start with more padding from top
 
-      // Add title
-      doc.setFontSize(12);
-      doc.setFont(undefined, 'bold');
-      doc.setTextColor(0, 0, 0);
-      const titleText = labelData.title || "Sample Title";
-      const titleWidth = doc.getTextWidth(titleText);
-      const titleX = startX + (labelWidth - titleWidth) / 2; // Center align
-      doc.text(titleText, titleX, currentY);
-      currentY += 5;
+        // Add title
+        if (labelData.title) {
+          doc.setFontSize(12);
+          doc.setFont(undefined, 'bold');
+          doc.setTextColor(0, 0, 0);
+          const titleText = labelData.title;
+          
+          // Split text if too long
+          const maxWidth = labelWidth - (padding * 2);
+          const titleLines = doc.splitTextToSize(titleText, maxWidth);
+          
+          // Center align each line
+          titleLines.forEach((line: string, index: number) => {
+            const lineWidth = doc.getTextWidth(line);
+            const titleX = x + (labelWidth - lineWidth) / 2;
+            doc.text(line, titleX, currentY + (index * 5));
+          });
+          
+          currentY += titleLines.length * 5 + 3; // Add space after title
+        }
 
-      // Add subtitle if present
-      if (labelData.subtitle) {
-        doc.setFontSize(9);
+        // Add subtitle if present
+        if (labelData.subtitle) {
+          doc.setFontSize(9);
+          doc.setFont(undefined, 'normal');
+          doc.setTextColor(120, 120, 120);
+          const subtitleText = labelData.subtitle;
+          const maxWidth = labelWidth - (padding * 2);
+          const subtitleLines = doc.splitTextToSize(subtitleText, maxWidth);
+          
+          subtitleLines.forEach((line: string, index: number) => {
+            const lineWidth = doc.getTextWidth(line);
+            const subtitleX = x + (labelWidth - lineWidth) / 2;
+            doc.text(line, subtitleX, currentY + (index * 4));
+          });
+          
+          currentY += subtitleLines.length * 4 + 4; // Add space after subtitle
+        }
+
+        // Add barcode area (matching the preview style exactly)
+        if (labelData.barcode_data) {
+          const barcodeHeight = 8;
+          const barcodeWidth = labelWidth - (padding * 2);
+          const barcodeX = x + padding;
+          
+          // Dark background for barcode
+          doc.setFillColor(35, 35, 55);
+          doc.rect(barcodeX, currentY, barcodeWidth, barcodeHeight, 'F');
+          
+          // Add barcode lines (simulating barcode appearance)
+          doc.setDrawColor(255, 255, 255);
+          doc.setLineWidth(0.3);
+          for (let i = 0; i < 10; i++) {
+            const lineX = barcodeX + 2 + (i * (barcodeWidth - 4) / 10);
+            doc.line(lineX, currentY + 1, lineX, currentY + barcodeHeight - 1);
+          }
+          
+          // Add barcode text
+          doc.setFontSize(6);
+          doc.setTextColor(255, 255, 255);
+          doc.setFont(undefined, 'normal');
+          const barcodeText = labelData.barcode_data.toUpperCase();
+          const barcodeTextWidth = doc.getTextWidth(barcodeText);
+          const barcodeTextX = barcodeX + (barcodeWidth - barcodeTextWidth) / 2;
+          doc.text(barcodeText, barcodeTextX, currentY + barcodeHeight - 1.5);
+          
+          currentY += barcodeHeight + 4; // Add space after barcode
+        }
+
+        // Add date and researcher info (with proper spacing)
+        doc.setFontSize(8);
         doc.setFont(undefined, 'normal');
-        doc.setTextColor(120, 120, 120);
-        const subtitleText = labelData.subtitle;
-        const subtitleWidth = doc.getTextWidth(subtitleText);
-        const subtitleX = startX + (labelWidth - subtitleWidth) / 2; // Center align
-        doc.text(subtitleText, subtitleX, currentY);
-        currentY += 4;
-      }
-
-      currentY += 2;
-
-      // Add barcode area (matching the preview style exactly)
-      if (labelData.barcode_data) {
-        const barcodeHeight = 8;
-        const barcodeWidth = labelWidth - (padding * 2);
-        const barcodeX = startX + padding;
+        doc.setTextColor(0, 0, 0);
         
-        // Dark background for barcode
-        doc.setFillColor(35, 35, 55); // Dark blue-grey color matching preview
-        doc.rect(barcodeX, currentY, barcodeWidth, barcodeHeight, 'F');
-        
-        // Add barcode lines (simulating barcode appearance)
-        doc.setDrawColor(255, 255, 255);
-        doc.setLineWidth(0.3);
-        for (let i = 0; i < 10; i++) {
-          const lineX = barcodeX + 2 + (i * (barcodeWidth - 4) / 10);
-          doc.line(lineX, currentY + 1, lineX, currentY + barcodeHeight - 1);
+        if (labelData.date) {
+          const dateText = labelData.date;
+          const dateWidth = doc.getTextWidth(dateText);
+          const dateX = x + (labelWidth - dateWidth) / 2;
+          doc.text(dateText, dateX, currentY);
+          currentY += 4; // Space between date and researcher
         }
         
-        // Add barcode text
-        doc.setFontSize(6);
-        doc.setTextColor(255, 255, 255);
-        const barcodeText = labelData.barcode_data.toUpperCase();
-        const barcodeTextWidth = doc.getTextWidth(barcodeText);
-        const barcodeTextX = barcodeX + (barcodeWidth - barcodeTextWidth) / 2;
-        doc.text(barcodeText, barcodeTextX, currentY + barcodeHeight - 1);
-        
-        currentY += barcodeHeight + 3;
-      }
+        if (labelData.researcher) {
+          const researcherText = labelData.researcher;
+          const researcherWidth = doc.getTextWidth(researcherText);
+          const researcherX = x + (labelWidth - researcherWidth) / 2;
+          doc.text(researcherText, researcherX, currentY);
+          currentY += 4; // Space after researcher
+        }
 
-      // Add date and researcher info (matching preview layout)
-      doc.setFontSize(8);
-      doc.setFont(undefined, 'normal');
-      doc.setTextColor(0, 0, 0);
-      
-      if (labelData.date) {
-        const dateText = labelData.date;
-        const dateWidth = doc.getTextWidth(dateText);
-        const dateX = startX + (labelWidth - dateWidth) / 2; // Center align
-        doc.text(dateText, dateX, currentY);
-        currentY += 3;
-      }
-      
-      if (labelData.researcher) {
-        const researcherText = labelData.researcher;
-        const researcherWidth = doc.getTextWidth(researcherText);
-        const researcherX = startX + (labelWidth - researcherWidth) / 2; // Center align
-        doc.text(researcherText, researcherX, currentY);
-        currentY += 3;
-      }
-
-      // Add notes if present and there's space (smaller font, bottom of label)
-      if (labelData.notes && currentY < startY + labelHeight - 8) {
-        doc.setFontSize(6);
-        doc.setTextColor(100, 100, 100);
-        const maxNoteWidth = labelWidth - (padding * 2);
-        const notesLines = doc.splitTextToSize(labelData.notes, maxNoteWidth);
-        const availableSpace = Math.floor((startY + labelHeight - padding - currentY) / 2);
-        const linesToShow = Math.min(notesLines.length, availableSpace);
-        
-        for (let i = 0; i < linesToShow; i++) {
-          if (currentY + 2 < startY + labelHeight - padding) {
-            const noteLineWidth = doc.getTextWidth(notesLines[i]);
-            const noteX = startX + (labelWidth - noteLineWidth) / 2; // Center align
-            doc.text(notesLines[i], noteX, currentY);
-            currentY += 2;
+        // Add notes if present and there's space (smaller font, bottom of label)
+        if (labelData.notes) {
+          const availableSpace = (y + labelHeight - padding) - currentY;
+          if (availableSpace > 6) { // Only add notes if there's enough space
+            doc.setFontSize(6);
+            doc.setTextColor(100, 100, 100);
+            doc.setFont(undefined, 'normal');
+            const maxNoteWidth = labelWidth - (padding * 2);
+            const notesLines = doc.splitTextToSize(labelData.notes, maxNoteWidth);
+            const maxLines = Math.floor(availableSpace / 2.5); // Calculate max lines that fit
+            const linesToShow = Math.min(notesLines.length, maxLines);
+            
+            for (let i = 0; i < linesToShow; i++) {
+              const noteLineWidth = doc.getTextWidth(notesLines[i]);
+              const noteX = x + (labelWidth - noteLineWidth) / 2;
+              doc.text(notesLines[i], noteX, currentY + (i * 2.5));
+            }
           }
         }
-      }
+      };
 
-      // Add multiple copies if quantity > 1 (same styling for each)
+      // Draw first label
+      drawSingleLabel(startX, startY);
+
+      // Add multiple copies if quantity > 1
       if (labelData.quantity > 1) {
         const labelsPerRow = 2;
         const labelsPerPage = 8;
+        const horizontalSpacing = 15;
+        const verticalSpacing = 15;
         
         for (let i = 1; i < Math.min(labelData.quantity, labelsPerPage); i++) {
           const row = Math.floor(i / labelsPerRow);
           const col = i % labelsPerRow;
-          const x = startX + col * (labelWidth + 15);
-          const y = startY + row * (labelHeight + 15);
+          const x = startX + col * (labelWidth + horizontalSpacing);
+          const y = startY + row * (labelHeight + verticalSpacing);
           
           // Check if we need a new page
           if (y + labelHeight > 280) {
             doc.addPage();
+            // Reset to first position on new page
+            drawSingleLabel(startX, startY);
             break;
           }
           
-          // Repeat the exact same label design
-          doc.setDrawColor(200, 200, 200);
-          doc.setLineWidth(0.5);
-          doc.rect(x, y, labelWidth, labelHeight);
-          doc.setFillColor(255, 255, 255);
-          doc.rect(x, y, labelWidth, labelHeight, 'F');
-
-          let labelY = y + padding + 4;
-
-          // Title
-          doc.setFontSize(12);
-          doc.setFont(undefined, 'bold');
-          doc.setTextColor(0, 0, 0);
-          const titleWidth = doc.getTextWidth(titleText);
-          const titleX = x + (labelWidth - titleWidth) / 2;
-          doc.text(titleText, titleX, labelY);
-          labelY += 5;
-
-          // Subtitle
-          if (labelData.subtitle) {
-            doc.setFontSize(9);
-            doc.setFont(undefined, 'normal');
-            doc.setTextColor(120, 120, 120);
-            const subtitleWidth = doc.getTextWidth(labelData.subtitle);
-            const subtitleX = x + (labelWidth - subtitleWidth) / 2;
-            doc.text(labelData.subtitle, subtitleX, labelY);
-            labelY += 4;
-          }
-
-          labelY += 2;
-
-          // Barcode
-          if (labelData.barcode_data) {
-            const barcodeX = x + padding;
-            doc.setFillColor(35, 35, 55);
-            doc.rect(barcodeX, labelY, labelWidth - (padding * 2), 8, 'F');
-            
-            doc.setDrawColor(255, 255, 255);
-            doc.setLineWidth(0.3);
-            for (let j = 0; j < 10; j++) {
-              const lineX = barcodeX + 2 + (j * (labelWidth - padding * 2 - 4) / 10);
-              doc.line(lineX, labelY + 1, lineX, labelY + 7);
-            }
-            
-            doc.setFontSize(6);
-            doc.setTextColor(255, 255, 255);
-            const barcodeTextWidth = doc.getTextWidth(labelData.barcode_data.toUpperCase());
-            const barcodeTextX = barcodeX + ((labelWidth - padding * 2) - barcodeTextWidth) / 2;
-            doc.text(labelData.barcode_data.toUpperCase(), barcodeTextX, labelY + 7);
-            labelY += 11;
-          }
-
-          // Date and researcher
-          doc.setFontSize(8);
-          doc.setTextColor(0, 0, 0);
-          if (labelData.date) {
-            const dateWidth = doc.getTextWidth(labelData.date);
-            const dateX = x + (labelWidth - dateWidth) / 2;
-            doc.text(labelData.date, dateX, labelY);
-            labelY += 3;
-          }
-          if (labelData.researcher) {
-            const researcherWidth = doc.getTextWidth(labelData.researcher);
-            const researcherX = x + (labelWidth - researcherWidth) / 2;
-            doc.text(labelData.researcher, researcherX, labelY);
-          }
+          drawSingleLabel(x, y);
         }
       }
 
