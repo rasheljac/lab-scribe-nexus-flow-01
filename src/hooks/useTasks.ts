@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -51,7 +50,11 @@ export const useTasks = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (newTask) => {
+      // Optimistically update the cache by placing the new task at the top
+      queryClient.setQueryData(['tasks'], (oldTasks: Task[] = []) => {
+        return [newTask, ...oldTasks];
+      });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
   });

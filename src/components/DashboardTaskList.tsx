@@ -39,16 +39,17 @@ const DashboardTaskList = () => {
     const loadTaskOrder = async () => {
       if (tasks.length > 0) {
         const savedOrder = await getSavedTaskOrder();
+        // Get the latest 5 tasks, ordered by created_at descending (newest first)
         const latestTasks = [...tasks]
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
           .slice(0, 5);
 
         if (savedOrder.length > 0) {
-          // Apply saved order, then add any new tasks not in the saved order
+          // Apply saved order, but prioritize newer tasks
           const orderedByPreference: Task[] = [];
           const remainingTasks = [...latestTasks];
 
-          // First, add tasks in the saved order
+          // First, add tasks in the saved order if they exist in latest tasks
           savedOrder.forEach(taskId => {
             const taskIndex = remainingTasks.findIndex(t => t.id === taskId);
             if (taskIndex !== -1) {
@@ -57,11 +58,11 @@ const DashboardTaskList = () => {
             }
           });
 
-          // Then add any remaining tasks (new ones not in saved order)
-          const finalOrder = [...orderedByPreference, ...remainingTasks];
+          // Then add any remaining tasks (new ones not in saved order) at the top
+          const finalOrder = [...remainingTasks, ...orderedByPreference];
           setOrderedTasks(finalOrder);
         } else {
-          // No saved order, use default (latest first)
+          // No saved order, use default (newest first)
           setOrderedTasks(latestTasks);
         }
       }

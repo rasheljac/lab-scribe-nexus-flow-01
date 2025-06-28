@@ -73,7 +73,7 @@ const DraggableTaskList = ({
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
-  // Initialize task order
+  // Initialize task order - prioritize newest tasks
   useEffect(() => {
     const initializeTaskOrder = async () => {
       if (tasks.length === 0) {
@@ -84,11 +84,16 @@ const DraggableTaskList = ({
       const savedOrder = await getSavedTaskOrder();
       
       if (savedOrder.length > 0) {
-        // Reorder tasks based on saved order
+        // Reorder tasks based on saved order, but prioritize newer tasks
         const orderedTaskList: Task[] = [];
         const taskMap = new Map(tasks.map(task => [task.id, task]));
         
-        // Add tasks in saved order
+        // Sort all tasks by creation date first (newest first)
+        const sortedTasks = [...tasks].sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        
+        // Add tasks in saved order if they exist
         savedOrder.forEach(taskId => {
           const task = taskMap.get(taskId);
           if (task) {
@@ -97,14 +102,18 @@ const DraggableTaskList = ({
           }
         });
         
-        // Add any new tasks that weren't in the saved order
-        taskMap.forEach(task => {
-          orderedTaskList.push(task);
-        });
+        // Add any new tasks that weren't in the saved order at the top
+        const newTasks = Array.from(taskMap.values()).sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
         
-        setOrderedTasks(orderedTaskList);
+        setOrderedTasks([...newTasks, ...orderedTaskList]);
       } else {
-        setOrderedTasks(tasks);
+        // No saved order, use creation date order (newest first)
+        const sortedTasks = [...tasks].sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        setOrderedTasks(sortedTasks);
       }
     };
 
