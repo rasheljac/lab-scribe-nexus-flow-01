@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ const EditInventoryItemDialog = ({ item, open, onOpenChange, onUpdateItem }: Edi
     location: "",
     expiry_date: "",
     cost: "",
+    url: "",
   });
 
   useEffect(() => {
@@ -38,10 +40,11 @@ const EditInventoryItemDialog = ({ item, open, onOpenChange, onUpdateItem }: Edi
         current_stock: item.current_stock,
         min_stock: item.min_stock,
         max_stock: item.max_stock,
-        unit: item.unit,
-        location: item.location,
-        expiry_date: item.expiry_date,
-        cost: item.cost,
+        unit: item.unit || "",
+        location: item.location || "",
+        expiry_date: item.expiry_date || "",
+        cost: item.cost || "",
+        url: item.url || "",
       });
     }
   }, [item]);
@@ -200,14 +203,26 @@ const EditInventoryItemDialog = ({ item, open, onOpenChange, onUpdateItem }: Edi
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="expiry_date">Expiry Date</Label>
-            <Input
-              id="expiry_date"
-              type="date"
-              value={formData.expiry_date}
-              onChange={(e) => setFormData(prev => ({ ...prev, expiry_date: e.target.value }))}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="expiry_date">Expiry Date</Label>
+              <Input
+                id="expiry_date"
+                type="date"
+                value={formData.expiry_date}
+                onChange={(e) => setFormData(prev => ({ ...prev, expiry_date: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="url">Purchase URL</Label>
+              <Input
+                id="url"
+                type="url"
+                value={formData.url}
+                onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
+                placeholder="https://example.com/product"
+              />
+            </div>
           </div>
 
           <div className="flex justify-end space-x-2">

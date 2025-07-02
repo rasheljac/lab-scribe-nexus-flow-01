@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -13,19 +14,20 @@ interface AddInventoryItemDialogProps {
 }
 
 const AddInventoryItemDialog = ({ onAddItem }: AddInventoryItemDialogProps) => {
-  const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
-    category: "Consumables",
+    category: "",
     supplier: "",
     current_stock: 0,
     min_stock: 0,
     max_stock: 0,
-    unit: "piece",
+    unit: "",
     location: "",
     expiry_date: "",
     cost: "",
+    url: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,26 +49,26 @@ const AddInventoryItemDialog = ({ onAddItem }: AddInventoryItemDialogProps) => {
       await onAddItem({
         ...formData,
         status,
-        last_ordered: new Date().toISOString().split('T')[0],
+        last_ordered: null,
       });
 
       setFormData({
         name: "",
-        category: "Consumables",
+        category: "",
         supplier: "",
         current_stock: 0,
         min_stock: 0,
         max_stock: 0,
-        unit: "piece",
+        unit: "",
         location: "",
         expiry_date: "",
         cost: "",
+        url: "",
       });
-
       setOpen(false);
       toast({
         title: "Success",
-        description: "Item added to inventory",
+        description: "Item added successfully",
       });
     } catch (error) {
       toast({
@@ -87,7 +89,7 @@ const AddInventoryItemDialog = ({ onAddItem }: AddInventoryItemDialogProps) => {
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Add Inventory Item</DialogTitle>
+          <DialogTitle>Add New Inventory Item</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -104,7 +106,7 @@ const AddInventoryItemDialog = ({ onAddItem }: AddInventoryItemDialogProps) => {
               <Label htmlFor="category">Category *</Label>
               <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Consumables">Consumables</SelectItem>
@@ -130,7 +132,7 @@ const AddInventoryItemDialog = ({ onAddItem }: AddInventoryItemDialogProps) => {
               <Label htmlFor="unit">Unit</Label>
               <Select value={formData.unit} onValueChange={(value) => setFormData(prev => ({ ...prev, unit: value }))}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select unit" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="box">Box</SelectItem>
@@ -198,14 +200,26 @@ const AddInventoryItemDialog = ({ onAddItem }: AddInventoryItemDialogProps) => {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="expiry_date">Expiry Date</Label>
-            <Input
-              id="expiry_date"
-              type="date"
-              value={formData.expiry_date}
-              onChange={(e) => setFormData(prev => ({ ...prev, expiry_date: e.target.value }))}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="expiry_date">Expiry Date</Label>
+              <Input
+                id="expiry_date"
+                type="date"
+                value={formData.expiry_date}
+                onChange={(e) => setFormData(prev => ({ ...prev, expiry_date: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="url">Purchase URL</Label>
+              <Input
+                id="url"
+                type="url"
+                value={formData.url}
+                onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
+                placeholder="https://example.com/product"
+              />
+            </div>
           </div>
 
           <div className="flex justify-end space-x-2">

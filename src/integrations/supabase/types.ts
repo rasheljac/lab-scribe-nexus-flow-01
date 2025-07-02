@@ -500,6 +500,7 @@ export type Database = {
           supplier: string
           unit: string | null
           updated_at: string
+          url: string | null
           user_id: string
         }
         Insert: {
@@ -518,6 +519,7 @@ export type Database = {
           supplier: string
           unit?: string | null
           updated_at?: string
+          url?: string | null
           user_id: string
         }
         Update: {
@@ -536,6 +538,7 @@ export type Database = {
           supplier?: string
           unit?: string | null
           updated_at?: string
+          url?: string | null
           user_id?: string
         }
         Relationships: []

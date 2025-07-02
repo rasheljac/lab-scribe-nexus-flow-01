@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +20,7 @@ import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import AddInventoryItemDialog from "@/components/AddInventoryItemDialog";
 import EditInventoryItemDialog from "@/components/EditInventoryItemDialog";
+import InventoryItemDetailsDialog from "@/components/InventoryItemDetailsDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useInventoryItems, InventoryItem } from "@/hooks/useInventoryItems";
 
@@ -31,6 +31,8 @@ const Inventory = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [detailsItem, setDetailsItem] = useState<InventoryItem | null>(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const getStatusColor = (status: string) => {
@@ -81,10 +83,19 @@ const Inventory = () => {
   };
 
   const handleOrderItem = (item: InventoryItem) => {
-    toast({
-      title: "Order Placed",
-      description: `Order placed for ${item.name} from ${item.supplier}`,
-    });
+    if (item.url) {
+      window.open(item.url, '_blank', 'noopener,noreferrer');
+    } else {
+      toast({
+        title: "Order Placed",
+        description: `Order placed for ${item.name} from ${item.supplier}`,
+      });
+    }
+  };
+
+  const handleItemClick = (item: InventoryItem) => {
+    setDetailsItem(item);
+    setDetailsDialogOpen(true);
   };
 
   const filteredInventory = items.filter(item => {
@@ -243,7 +254,11 @@ const Inventory = () => {
               <CardContent>
                 <div className="space-y-4">
                   {filteredInventory.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                    <div 
+                      key={item.id} 
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                      onClick={() => handleItemClick(item)}
+                    >
                       <div className="flex items-center gap-4 flex-1">
                         <div className="bg-white p-2 rounded-lg border">
                           {getStatusIcon(item.status)}
@@ -264,7 +279,7 @@ const Inventory = () => {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         <span className="text-sm font-medium text-green-600">{item.cost}</span>
                         <Button variant="outline" size="sm" onClick={() => handleEditItem(item)}>
                           <Edit className="h-4 w-4" />
@@ -308,6 +323,14 @@ const Inventory = () => {
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         onUpdateItem={handleUpdateItem}
+      />
+
+      <InventoryItemDetailsDialog
+        item={detailsItem}
+        open={detailsDialogOpen}
+        onOpenChange={setDetailsDialogOpen}
+        onEdit={handleEditItem}
+        onOrder={handleOrderItem}
       />
     </div>
   );
