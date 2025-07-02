@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -58,7 +57,7 @@ const Sidebar = () => {
     { icon: CheckSquare, label: "Tasks", path: "/tasks", badge: uncompletedTasksCount.toString(), key: "tasks" },
     { icon: BarChart3, label: "Analytics", path: "/analytics", badge: null, key: "analytics" },
     { icon: FileText, label: "Reports", path: "/reports", badge: reports.length.toString(), key: "reports" },
-    { icon: Package, label: "Inventory", path: "/inventory", badge: "!", key: "inventory" },
+    { icon: Package, label: "Inventory", path: "/inventory", badge: null, key: "inventory" },
     { icon: Printer, label: "Label Printer", path: "/labels", badge: null, key: "labels" },
     { icon: ShoppingCart, label: "Order Portal", path: "/orders", badge: "2", key: "orders" },
     { icon: MessageSquare, label: "Messages", path: "/messages", badge: "5", key: "messages" },
