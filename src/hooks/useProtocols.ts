@@ -117,7 +117,7 @@ export const useProtocols = () => {
 export const useExperimentProtocols = (experimentId: string) => {
   const { user } = useAuth();
 
-  const { data: protocols, isLoading, error } = useQuery({
+  const { data: experimentProtocols, isLoading, error } = useQuery({
     queryKey: ['experimentProtocols', experimentId],
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
@@ -127,7 +127,7 @@ export const useExperimentProtocols = (experimentId: string) => {
   });
 
   return {
-    protocols: protocols || [],
+    experimentProtocols: experimentProtocols || [],
     isLoading,
     error,
   };

@@ -3,6 +3,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 
+export interface IdeaNote {
+  id: string;
+  idea_id: string;
+  title: string;
+  content?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export const useIdeaNotes = (ideaId: string) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();

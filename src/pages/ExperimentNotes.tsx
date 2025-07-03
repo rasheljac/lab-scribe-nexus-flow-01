@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -113,7 +112,10 @@ const ExperimentNotes = () => {
 
   const handleDetachProtocol = async (protocolAttachmentId: string, protocolTitle: string) => {
     try {
-      await detachFromExperiment.mutateAsync(protocolAttachmentId);
+      await detachFromExperiment.mutateAsync({ 
+        experimentId: experimentId!, 
+        protocolId: protocolAttachmentId 
+      });
       toast({
         title: "Success",
         description: `Protocol "${protocolTitle}" detached successfully`,

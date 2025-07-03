@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +23,8 @@ import {
   Trash2,
   Check,
   X,
-  Save
+  Save,
+  Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -34,15 +36,15 @@ const Settings = () => {
   const { preferences, updatePreferences } = useUserPreferences();
 
   const [profileData, setProfileData] = useState({
-    firstName: user?.first_name || "",
-    lastName: user?.last_name || "",
+    firstName: user?.email || "",
+    lastName: user?.email || "",
     email: user?.email || "",
   });
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
-  const [appTheme, setAppTheme] = useState(preferences?.appTheme || "system");
-  const [notificationsEnabled, setNotificationsEnabled] = useState(preferences?.notificationsEnabled || true);
-  const [emailFrequency, setEmailFrequency] = useState(preferences?.emailFrequency || "daily");
+  const [appTheme, setAppTheme] = useState(preferences?.preferences?.theme || "system");
+  const [notificationsEnabled, setNotificationsEnabled] = useState(preferences?.preferences?.notifications?.system || true);
+  const [emailFrequency, setEmailFrequency] = useState("daily");
 
   const handleProfileUpdate = async () => {
     setIsSavingProfile(true);
@@ -58,9 +60,12 @@ const Settings = () => {
   const handlePreferencesUpdate = async () => {
     try {
       await updatePreferences({
-        appTheme,
-        notificationsEnabled,
-        emailFrequency,
+        preferences: {
+          theme: appTheme,
+          notifications: {
+            system: notificationsEnabled,
+          }
+        }
       });
       toast({
         title: "Preferences Updated",

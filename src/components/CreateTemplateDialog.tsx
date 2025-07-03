@@ -28,19 +28,19 @@ const CreateTemplateDialog = ({ onTemplateCreated }: CreateTemplateDialogProps) 
     width_mm: 60.0,
     height_mm: 40.0,
   });
-  const { addTemplate } = useLabelTemplates();
+  const { createTemplate } = useLabelTemplates();
 
   const handleSubmit = async () => {
     if (!formData.name || !formData.type) {
       return;
     }
 
-    const result = await addTemplate({
-      ...formData,
-      is_default: false,
-    });
+    try {
+      await createTemplate.mutateAsync({
+        ...formData,
+        is_default: false,
+      });
 
-    if (result) {
       setOpen(false);
       setFormData({
         name: "",
@@ -50,6 +50,8 @@ const CreateTemplateDialog = ({ onTemplateCreated }: CreateTemplateDialogProps) 
         height_mm: 40.0,
       });
       onTemplateCreated?.();
+    } catch (error) {
+      console.error("Error creating template:", error);
     }
   };
 
