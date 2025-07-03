@@ -24,9 +24,12 @@ COPY postcss.config.js ./
 COPY tsconfig*.json ./
 COPY components.json ./
 
-# Build the application with environment variable
+# Build the application with explicit production environment
 ENV NODE_ENV=production
 RUN npm run build
+
+# Verify build contents
+RUN ls -la dist/ && echo "Build completed successfully"
 
 # Production stage
 FROM nginx:alpine
@@ -49,6 +52,10 @@ RUN chown -R nginx:nginx /usr/share/nginx/html && \
     chown -R nginx:nginx /var/cache/nginx && \
     chown -R nginx:nginx /var/log/nginx && \
     chown -R nginx:nginx /etc/nginx/conf.d
+
+# Create nginx cache directory
+RUN mkdir -p /var/cache/nginx && \
+    chown -R nginx:nginx /var/cache/nginx
 
 # Expose port
 EXPOSE 80
