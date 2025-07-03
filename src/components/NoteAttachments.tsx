@@ -1,3 +1,4 @@
+
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -140,8 +141,8 @@ const NoteAttachments = ({ noteId, compact = false }: NoteAttachmentsProps) => {
                 {selectedFile ? `Selected: ${selectedFile.name}` : "Select File"}
               </Button>
               {selectedFile && (
-                <Button variant="secondary" size="sm" onClick={handleUpload} disabled={uploadAttachment.isLoading}>
-                  {uploadAttachment.isLoading ? (
+                <Button variant="secondary" size="sm" onClick={handleUpload} disabled={uploadAttachment.isPending}>
+                  {uploadAttachment.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Uploading...
@@ -182,9 +183,9 @@ const NoteAttachments = ({ noteId, compact = false }: NoteAttachmentsProps) => {
                         size="sm"
                         className="text-red-600 hover:text-red-700"
                         onClick={() => handleDelete(attachment.id)}
-                        disabled={deleteAttachment.isLoading}
+                        disabled={deleteAttachment.isPending}
                       >
-                        {deleteAttachment.isLoading ? (
+                        {deleteAttachment.isPending ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <X className="h-4 w-4" />
@@ -219,8 +220,8 @@ const NoteAttachments = ({ noteId, compact = false }: NoteAttachmentsProps) => {
           {selectedFile ? `Selected: ${selectedFile.name}` : "Select File"}
         </Button>
         {selectedFile && (
-          <Button variant="secondary" size="sm" onClick={handleUpload} disabled={uploadAttachment.isLoading}>
-            {uploadAttachment.isLoading ? (
+          <Button variant="secondary" size="sm" onClick={handleUpload} disabled={uploadAttachment.isPending}>
+            {uploadAttachment.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Uploading...
@@ -261,13 +262,13 @@ const NoteAttachments = ({ noteId, compact = false }: NoteAttachmentsProps) => {
                   size="sm"
                   className="text-red-600 hover:text-red-700"
                   onClick={() => handleDelete(attachment.id)}
-                  disabled={deleteAttachment.isLoading}
+                  disabled={deleteAttachment.isPending}
                 >
-                  {deleteAttachment.isLoading ? (
+                  {deleteAttachment.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <X className="h-4 w-4" />
-                  )}
+                    )}
                 </Button>
               </div>
             </li>

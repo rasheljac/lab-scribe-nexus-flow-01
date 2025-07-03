@@ -26,10 +26,10 @@ export const useLabelTemplates = () => {
     },
   });
 
-  const addTemplate = useMutation({
-    mutationFn: async (template: any) => {
+  const updateTemplate = useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string } & any) => {
       if (!user) throw new Error('User not authenticated');
-      return await apiClient.post('/label-templates', template);
+      return await apiClient.put(`/label-templates/${id}`, updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['labelTemplates'] });
@@ -52,7 +52,7 @@ export const useLabelTemplates = () => {
     loading: isLoading,
     error,
     createTemplate,
-    addTemplate,
+    updateTemplate,
     deleteTemplate,
   };
 };

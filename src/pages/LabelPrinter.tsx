@@ -30,7 +30,6 @@ import { useToast } from "@/hooks/use-toast";
 const LabelPrinter = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const { templates, isLoading, error, deleteTemplate } = useLabelTemplates();
   const { toast } = useToast();
 
@@ -88,10 +87,7 @@ const LabelPrinter = () => {
                   {templates.length} templates available
                 </p>
               </div>
-              <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">
-                <Plus className="h-4 w-4" />
-                New Template
-              </Button>
+              <CreateTemplateDialog />
             </div>
 
             {/* Search */}
@@ -195,11 +191,6 @@ const LabelPrinter = () => {
           </div>
         </main>
       </div>
-
-      <CreateTemplateDialog 
-        open={createDialogOpen} 
-        onOpenChange={setCreateDialogOpen}
-      />
     </div>
   );
 };

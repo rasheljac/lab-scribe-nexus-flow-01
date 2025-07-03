@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +31,7 @@ import Header from "@/components/Header";
 import CreateProtocolDialog from "@/components/CreateProtocolDialog";
 import EditProtocolDialog from "@/components/EditProtocolDialog";
 import DraggableGrid from "@/components/DraggableGrid";
-import { useProtocols } from "@/hooks/useProtocols";
+import { useProtocols, Protocol } from "@/hooks/useProtocols";
 import { useToast } from "@/hooks/use-toast";
 
 const ITEMS_PER_PAGE = 8;
@@ -47,9 +46,9 @@ const Protocols = () => {
   const { toast } = useToast();
   const { protocols, isLoading, error, deleteProtocol, updateProtocolOrder } = useProtocols();
 
-  const categories = ["all", ...Array.from(new Set(protocols.map(p => p.category)))];
+  const categories = ["all", ...Array.from(new Set(protocols.map((p: Protocol) => p.category)))];
 
-  const filteredProtocols = protocols.filter(protocol => {
+  const filteredProtocols = protocols.filter((protocol: Protocol) => {
     const matchesSearch = protocol.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (protocol.description && protocol.description.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesCategory = selectedCategory === "all" || protocol.category === selectedCategory;
@@ -82,7 +81,7 @@ const Protocols = () => {
     navigate(`/protocols/${protocolId}`);
   };
 
-  const handleReorder = async (reorderedItems: any[]) => {
+  const handleReorder = async (reorderedItems: Protocol[]) => {
     // Update the order based on global position, not just current page
     const reorderedWithGlobalOrder = reorderedItems.map((item, index) => ({
       id: item.id,
@@ -101,7 +100,7 @@ const Protocols = () => {
     }
   };
 
-  const renderProtocolCard = (protocol: any, index: number) => (
+  const renderProtocolCard = (protocol: Protocol, index: number) => (
     <Card key={protocol.id} className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
@@ -160,7 +159,7 @@ const Protocols = () => {
           </div>
           <div className="flex items-center gap-2">
             <Tag className="h-4 w-4 text-gray-400" />
-            <span>Version {protocol.version}</span>
+            <span>Updated {new Date(protocol.updated_at).toLocaleDateString()}</span>
             {protocol.is_template && (
               <Badge variant="secondary" className="text-xs">Template</Badge>
             )}
@@ -223,13 +222,13 @@ const Protocols = () => {
               <div className="flex gap-2">
                 {categories.map((category) => (
                   <Button
-                    key={category}
+                    key={String(category)}
                     variant={selectedCategory === category ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setSelectedCategory(category)}
+                    onClick={() => setSelectedCategory(String(category))}
                     className="capitalize"
                   >
-                    {category}
+                    {String(category)}
                   </Button>
                 ))}
               </div>
