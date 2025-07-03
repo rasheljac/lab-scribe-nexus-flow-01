@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -177,13 +178,12 @@ const LabelPrinter = () => {
                     <p className="text-gray-600">
                       {searchTerm ? "No templates found matching your criteria." : "No templates available."}
                     </p>
-                    <Button 
-                      className="mt-4 gap-2" 
-                      onClick={() => setCreateDialogOpen(true)}
-                    >
-                      <Plus className="h-4 w-4" />
-                      Create First Template
-                    </Button>
+                    <CreateTemplateDialog>
+                      <Button className="mt-4 gap-2">
+                        <Plus className="h-4 w-4" />
+                        Create First Template
+                      </Button>
+                    </CreateTemplateDialog>
                   </div>
                 )}
               </>

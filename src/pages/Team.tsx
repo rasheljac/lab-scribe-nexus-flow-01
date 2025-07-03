@@ -186,17 +186,17 @@ const Team = () => {
                         <Avatar className="h-12 w-12">
                           <AvatarImage src={member.avatar || undefined} />
                           <AvatarFallback>
-                            {member.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                            {member.name.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
                           <div className="flex items-center justify-between">
-                            <CardTitle className="text-lg">{member.name}</CardTitle>
-                            <Badge className={getStatusColor(member.status)}>
-                              {member.status}
+                            <CardTitle className="text-lg">{String(member.name)}</CardTitle>
+                            <Badge className={getStatusColor(String(member.status))}>
+                              {String(member.status)}
                             </Badge>
                           </div>
-                          <p className="text-sm text-gray-600">{member.role}</p>
+                          <p className="text-sm text-gray-600">{String(member.role)}</p>
                         </div>
                       </div>
                     </CardHeader>

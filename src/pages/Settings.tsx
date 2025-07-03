@@ -174,7 +174,7 @@ const Settings = () => {
                 <Switch
                   id="notifications"
                   checked={notificationsEnabled}
-                  onCheckedChange={setNotificationsEnabled}
+                  onCheckedChange={(checked: boolean) => setNotificationsEnabled(checked)}
                 />
               </div>
               <div className="space-y-2">
