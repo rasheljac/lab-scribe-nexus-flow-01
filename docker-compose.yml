@@ -1,4 +1,5 @@
 
+
 version: '3.8'
 
 services:
@@ -21,7 +22,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:80"
+      - "8517:80"
     environment:
       - NODE_ENV=production
     restart: unless-stopped
@@ -31,3 +32,4 @@ services:
 volumes:
   backend_data:
     driver: local
+
