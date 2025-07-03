@@ -43,7 +43,7 @@ const Settings = () => {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   const [appTheme, setAppTheme] = useState(preferences?.preferences?.theme || "system");
-  const [notificationsEnabled, setNotificationsEnabled] = useState(preferences?.preferences?.notifications?.system || true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(preferences?.preferences?.notifications?.system || true);
   const [emailFrequency, setEmailFrequency] = useState("daily");
 
   const handleProfileUpdate = async () => {
@@ -174,7 +174,7 @@ const Settings = () => {
                 <Switch
                   id="notifications"
                   checked={notificationsEnabled}
-                  onCheckedChange={(checked: boolean) => setNotificationsEnabled(checked)}
+                  onCheckedChange={setNotificationsEnabled}
                 />
               </div>
               <div className="space-y-2">

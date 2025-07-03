@@ -17,9 +17,10 @@ import { useLabelTemplates } from "@/hooks/useLabelTemplates";
 
 interface CreateTemplateDialogProps {
   onTemplateCreated?: () => void;
+  children?: React.ReactNode;
 }
 
-const CreateTemplateDialog = ({ onTemplateCreated }: CreateTemplateDialogProps) => {
+const CreateTemplateDialog = ({ onTemplateCreated, children }: CreateTemplateDialogProps) => {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -67,10 +68,12 @@ const CreateTemplateDialog = ({ onTemplateCreated }: CreateTemplateDialogProps) 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2">
-          <Plus className="h-4 w-4" />
-          New Template
-        </Button>
+        {children || (
+          <Button variant="outline" className="gap-2">
+            <Plus className="h-4 w-4" />
+            New Template
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

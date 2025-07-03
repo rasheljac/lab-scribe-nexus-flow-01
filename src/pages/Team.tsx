@@ -156,7 +156,7 @@ const Team = () => {
                 <SelectContent>
                   <SelectItem value="all">All Departments</SelectItem>
                   {departments.map(dept => (
-                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                    <SelectItem key={String(dept)} value={String(dept)}>{String(dept)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -180,13 +180,13 @@ const Team = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredMembers.map((member) => (
-                  <Card key={member.id} className="hover:shadow-md transition-shadow">
+                  <Card key={String(member.id)} className="hover:shadow-md transition-shadow">
                     <CardHeader className="pb-4">
                       <div className="flex items-center gap-4">
                         <Avatar className="h-12 w-12">
                           <AvatarImage src={member.avatar || undefined} />
                           <AvatarFallback>
-                            {member.name.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                            {String(member.name).split(' ').map((n: string) => n[0]).join('').toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
