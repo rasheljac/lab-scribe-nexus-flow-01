@@ -1,17 +1,28 @@
+
 # Build stage
 FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Install build dependencies for any native modules
+RUN apk add --no-cache python3 make g++ sqlite
+
+# Copy package files (frontend only)
 COPY package*.json ./
 COPY bun.lockb ./
 
-# Install ALL dependencies (including dev dependencies) for building
+# Install dependencies (this will only install what's in the frontend package.json)
 RUN npm install
 
-# Copy source code
-COPY . .
+# Copy source code (frontend only)
+COPY src/ ./src/
+COPY public/ ./public/
+COPY index.html ./
+COPY vite.config.ts ./
+COPY tailwind.config.ts ./
+COPY postcss.config.js ./
+COPY tsconfig*.json ./
+COPY components.json ./
 
 # Build the application and verify output
 RUN npm run build && \
