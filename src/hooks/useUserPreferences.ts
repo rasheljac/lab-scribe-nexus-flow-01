@@ -12,7 +12,9 @@ interface UserPreferences {
       system?: boolean;
     };
     theme?: string;
+    dashboardTaskOrder?: string[];
   };
+  hidden_pages: string[];
   created_at: string;
   updated_at: string;
 }
@@ -35,7 +37,9 @@ export const useUserPreferences = () => {
             system: false,
           },
           theme: 'system',
+          dashboardTaskOrder: [],
         },
+        hidden_pages: [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       });
@@ -43,7 +47,7 @@ export const useUserPreferences = () => {
     setLoading(false);
   }, [user]);
 
-  const updatePreferences = async (updates: Partial<Pick<UserPreferences, 'preferences'>>) => {
+  const updatePreferences = async (updates: Partial<Pick<UserPreferences, 'preferences' | 'hidden_pages'>>) => {
     if (!user || !preferences) throw new Error('User not authenticated');
     
     setPreferences({
