@@ -24,7 +24,8 @@ COPY postcss.config.js ./
 COPY tsconfig*.json ./
 COPY components.json ./
 
-# Build the application and verify output
+# Build the application with environment variable
+ENV NODE_ENV=production
 RUN npm run build && \
     ls -la dist/
 
