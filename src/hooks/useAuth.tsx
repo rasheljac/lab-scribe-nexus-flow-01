@@ -36,6 +36,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     // Check for stored token on mount
     const token = localStorage.getItem('access_token');
+    console.log('Checking stored token:', token ? 'Token found' : 'No token found');
     if (token) {
       fetchUser(token);
     } else {
@@ -45,68 +46,110 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchUser = async (token: string) => {
     try {
+      console.log('Fetching user with token...');
       const response = await fetch(`${API_BASE_URL}/auth/user`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
 
+      console.log('User fetch response status:', response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('User data received:', data);
         setUser(data.user);
         setSession({ access_token: token });
       } else {
+        console.log('Invalid token, removing from storage');
         localStorage.removeItem('access_token');
+        setUser(null);
+        setSession(null);
       }
     } catch (error) {
       console.error('Error fetching user:', error);
       localStorage.removeItem('access_token');
+      setUser(null);
+      setSession(null);
     } finally {
       setLoading(false);
     }
   };
 
   const signIn = async (email: string, password: string) => {
-    const response = await fetch(`${API_BASE_URL}/auth/signin`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password }),
-    });
+    console.log('Attempting sign in for:', email);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/signin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Sign in failed');
+      console.log('Sign in response status:', response.status);
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('Sign in error response:', error);
+        throw new Error(error.error || 'Sign in failed');
+      }
+
+      const data = await response.json();
+      console.log('Sign in successful:', data);
+      
+      setUser(data.user);
+      setSession(data.session);
+      localStorage.setItem('access_token', data.session.access_token);
+    } catch (error) {
+      console.error('Network or parsing error during sign in:', error);
+      if (error instanceof Error) {
+        throw error;
+      } else {
+        throw new Error('Network connection failed. Please check if the server is running.');
+      }
     }
-
-    const data = await response.json();
-    setUser(data.user);
-    setSession(data.session);
-    localStorage.setItem('access_token', data.session.access_token);
   };
 
   const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
-    const response = await fetch(`${API_BASE_URL}/auth/signup`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password, firstName, lastName }),
-    });
+    console.log('Attempting sign up for:', email);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password, firstName, lastName }),
+      });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Sign up failed');
+      console.log('Sign up response status:', response.status);
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('Sign up error response:', error);
+        throw new Error(error.error || 'Sign up failed');
+      }
+
+      const data = await response.json();
+      console.log('Sign up successful:', data);
+      
+      setUser(data.user);
+      setSession(data.session);
+      localStorage.setItem('access_token', data.session.access_token);
+    } catch (error) {
+      console.error('Network or parsing error during sign up:', error);
+      if (error instanceof Error) {
+        throw error;
+      } else {
+        throw new Error('Network connection failed. Please check if the server is running.');
+      }
     }
-
-    const data = await response.json();
-    setUser(data.user);
-    setSession(data.session);
-    localStorage.setItem('access_token', data.session.access_token);
   };
 
   const signOut = async () => {
+    console.log('Signing out...');
     try {
       const token = localStorage.getItem('access_token');
       if (token) {
@@ -123,6 +166,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       localStorage.removeItem('access_token');
       setUser(null);
       setSession(null);
+      console.log('Sign out complete');
     }
   };
 
