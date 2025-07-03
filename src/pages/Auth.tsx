@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { Loader2, Eye, EyeOff, AlertCircle, Wifi, WifiOff } from "lucide-react";
+import { API_BASE_URL } from "@/config/api";
 
 const Auth = () => {
   const [loading, setLoading] = useState(false);
@@ -39,7 +39,7 @@ const Auth = () => {
 
   const checkServerStatus = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/auth/user', {
+      const response = await fetch(`${API_BASE_URL}/auth/user`, {
         method: 'GET',
         headers: {
           'Authorization': 'Bearer invalid-token-for-status-check',
