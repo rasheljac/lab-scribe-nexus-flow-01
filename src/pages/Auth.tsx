@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 
@@ -22,6 +21,7 @@ const Auth = () => {
     lastName: ""
   });
   const navigate = useNavigate();
+  const { signIn, signUp } = useAuth();
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,12 +29,7 @@ const Auth = () => {
     setError("");
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
-      });
-
-      if (error) throw error;
+      await signIn(formData.email, formData.password);
       navigate("/");
     } catch (error: any) {
       setError(error.message);
@@ -55,20 +50,8 @@ const Auth = () => {
     }
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-          }
-        }
-      });
-
-      if (error) throw error;
-      
-      setError("Check your email for the confirmation link!");
+      await signUp(formData.email, formData.password, formData.firstName, formData.lastName);
+      navigate("/");
     } catch (error: any) {
       setError(error.message);
     } finally {

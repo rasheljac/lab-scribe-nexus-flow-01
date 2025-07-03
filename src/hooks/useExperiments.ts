@@ -1,26 +1,26 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 
 export interface Experiment {
   id: string;
-  user_id: string;
+  userId: string;
   title: string;
   description: string | null;
   status: 'planning' | 'in_progress' | 'completed' | 'on_hold';
   progress: number;
-  start_date: string;
-  end_date: string | null;
+  startDate: string;
+  endDate: string | null;
   researcher: string;
   protocols: number;
   samples: number;
   category: string;
-  project_id: string | null;
-  folder_id: string | null;
-  display_order: number;
-  created_at: string;
-  updated_at: string;
+  projectId: string | null;
+  folderId: string | null;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export const useExperiments = () => {
@@ -31,41 +31,15 @@ export const useExperiments = () => {
     queryKey: ['experiments'],
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
-      
-      const { data, error } = await supabase
-        .from('experiments')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('display_order', { ascending: true });
-
-      if (error) throw error;
-      return data as Experiment[];
+      return await apiClient.get('/experiments');
     },
     enabled: !!user,
   });
 
   const createExperiment = useMutation({
-    mutationFn: async (experiment: Omit<Experiment, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'display_order'>) => {
+    mutationFn: async (experiment: Omit<Experiment, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'displayOrder'>) => {
       if (!user) throw new Error('User not authenticated');
-
-      // Get the highest display_order for this user
-      const { data: maxOrderData } = await supabase
-        .from('experiments')
-        .select('display_order')
-        .eq('user_id', user.id)
-        .order('display_order', { ascending: false })
-        .limit(1);
-
-      const nextOrder = maxOrderData && maxOrderData.length > 0 ? maxOrderData[0].display_order + 1 : 1;
-
-      const { data, error } = await supabase
-        .from('experiments')
-        .insert([{ ...experiment, user_id: user.id, display_order: nextOrder }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      return await apiClient.post('/experiments', experiment);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['experiments'] });
@@ -74,37 +48,7 @@ export const useExperiments = () => {
 
   const updateExperiment = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Experiment> & { id: string }) => {
-      const { data, error } = await supabase
-        .from('experiments')
-        .update(updates)
-        .eq('id', id)
-        .eq('user_id', user?.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['experiments'] });
-    },
-  });
-
-  const updateExperimentOrder = useMutation({
-    mutationFn: async (experiments: { id: string; display_order: number }[]) => {
-      const updates = experiments.map(exp => 
-        supabase
-          .from('experiments')
-          .update({ display_order: exp.display_order })
-          .eq('id', exp.id)
-          .eq('user_id', user?.id)
-      );
-
-      const results = await Promise.all(updates);
-      const errors = results.filter(result => result.error);
-      if (errors.length > 0) {
-        throw new Error('Failed to update experiment order');
-      }
+      return await apiClient.put(`/experiments/${id}`, updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['experiments'] });
@@ -113,13 +57,21 @@ export const useExperiments = () => {
 
   const deleteExperiment = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('experiments')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user?.id);
+      return await apiClient.delete(`/experiments/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['experiments'] });
+    },
+  });
 
-      if (error) throw error;
+  const updateExperimentOrder = useMutation({
+    mutationFn: async (experiments: { id: string; displayOrder: number }[]) => {
+      // For now, just update each experiment individually
+      // In a real implementation, you'd want a batch update endpoint
+      const updates = experiments.map(exp => 
+        apiClient.put(`/experiments/${exp.id}`, { displayOrder: exp.displayOrder })
+      );
+      await Promise.all(updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['experiments'] });
