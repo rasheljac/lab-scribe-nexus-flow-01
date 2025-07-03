@@ -171,10 +171,10 @@ const Experiments = () => {
 
   const handleReorder = async (reorderedExperiments: Experiment[]) => {
     try {
-      // Update display_order for all experiments in the current page
+      // Update displayOrder for all experiments in the current page
       const updates = reorderedExperiments.map((exp, index) => ({
         id: exp.id,
-        display_order: startIndex + index + 1
+        displayOrder: startIndex + index + 1
       }));
 
       await updateExperimentOrder.mutateAsync(updates);
@@ -262,7 +262,7 @@ const Experiments = () => {
           </div>
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-gray-400" />
-            <span>{experiment.start_date} - {experiment.end_date || "Ongoing"}</span>
+            <span>{experiment.startDate} - {experiment.endDate || "Ongoing"}</span>
           </div>
           <div className="flex items-center gap-2">
             <FileText className="h-4 w-4 text-gray-400" />

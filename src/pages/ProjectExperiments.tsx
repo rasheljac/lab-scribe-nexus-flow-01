@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,7 +49,7 @@ const ProjectExperiments = () => {
   const { projects } = useProjects();
 
   const project = projects.find(p => p.id === projectId);
-  const projectExperiments = experiments.filter(exp => exp.project_id === projectId);
+  const projectExperiments = experiments.filter(exp => exp.projectId === projectId);
 
   // Update search params when search term changes
   useEffect(() => {
@@ -270,7 +269,7 @@ const ProjectExperiments = () => {
                         </div>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-gray-400" />
-                          <span>{experiment.start_date} - {experiment.end_date || "Ongoing"}</span>
+                          <span>{experiment.startDate} - {experiment.endDate || "Ongoing"}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <FileText className="h-4 w-4 text-gray-400" />

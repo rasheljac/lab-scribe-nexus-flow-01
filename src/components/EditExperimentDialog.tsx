@@ -34,8 +34,8 @@ const EditExperimentDialog = ({ experiment }: EditExperimentDialogProps) => {
     description: experiment.description || "",
     status: experiment.status,
     progress: experiment.progress,
-    start_date: experiment.start_date,
-    end_date: experiment.end_date || "",
+    startDate: experiment.startDate,
+    endDate: experiment.endDate || "",
     researcher: experiment.researcher,
     protocols: experiment.protocols,
     samples: experiment.samples,
@@ -162,22 +162,22 @@ const EditExperimentDialog = ({ experiment }: EditExperimentDialogProps) => {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="start_date">Start Date</Label>
+              <Label htmlFor="startDate">Start Date</Label>
               <Input
-                id="start_date"
+                id="startDate"
                 type="date"
-                value={formData.start_date}
-                onChange={(e) => handleInputChange("start_date", e.target.value)}
+                value={formData.startDate}
+                onChange={(e) => handleInputChange("startDate", e.target.value)}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="end_date">End Date</Label>
+              <Label htmlFor="endDate">End Date</Label>
               <Input
-                id="end_date"
+                id="endDate"
                 type="date"
-                value={formData.end_date}
-                onChange={(e) => handleInputChange("end_date", e.target.value)}
+                value={formData.endDate}
+                onChange={(e) => handleInputChange("endDate", e.target.value)}
               />
             </div>
           </div>

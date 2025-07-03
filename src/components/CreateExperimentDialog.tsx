@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,8 +32,8 @@ const CreateExperimentDialog = ({ open, onOpenChange, projectId, folderId = null
     description: "",
     category: "biochemistry",
     researcher: "",
-    start_date: "",
-    end_date: "",
+    startDate: "",
+    endDate: "",
   });
 
   const { createExperiment } = useExperiments();
@@ -59,8 +60,8 @@ const CreateExperimentDialog = ({ open, onOpenChange, projectId, folderId = null
         progress: 0,
         protocols: 0,
         samples: 0,
-        project_id: projectId || null, // Use the provided projectId
-        folder_id: folderId, // Include folder_id
+        projectId: projectId || null, // Use camelCase
+        folderId: folderId, // Use camelCase
       });
       toast({
         title: "Success",
@@ -71,8 +72,8 @@ const CreateExperimentDialog = ({ open, onOpenChange, projectId, folderId = null
         description: "",
         category: "biochemistry",
         researcher: "",
-        start_date: "",
-        end_date: "",
+        startDate: "",
+        endDate: "",
       });
       const shouldClose = onOpenChange ? true : true;
       if (shouldClose) {
@@ -163,22 +164,22 @@ const CreateExperimentDialog = ({ open, onOpenChange, projectId, folderId = null
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="start_date">Start Date</Label>
+              <Label htmlFor="startDate">Start Date</Label>
               <Input
-                id="start_date"
+                id="startDate"
                 type="date"
-                value={formData.start_date}
-                onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
+                value={formData.startDate}
+                onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="end_date">End Date</Label>
+              <Label htmlFor="endDate">End Date</Label>
               <Input
-                id="end_date"
+                id="endDate"
                 type="date"
-                value={formData.end_date}
-                onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
+                value={formData.endDate}
+                onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
               />
             </div>
           </div>
