@@ -33,9 +33,9 @@ const EditProjectDialog = ({ project }: EditProjectDialogProps) => {
     title: project.title,
     description: project.description || "",
     status: project.status,
-    progress: project.progress,
-    start_date: project.start_date,
-    end_date: project.end_date || "",
+    progress: project.progress || 0,
+    startDate: project.startDate,
+    endDate: project.endDate || "",
     budget: project.budget || "",
     category: project.category,
   });
@@ -128,10 +128,10 @@ const EditProjectDialog = ({ project }: EditProjectDialogProps) => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="planning">Planning</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="on_hold">On Hold</SelectItem>
+                  <SelectItem value="archived">Archived</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -160,22 +160,22 @@ const EditProjectDialog = ({ project }: EditProjectDialogProps) => {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="start_date">Start Date</Label>
+              <Label htmlFor="startDate">Start Date</Label>
               <Input
-                id="start_date"
+                id="startDate"
                 type="date"
-                value={formData.start_date}
-                onChange={(e) => handleInputChange("start_date", e.target.value)}
+                value={formData.startDate}
+                onChange={(e) => handleInputChange("startDate", e.target.value)}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="end_date">End Date</Label>
+              <Label htmlFor="endDate">End Date</Label>
               <Input
-                id="end_date"
+                id="endDate"
                 type="date"
-                value={formData.end_date}
-                onChange={(e) => handleInputChange("end_date", e.target.value)}
+                value={formData.endDate}
+                onChange={(e) => handleInputChange("endDate", e.target.value)}
               />
             </div>
           </div>

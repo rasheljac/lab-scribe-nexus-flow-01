@@ -9,10 +9,18 @@ export interface Project {
   title: string;
   description: string | null;
   status: 'active' | 'completed' | 'on_hold' | 'archived';
+  progress: number;
   startDate: string;
   endDate: string | null;
+  budget: string | null;
+  category: string;
+  displayOrder: number;
   createdAt: string;
   updatedAt: string;
+  // Legacy snake_case properties for compatibility
+  start_date: string;
+  end_date: string | null;
+  experiments_count: number;
 }
 
 export const useProjects = () => {
@@ -30,7 +38,7 @@ export const useProjects = () => {
   });
 
   const createProject = useMutation({
-    mutationFn: async (project: Omit<Project, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
+    mutationFn: async (project: Omit<Project, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'displayOrder' | 'start_date' | 'end_date' | 'experiments_count'>) => {
       if (!user) throw new Error('User not authenticated');
       return await apiClient.post('/projects', project);
     },
@@ -42,6 +50,15 @@ export const useProjects = () => {
   const updateProject = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Project> & { id: string }) => {
       return await apiClient.put(`/projects/${id}`, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
+  });
+
+  const updateProjectOrder = useMutation({
+    mutationFn: async (updates: { id: string; displayOrder: number }[]) => {
+      return await apiClient.put('/projects/reorder', { updates });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
@@ -63,6 +80,7 @@ export const useProjects = () => {
     error,
     createProject,
     updateProject,
+    updateProjectOrder,
     deleteProject,
   };
 };

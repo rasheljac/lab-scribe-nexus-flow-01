@@ -150,7 +150,7 @@ const Projects = () => {
       // Update display_order for all projects in the current page
       const updates = reorderedProjects.map((proj, index) => ({
         id: proj.id,
-        display_order: startIndex + index + 1
+        displayOrder: startIndex + index + 1
       }));
 
       await updateProjectOrder.mutateAsync(updates);
@@ -215,16 +215,16 @@ const Projects = () => {
           <div>
             <div className="flex justify-between text-sm mb-2">
               <span>Progress</span>
-              <span>{project.progress}%</span>
+              <span>{project.progress || 0}%</span>
             </div>
-            <Progress value={project.progress} className="h-2" />
+            <Progress value={project.progress || 0} className="h-2" />
           </div>
 
           {/* Project Details */}
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-gray-400" />
-              <span>{project.start_date} - {project.end_date || "Ongoing"}</span>
+              <span>{project.startDate} - {project.endDate || "Ongoing"}</span>
             </div>
             <div className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-gray-400" />
@@ -234,7 +234,7 @@ const Projects = () => {
 
           {/* Actions */}
           <div className="flex justify-between items-center pt-2">
-            <Badge variant="outline">{project.category}</Badge>
+            <Badge variant="outline">{project.category || 'Unknown'}</Badge>
             <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
               <EditProjectDialog project={project} />
               <Button 
