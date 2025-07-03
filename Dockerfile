@@ -26,8 +26,7 @@ COPY components.json ./
 
 # Build the application with environment variable
 ENV NODE_ENV=production
-RUN npm run build && \
-    ls -la dist/
+RUN npm run build
 
 # Production stage
 FROM nginx:alpine
@@ -35,15 +34,15 @@ FROM nginx:alpine
 # Copy built application
 COPY --from=builder /app/dist /usr/share/nginx/html/
 
-# Verify files are copied correctly
-RUN ls -la /usr/share/nginx/html/
-
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf
 
 # Create healthcheck script
-RUN echo '#!/bin/sh\nnginx -t' > /usr/local/bin/healthcheck.sh && \
+RUN echo '#!/bin/sh\ncurl -f http://localhost/health || exit 1' > /usr/local/bin/healthcheck.sh && \
     chmod +x /usr/local/bin/healthcheck.sh
+
+# Install curl for healthcheck
+RUN apk add --no-cache curl
 
 # Set up permissions for nginx
 RUN chown -R nginx:nginx /usr/share/nginx/html && \
@@ -54,9 +53,9 @@ RUN chown -R nginx:nginx /usr/share/nginx/html && \
 # Expose port
 EXPOSE 80
 
-# Health check using nginx -t
+# Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD /usr/local/bin/healthcheck.sh
 
-# Start nginx (using the default entrypoint which handles permissions correctly)
+# Start nginx
 CMD ["nginx", "-g", "daemon off;"]

@@ -11,11 +11,13 @@ const getAuthHeaders = () => {
 
 export const apiClient = {
   get: async (endpoint: string) => {
+    console.log(`Making GET request to: ${API_BASE_URL}${endpoint}`);
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       headers: getAuthHeaders(),
     });
     
     if (!response.ok) {
+      console.error(`API GET error: ${response.status} ${response.statusText}`);
       throw new Error(`API error: ${response.statusText}`);
     }
     
@@ -23,6 +25,7 @@ export const apiClient = {
   },
 
   post: async (endpoint: string, data: any) => {
+    console.log(`Making POST request to: ${API_BASE_URL}${endpoint}`);
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -30,6 +33,7 @@ export const apiClient = {
     });
     
     if (!response.ok) {
+      console.error(`API POST error: ${response.status} ${response.statusText}`);
       throw new Error(`API error: ${response.statusText}`);
     }
     
@@ -37,6 +41,7 @@ export const apiClient = {
   },
 
   put: async (endpoint: string, data: any) => {
+    console.log(`Making PUT request to: ${API_BASE_URL}${endpoint}`);
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
@@ -44,6 +49,7 @@ export const apiClient = {
     });
     
     if (!response.ok) {
+      console.error(`API PUT error: ${response.status} ${response.statusText}`);
       throw new Error(`API error: ${response.statusText}`);
     }
     
@@ -51,12 +57,14 @@ export const apiClient = {
   },
 
   delete: async (endpoint: string) => {
+    console.log(`Making DELETE request to: ${API_BASE_URL}${endpoint}`);
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
     
     if (!response.ok) {
+      console.error(`API DELETE error: ${response.status} ${response.statusText}`);
       throw new Error(`API error: ${response.statusText}`);
     }
     
