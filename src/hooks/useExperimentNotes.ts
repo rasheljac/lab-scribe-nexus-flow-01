@@ -1,6 +1,6 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 
 export interface ExperimentNote {
@@ -22,15 +22,7 @@ export const useExperimentNotes = (experimentId: string) => {
     queryKey: ['experimentNotes', experimentId],
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
-      
-      const { data, error } = await supabase
-        .from('experiment_notes')
-        .select('*')
-        .eq('experiment_id', experimentId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data as ExperimentNote[];
+      return await apiClient.get(`/experiments/${experimentId}/notes`);
     },
     enabled: !!user && !!experimentId,
   });
@@ -38,15 +30,7 @@ export const useExperimentNotes = (experimentId: string) => {
   const createNote = useMutation({
     mutationFn: async (note: Omit<ExperimentNote, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
       if (!user) throw new Error('User not authenticated');
-
-      const { data, error } = await supabase
-        .from('experiment_notes')
-        .insert([{ ...note, user_id: user.id }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      return await apiClient.post(`/experiments/${experimentId}/notes`, note);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['experimentNotes', experimentId] });
@@ -55,15 +39,7 @@ export const useExperimentNotes = (experimentId: string) => {
 
   const updateNote = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<ExperimentNote> & { id: string }) => {
-      const { data, error } = await supabase
-        .from('experiment_notes')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      return await apiClient.put(`/experiment-notes/${id}`, updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['experimentNotes', experimentId] });
@@ -72,12 +48,7 @@ export const useExperimentNotes = (experimentId: string) => {
 
   const deleteNote = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('experiment_notes')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      return await apiClient.delete(`/experiment-notes/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['experimentNotes', experimentId] });

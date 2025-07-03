@@ -1,6 +1,6 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 
 export interface Report {
@@ -26,15 +26,7 @@ export const useReports = () => {
     queryKey: ['reports'],
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
-      
-      const { data, error } = await supabase
-        .from('reports')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data as Report[];
+      return await apiClient.get('/reports');
     },
     enabled: !!user,
   });
@@ -42,15 +34,7 @@ export const useReports = () => {
   const createReport = useMutation({
     mutationFn: async (report: Omit<Report, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
       if (!user) throw new Error('User not authenticated');
-
-      const { data, error } = await supabase
-        .from('reports')
-        .insert([{ ...report, user_id: user.id }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      return await apiClient.post('/reports', report);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reports'] });
@@ -59,16 +43,7 @@ export const useReports = () => {
 
   const updateReport = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Report> & { id: string }) => {
-      const { data, error } = await supabase
-        .from('reports')
-        .update(updates)
-        .eq('id', id)
-        .eq('user_id', user?.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      return await apiClient.put(`/reports/${id}`, updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reports'] });
@@ -77,13 +52,7 @@ export const useReports = () => {
 
   const deleteReport = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('reports')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user?.id);
-
-      if (error) throw error;
+      return await apiClient.delete(`/reports/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reports'] });

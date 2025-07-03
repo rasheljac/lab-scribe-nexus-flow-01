@@ -1,23 +1,17 @@
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useMutation } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
 export const useTaskReminders = () => {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const sendTaskReminders = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error('User not authenticated');
-
-      const { data, error } = await supabase.functions.invoke('send-task-reminders', {
-        body: { user_id: user.id }
-      });
-
-      if (error) throw error;
+      const data = await apiClient.post('/task-reminders/send', { user_id: user.id });
       return data;
     },
     onSuccess: (data) => {
@@ -39,9 +33,7 @@ export const useTaskReminders = () => {
 
   const sendCalendarReminders = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('send-calendar-reminders');
-
-      if (error) throw error;
+      const data = await apiClient.post('/calendar-reminders/send', {});
       return data;
     },
     onSuccess: (data) => {
@@ -64,17 +56,10 @@ export const useTaskReminders = () => {
   const testEmailConfiguration = useMutation({
     mutationFn: async (testEmail: string) => {
       if (!user) throw new Error('User not authenticated');
-
-      // Test by sending a task reminder to the specified email
-      const { data, error } = await supabase.functions.invoke('send-task-reminders', {
-        body: { 
-          user_id: user.id,
-          test_mode: true,
-          test_email: testEmail
-        }
+      const data = await apiClient.post('/test-email', { 
+        user_id: user.id,
+        test_email: testEmail
       });
-
-      if (error) throw error;
       return data;
     },
     onSuccess: (data) => {

@@ -1,6 +1,6 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 
 export interface TeamMember {
@@ -29,15 +29,7 @@ export const useTeamMembers = () => {
     queryKey: ['teamMembers'],
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
-      
-      const { data, error } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data as TeamMember[];
+      return await apiClient.get('/team-members');
     },
     enabled: !!user,
   });
@@ -45,15 +37,7 @@ export const useTeamMembers = () => {
   const createTeamMember = useMutation({
     mutationFn: async (teamMember: Omit<TeamMember, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
       if (!user) throw new Error('User not authenticated');
-
-      const { data, error } = await supabase
-        .from('team_members')
-        .insert([{ ...teamMember, user_id: user.id }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      return await apiClient.post('/team-members', teamMember);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teamMembers'] });
@@ -62,16 +46,7 @@ export const useTeamMembers = () => {
 
   const updateTeamMember = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<TeamMember> & { id: string }) => {
-      const { data, error } = await supabase
-        .from('team_members')
-        .update(updates)
-        .eq('id', id)
-        .eq('user_id', user?.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      return await apiClient.put(`/team-members/${id}`, updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teamMembers'] });
@@ -80,13 +55,7 @@ export const useTeamMembers = () => {
 
   const deleteTeamMember = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('team_members')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user?.id);
-
-      if (error) throw error;
+      return await apiClient.delete(`/team-members/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teamMembers'] });

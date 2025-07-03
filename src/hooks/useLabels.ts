@@ -1,6 +1,6 @@
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -20,46 +20,25 @@ export interface Label {
 }
 
 export const useLabels = () => {
-  const [labels, setLabels] = useState<Label[]>([]);
-  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const fetchLabels = async () => {
-    if (!user) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('labels')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setLabels(data || []);
-    } catch (error) {
-      console.error('Error fetching labels:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch labels",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: labels, isLoading: loading, error } = useQuery({
+    queryKey: ['labels'],
+    queryFn: async () => {
+      if (!user) throw new Error('User not authenticated');
+      return await apiClient.get('/labels');
+    },
+    enabled: !!user,
+  });
 
   const addLabel = async (label: Omit<Label, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('labels')
-        .insert([{ ...label, user_id: user.id }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      setLabels(prev => [data, ...prev]);
+      const data = await apiClient.post('/labels', label);
+      queryClient.invalidateQueries({ queryKey: ['labels'] });
       return data;
     } catch (error) {
       console.error('Error adding label:', error);
@@ -73,13 +52,8 @@ export const useLabels = () => {
 
   const deleteLabel = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('labels')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      setLabels(prev => prev.filter(label => label.id !== id));
+      await apiClient.delete(`/labels/${id}`);
+      queryClient.invalidateQueries({ queryKey: ['labels'] });
       toast({
         title: "Success",
         description: "Label deleted successfully",
@@ -94,15 +68,15 @@ export const useLabels = () => {
     }
   };
 
-  useEffect(() => {
-    fetchLabels();
-  }, [user]);
+  const refetch = () => {
+    queryClient.invalidateQueries({ queryKey: ['labels'] });
+  };
 
   return {
-    labels,
+    labels: labels || [],
     loading,
     addLabel,
     deleteLabel,
-    refetch: fetchLabels
+    refetch
   };
 };

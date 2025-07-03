@@ -1,6 +1,6 @@
 
 import { useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 export const useCalendarReminders = () => {
@@ -8,9 +8,7 @@ export const useCalendarReminders = () => {
 
   const sendCalendarReminders = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('send-calendar-reminders');
-
-      if (error) throw error;
+      const data = await apiClient.post('/calendar-reminders/send', {});
       return data;
     },
     onSuccess: (data) => {

@@ -1,6 +1,6 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 
 export interface IdeaNote {
@@ -21,15 +21,7 @@ export const useIdeaNotes = (ideaId: string) => {
     queryKey: ['ideaNotes', ideaId],
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
-      
-      const { data, error } = await supabase
-        .from('idea_notes')
-        .select('*')
-        .eq('idea_id', ideaId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return (data || []) as unknown as IdeaNote[];
+      return await apiClient.get(`/ideas/${ideaId}/notes`);
     },
     enabled: !!user && !!ideaId,
   });
@@ -37,15 +29,7 @@ export const useIdeaNotes = (ideaId: string) => {
   const createNote = useMutation({
     mutationFn: async (note: Omit<IdeaNote, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
       if (!user) throw new Error('User not authenticated');
-
-      const { data, error } = await supabase
-        .from('idea_notes')
-        .insert([{ ...note, user_id: user.id }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data as unknown as IdeaNote;
+      return await apiClient.post(`/ideas/${ideaId}/notes`, note);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ideaNotes', ideaId] });
@@ -54,15 +38,7 @@ export const useIdeaNotes = (ideaId: string) => {
 
   const updateNote = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<IdeaNote> & { id: string }) => {
-      const { data, error } = await supabase
-        .from('idea_notes')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data as unknown as IdeaNote;
+      return await apiClient.put(`/idea-notes/${id}`, updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ideaNotes', ideaId] });
@@ -71,12 +47,7 @@ export const useIdeaNotes = (ideaId: string) => {
 
   const deleteNote = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('idea_notes')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      return await apiClient.delete(`/idea-notes/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ideaNotes', ideaId] });

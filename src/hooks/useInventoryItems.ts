@@ -1,6 +1,6 @@
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -25,46 +25,25 @@ export interface InventoryItem {
 }
 
 export const useInventoryItems = () => {
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const fetchItems = async () => {
-    if (!user) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('inventory_items')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setItems(data || []);
-    } catch (error) {
-      console.error('Error fetching inventory items:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch inventory items",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: items, isLoading: loading, error } = useQuery({
+    queryKey: ['inventoryItems'],
+    queryFn: async () => {
+      if (!user) throw new Error('User not authenticated');
+      return await apiClient.get('/inventory-items');
+    },
+    enabled: !!user,
+  });
 
   const addItem = async (item: Omit<InventoryItem, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('inventory_items')
-        .insert([{ ...item, user_id: user.id }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      setItems(prev => [data, ...prev]);
+      const data = await apiClient.post('/inventory-items', item);
+      queryClient.invalidateQueries({ queryKey: ['inventoryItems'] });
       return data;
     } catch (error) {
       console.error('Error adding inventory item:', error);
@@ -78,15 +57,8 @@ export const useInventoryItems = () => {
 
   const updateItem = async (id: string, updates: Partial<InventoryItem>) => {
     try {
-      const { data, error } = await supabase
-        .from('inventory_items')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      setItems(prev => prev.map(item => item.id === id ? data : item));
+      const data = await apiClient.put(`/inventory-items/${id}`, updates);
+      queryClient.invalidateQueries({ queryKey: ['inventoryItems'] });
       return data;
     } catch (error) {
       console.error('Error updating inventory item:', error);
@@ -100,13 +72,8 @@ export const useInventoryItems = () => {
 
   const deleteItem = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('inventory_items')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      setItems(prev => prev.filter(item => item.id !== id));
+      await apiClient.delete(`/inventory-items/${id}`);
+      queryClient.invalidateQueries({ queryKey: ['inventoryItems'] });
       toast({
         title: "Success",
         description: "Inventory item deleted successfully",
@@ -121,16 +88,16 @@ export const useInventoryItems = () => {
     }
   };
 
-  useEffect(() => {
-    fetchItems();
-  }, [user]);
+  const refetch = () => {
+    queryClient.invalidateQueries({ queryKey: ['inventoryItems'] });
+  };
 
   return {
-    items,
+    items: items || [],
     loading,
     addItem,
     updateItem,
     deleteItem,
-    refetch: fetchItems
+    refetch
   };
 };

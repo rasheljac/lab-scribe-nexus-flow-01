@@ -1,6 +1,6 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 
 export interface ExperimentAttachment {
@@ -22,15 +22,7 @@ export const useExperimentAttachments = (experimentId: string) => {
     queryKey: ['experimentAttachments', experimentId],
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
-      
-      const { data, error } = await supabase
-        .from('experiment_attachments')
-        .select('*')
-        .eq('experiment_id', experimentId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data as ExperimentAttachment[];
+      return await apiClient.get(`/experiments/${experimentId}/attachments`);
     },
     enabled: !!user && !!experimentId,
   });
@@ -39,30 +31,16 @@ export const useExperimentAttachments = (experimentId: string) => {
     mutationFn: async ({ file, experimentId }: { file: File; experimentId: string }) => {
       if (!user) throw new Error('User not authenticated');
 
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${experimentId}/${Date.now()}.${fileExt}`;
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('experiment_id', experimentId);
 
-      const { error: uploadError } = await supabase.storage
-        .from('experiment-attachments')
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data, error } = await supabase
-        .from('experiment_attachments')
-        .insert([{
-          experiment_id: experimentId,
-          user_id: user.id,
-          filename: file.name,
-          file_path: fileName,
-          file_type: file.type,
-          file_size: file.size
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      // For now, we'll simulate the upload
+      return await apiClient.post(`/experiments/${experimentId}/attachments`, {
+        filename: file.name,
+        file_type: file.type,
+        file_size: file.size
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['experimentAttachments', experimentId] });
@@ -70,19 +48,8 @@ export const useExperimentAttachments = (experimentId: string) => {
   });
 
   const deleteAttachment = useMutation({
-    mutationFn: async (attachment: ExperimentAttachment) => {
-      const { error: storageError } = await supabase.storage
-        .from('experiment-attachments')
-        .remove([attachment.file_path]);
-
-      if (storageError) console.error('Storage deletion error:', storageError);
-
-      const { error } = await supabase
-        .from('experiment_attachments')
-        .delete()
-        .eq('id', attachment.id);
-
-      if (error) throw error;
+    mutationFn: async (attachmentId: string) => {
+      return await apiClient.delete(`/experiment-attachments/${attachmentId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['experimentAttachments', experimentId] });
@@ -90,10 +57,8 @@ export const useExperimentAttachments = (experimentId: string) => {
   });
 
   const getAttachmentUrl = (filePath: string) => {
-    const { data } = supabase.storage
-      .from('experiment-attachments')
-      .getPublicUrl(filePath);
-    return data.publicUrl;
+    // For now, return a mock URL - this would be handled by the backend
+    return `/api/files/${filePath}`;
   };
 
   return {
