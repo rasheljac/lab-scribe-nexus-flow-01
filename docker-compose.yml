@@ -26,7 +26,6 @@ services:
       - "8517:80"
     environment:
       - NODE_ENV=production
-      - VITE_API_URL=/api
     restart: unless-stopped
     depends_on:
       - backend
