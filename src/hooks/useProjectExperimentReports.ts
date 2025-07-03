@@ -1,23 +1,54 @@
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
-export const useProjectExperimentReports = (projectId: string) => {
+export const useProjectExperimentReports = (projectId?: string) => {
   const { user } = useAuth();
+  const { toast } = useToast();
 
-  const { data: reports, isLoading, error } = useQuery({
-    queryKey: ['projectExperimentReports', projectId],
-    queryFn: async () => {
+  const generateProjectReport = useMutation({
+    mutationFn: async ({ projectId, projectTitle, reportTitle, includeNotes, includeAttachments }: {
+      projectId: string;
+      projectTitle: string;
+      reportTitle: string;
+      includeNotes: boolean;
+      includeAttachments: boolean;
+    }) => {
       if (!user) throw new Error('User not authenticated');
-      return await apiClient.get(`/projects/${projectId}/experiment-reports`);
+      return await apiClient.post(`/projects/${projectId}/generate-report`, {
+        projectTitle,
+        reportTitle,
+        includeNotes,
+        includeAttachments
+      });
     },
-    enabled: !!user && !!projectId,
+  });
+
+  const generateExperimentReport = useMutation({
+    mutationFn: async ({ experimentId, experimentTitle, reportTitle, includeNotes, includeAttachments }: {
+      experimentId: string;
+      experimentTitle: string;
+      reportTitle: string;
+      includeNotes: boolean;
+      includeAttachments: boolean;
+    }) => {
+      if (!user) throw new Error('User not authenticated');
+      return await apiClient.post(`/experiments/${experimentId}/generate-report`, {
+        experimentTitle,
+        reportTitle,
+        includeNotes,
+        includeAttachments
+      });
+    },
   });
 
   return {
-    reports: reports || [],
-    isLoading,
-    error,
+    reports: [],
+    isLoading: false,
+    error: null,
+    generateProjectReport,
+    generateExperimentReport,
   };
 };

@@ -30,10 +30,29 @@ export const useExperimentNoteAttachments = (noteId: string) => {
     },
   });
 
+  const deleteAttachment = useMutation({
+    mutationFn: async (attachmentId: string) => {
+      if (!user) throw new Error('User not authenticated');
+      return await apiClient.delete(`/experiment-notes/attachments/${attachmentId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['experimentNoteAttachments', noteId] });
+    },
+  });
+
+  const downloadAttachment = useMutation({
+    mutationFn: async (attachmentId: string) => {
+      if (!user) throw new Error('User not authenticated');
+      return await apiClient.get(`/experiment-notes/attachments/${attachmentId}/download`);
+    },
+  });
+
   return {
     attachments: attachments || [],
     isLoading,
     error,
     uploadAttachment,
+    deleteAttachment,
+    downloadAttachment,
   };
 };
